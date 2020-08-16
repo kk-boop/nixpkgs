@@ -1674,6 +1674,8 @@ in
 
   dante = callPackage ../servers/dante { };
 
+  dapr-cli = callPackage ../development/tools/dapr/cli {};
+
   dasher = callPackage ../applications/accessibility/dasher { };
 
   datamash = callPackage ../tools/misc/datamash { };
@@ -5207,8 +5209,15 @@ in
   mailhog = callPackage ../servers/mail/mailhog {};
 
   mailnag = callPackage ../applications/networking/mailreaders/mailnag {
-    pythonPackages = python3Packages;
+    availablePlugins = {
+      # More are listed here: https://github.com/pulb/mailnag/#desktop-integration
+      # Use the attributes here as arguments to `plugins` list
+      goa = callPackage ../applications/networking/mailreaders/mailnag/goa-plugin.nix { };
+    };
   };
+  mailnagWithPlugins = mailnag.withPlugins(
+    builtins.attrValues mailnag.availablePlugins
+  );
 
   mailsend = callPackage ../tools/networking/mailsend { };
 
@@ -7215,6 +7224,8 @@ in
   tilix = callPackage ../applications/misc/tilix { };
 
   tinc_pre = callPackage ../tools/networking/tinc/pre.nix {};
+
+  tinycbor = callPackage ../development/libraries/tinycbor { };
 
   tiny8086 = callPackage ../applications/virtualization/8086tiny { };
 
@@ -9896,14 +9907,43 @@ in
 
   # Python interpreter that is build with all modules, including tkinter.
   # These are for compatibility and should not be used inside Nixpkgs.
-  pythonFull = python.override{x11Support=true;};
-  python2Full = python2.override{x11Support=true;};
-  python27Full = python27.override{x11Support=true;};
-  python3Full = python3.override{x11Support=true;};
-  python36Full = python36.override{x11Support=true;};
-  python37Full = python37.override{x11Support=true;};
-  python38Full = python38.override{x11Support=true;};
-  python39Full = python39.override{x11Support=true;};
+  pythonFull = python.override {
+    self = pythonFull;
+    x11Support = true;
+  };
+  python2Full = python2.override {
+    self = python2Full;
+    x11Support = true;
+  };
+  python27Full = python27.override {
+    self = python27Full;
+    x11Support = true;
+  };
+  python3Full = python3.override {
+    self = python3Full;
+    bluezSupport = true;
+    x11Support = true;
+  };
+  python36Full = python36.override {
+    self = python36Full;
+    bluezSupport = true;
+    x11Support = true;
+  };
+  python37Full = python37.override {
+    self = python37Full;
+    bluezSupport = true;
+    x11Support = true;
+  };
+  python38Full = python38.override {
+    self = python38Full;
+    bluezSupport = true;
+    x11Support = true;
+  };
+  python39Full = python39.override {
+    self = python39Full;
+    bluezSupport = true;
+    x11Support = true;
+  };
 
   # pythonPackages further below, but assigned here because they need to be in sync
   pythonPackages = python.pkgs;
@@ -13978,6 +14018,8 @@ in
 
   libyamlcpp = callPackage ../development/libraries/libyaml-cpp { };
 
+  rang = callPackage ../development/libraries/rang { };
+
   libyamlcpp_0_3 = pkgs.libyamlcpp.overrideAttrs (oldAttrs: {
     src = pkgs.fetchurl {
       url = "https://github.com/jbeder/yaml-cpp/archive/release-0.3.0.tar.gz";
@@ -15404,6 +15446,14 @@ in
 
   vtk_7 = callPackage ../development/libraries/vtk/7.x.nix {
     stdenv = if stdenv.isDarwin then stdenv else gcc8Stdenv;
+    inherit (darwin) libobjc;
+    inherit (darwin.apple_sdk.libs) xpc;
+    inherit (darwin.apple_sdk.frameworks) Cocoa CoreServices DiskArbitration
+                                          IOKit CFNetwork Security ApplicationServices
+                                          CoreText IOSurface ImageIO OpenGL GLUT;
+  };
+
+  vtk_9 = libsForQt5.callPackage ../development/libraries/vtk/9.x.nix {
     inherit (darwin) libobjc;
     inherit (darwin.apple_sdk.libs) xpc;
     inherit (darwin.apple_sdk.frameworks) Cocoa CoreServices DiskArbitration
@@ -23972,8 +24022,6 @@ in
 
   masari = callPackage ../applications/blockchains/masari.nix { boost = boost165; };
 
-  mist = callPackage ../applications/blockchains/mist.nix { };
-
   nano-wallet = libsForQt5.callPackage ../applications/blockchains/nano-wallet { };
 
   namecoin  = callPackage ../applications/blockchains/namecoin.nix  { withGui = true; };
@@ -25092,6 +25140,8 @@ in
   avogadro = callPackage ../applications/science/chemistry/avogadro {
     eigen = eigen2;
   };
+
+  d-seams = callPackage ../applications/science/chemistry/d-seams {};
 
   gwyddion = callPackage ../applications/science/chemistry/gwyddion {};
 
