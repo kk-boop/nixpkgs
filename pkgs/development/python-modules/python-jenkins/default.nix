@@ -1,48 +1,65 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, mock
-, pbr
-, pyyaml
-, setuptools
-, six
-, multi_key_dict
-, testscenarios
-, requests
-, unittest2
-, requests-mock
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  mock,
+  pbr,
+  pyyaml,
+  six,
+  multi-key-dict,
+  testscenarios,
+  requests,
+  requests-mock,
+  stestr,
+  multiprocess,
 }:
 
 buildPythonPackage rec {
   pname = "python-jenkins";
-  version = "1.7.0";
+  version = "1.8.3";
+  format = "setuptools";
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "01jid5s09lr3kayr2h1z9n8h9nhyw3jxv9c4b5hrlxijknkqzvfy";
+    pname = "python_jenkins";
+    inherit version;
+    hash = "sha256-j0dhw5GsEejB8j93EBCSDBBEBJdwWrcXXVI1j1oS3Jg=";
   };
 
   # test uses timeout mechanism unsafe for use with the "spawn"
   # multiprocessing backend used on macos
-  postPatch = lib.optionalString stdenv.isDarwin ''
+  postPatch = lib.optionalString stdenv.hostPlatform.isDarwin ''
     substituteInPlace tests/test_jenkins_sockets.py \
       --replace test_jenkins_open_no_timeout dont_test_jenkins_open_no_timeout
   '';
 
-  buildInputs = [ mock ];
-  propagatedBuildInputs = [ pbr pyyaml setuptools six multi_key_dict requests ];
+  pythonRelaxDeps = [ "setuptools" ];
 
-  checkInputs = [ unittest2 testscenarios requests-mock ];
+  buildInputs = [ mock ];
+  propagatedBuildInputs = [
+    pbr
+    pyyaml
+    six
+    multi-key-dict
+    requests
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
+    stestr
+    testscenarios
+    requests-mock
+    multiprocess
+  ];
   checkPhase = ''
-    unit2
+    stestr run
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Python bindings for the remote Jenkins API";
-    homepage = "https://pypi.python.org/pypi/python-jenkins";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ ];
+    homepage = "https://pypi.org/project/python-jenkins/";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ gador ];
   };
-
 }

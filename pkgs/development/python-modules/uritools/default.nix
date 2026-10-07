@@ -1,18 +1,29 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27 }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "uritools";
-  version = "3.0.2";
-  disabled = isPy27;
+  version = "6.0.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "28ffef82ce3b2793237d36e45aa7cde28dae6502f6a93fdbd05ede401520e279";
+    hash = "sha256-TWccO4yiMKXUfvpfimk/PQFTHzj09SMXApm+c0zJhRs=";
   };
 
-  meta = with lib; {
+  build-system = [ setuptools ];
+
+  pythonImportsCheck = [ "uritools" ];
+
+  meta = {
     description = "RFC 3986 compliant, Unicode-aware, scheme-agnostic replacement for urlparse";
-    license = licenses.mit;
-    maintainers = [ maintainers.rvolosatovs ];
+    homepage = "https://github.com/tkem/uritools/";
+    changelog = "https://github.com/tkem/uritools/blob/v${version}/CHANGELOG.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ rvolosatovs ];
   };
 }

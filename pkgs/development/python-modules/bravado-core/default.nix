@@ -1,52 +1,74 @@
-{ lib, buildPythonPackage, fetchFromGitHub, python-dateutil, jsonref, jsonschema,
-  pyyaml, simplejson, six, pytz, msgpack, swagger-spec-validator, rfc3987,
-  strict-rfc3339, webcolors, mypy-extensions, jsonpointer, idna, pytest, mock,
-  pytest-benchmark, isPy27, enum34 }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  # build inputs
+  jsonref,
+  jsonschema,
+  python-dateutil,
+  pyyaml,
+  requests,
+  simplejson,
+  six,
+  swagger-spec-validator,
+  pytz,
+  msgpack,
+  # check inputs
+  pytestCheckHook,
+  mock,
+}:
 
 buildPythonPackage rec {
   pname = "bravado-core";
-  version = "5.17.0";
+  version = "6.4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Yelp";
-    repo = pname;
+    repo = "bravado-core";
     rev = "v${version}";
-    sha256 = "sha256-okQA4YJq0lyVJuDzD8mMRlOS/K3gf1qRUpw/5M0LlZE=";
+    hash = "sha256-P6R1Pmhddyy1iwQuem8YVDFFrQ4qxHzASZQbqpMZXeI=";
   };
 
-  checkInputs = [
-    mypy-extensions
-    pytest
-    mock
-    pytest-benchmark
-  ];
+  build-system = [ setuptools ];
 
-  checkPhase = "pytest --benchmark-skip";
-
-  propagatedBuildInputs = [
-    python-dateutil
+  dependencies = [
     jsonref
-    jsonschema
+    jsonschema # jsonschema[format-nongpl]
+    python-dateutil
     pyyaml
+    requests
     simplejson
     six
+    swagger-spec-validator
     pytz
     msgpack
-    swagger-spec-validator
+  ]
+  ++ jsonschema.optional-dependencies.format-nongpl;
 
-    # the following 3 packages are included when jsonschema (3.2) is installed
-    # as jsonschema[format], which reflects what happens in setup.py
-    rfc3987
-    strict-rfc3339
-    webcolors
-    jsonpointer
-    idna
-  ] ++ lib.optionals isPy27 [ enum34 ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    mock
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "bravado_core" ];
+
+  disabledTestPaths = [
+    # skip benchmarks
+    "tests/profiling"
+    # take too long to run
+    "tests/spec/Spec"
+  ];
+
+  meta = {
     description = "Library for adding Swagger support to clients and servers";
     homepage = "https://github.com/Yelp/bravado-core";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ vanschelven ];
+    changelog = "https://github.com/Yelp/bravado-core/blob/v${version}/CHANGELOG.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [
+      vanschelven
+      nickcao
+    ];
   };
 }

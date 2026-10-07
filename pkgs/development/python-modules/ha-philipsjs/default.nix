@@ -1,49 +1,52 @@
-{ lib
-, buildPythonPackage
-, cryptography
-, fetchFromGitHub
-, httpx
-, pytest-aiohttp
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, respx
+{
+  lib,
+  buildPythonPackage,
+  cryptography,
+  fetchFromGitHub,
+  httpx,
+  pytest-aiohttp,
+  pytest-mock,
+  pytestCheckHook,
+  respx,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "ha-philipsjs";
-  version = "2.7.6";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "3.3.4"; # FIXME Can we check metadata again?
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "danielperna84";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-U5XigLFkpRoIXcFB4dpxi8pxqcmmb20sv9i9J70s0C0=";
+    repo = "ha-philipsjs";
+    tag = version;
+    hash = "sha256-Ui15KtTpyfVTHmiHNVx/99qiUtKLZeyOOtAuQvfnU8k=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     cryptography
     httpx
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-aiohttp
     pytest-mock
     pytestCheckHook
     respx
   ];
 
-  pythonImportsCheck = [
-    "haphilipsjs"
-  ];
+  pythonImportsCheck = [ "haphilipsjs" ];
 
-  meta = with lib; {
-    description = "Python library to interact with Philips TVs with jointSPACE API";
+  # the tag 3.3.4 actually corresponds to version 3.2.4
+  dontCheckPythonMetadata = true;
+
+  meta = {
+    description = "Library to interact with Philips TVs with jointSPACE API";
     homepage = "https://github.com/danielperna84/ha-philipsjs";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/danielperna84/ha-philipsjs/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

@@ -1,26 +1,91 @@
-{ lib, fetchPypi, buildPythonPackage
-, importlib-metadata, importlib-resources, six, traits
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  numpy,
+  pillow,
+  pygments,
+  pyqt5,
+  pyqt6,
+  pyside2,
+  pyside6,
+  pytestCheckHook,
+  setuptools,
+  traits,
+  traitsui,
+  writableTmpDirAsHomeHook,
+  wxpython,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyface";
-  version = "7.3.0";
+  version = "8.0.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "a7031ec4cfff034affc822e47ff5e6c1a0272e576d79465cdbbe25f721740322";
+  src = fetchFromGitHub {
+    owner = "enthought";
+    repo = "pyface";
+    tag = finalAttrs.version;
+    hash = "sha256-i97cosaFc5GTv5GJgpx1xc81mir/IWljSrAORUapymM=";
   };
 
-  propagatedBuildInputs = [ importlib-metadata importlib-resources six traits ];
+  build-system = [ setuptools ];
 
-  doCheck = false; # Needs X server
+  dependencies = [
+    traits
+  ];
+
+  optional-dependencies = {
+    pillow = [ pillow ];
+    pyqt5 = [
+      pygments
+      pyqt5
+    ];
+    pyqt6 = [
+      pygments
+      pyqt6
+    ];
+    pyside2 = [
+      pygments
+      pyside2
+    ];
+    pyside6 = [
+      pygments
+      pyside6
+    ];
+    numpy = [ numpy ];
+    traitsui = [ traitsui ];
+    wx = [
+      wxpython
+      numpy
+    ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    writableTmpDirAsHomeHook
+  ];
+
+  enabledTestPaths = "pyface/tests";
+
+  disabledTestPaths = [
+    # tests need an X server
+    "pyface/tests/test_beep.py"
+    "pyface/tests/test_clipboard.py"
+    "pyface/tests/test_font.py"
+    "pyface/tests/test_image_cache.py"
+    "pyface/tests/test_image_resource.py"
+    "pyface/tests/test_system_metrics.py"
+    "pyface/tests/test_widget.py"
+  ];
 
   pythonImportsCheck = [ "pyface" ];
 
-  meta = with lib; {
+  meta = {
     description = "Traits-capable windowing framework";
     homepage = "https://github.com/enthought/pyface";
-    maintainers = with maintainers; [ knedlsepp ];
-    license = licenses.bsdOriginal;
+    changelog = "https://github.com/enthought/pyface/releases/tag/${finalAttrs.src.tag}";
+    maintainers = [ ];
+    license = lib.licenses.bsdOriginal;
   };
-}
+})

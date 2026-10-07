@@ -1,34 +1,41 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, six
-, html5lib
-, setuptools
-, packaging
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
+  tinycss2,
+  webencodings,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "bleach";
-  version = "4.1.0";
-  disabled = pythonOlder "3.6";
+  version = "6.4.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-CQDYs366YagC7kCsAGH4wrXe4pwZJ90dIz4HXr9acdo=";
+  src = fetchFromGitHub {
+    owner = "mozilla";
+    repo = "bleach";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-2HcJIxmH78TIE4q481OZPL5ZempMqka6OChEv+BFctY=";
   };
 
-  propagatedBuildInputs = [
-    packaging
-    six
-    html5lib
-    setuptools
+  pythonRelaxDeps = [
+    # Upstream views pins as known-good versions: https://github.com/mozilla/bleach/pull/741
+    "tinycss2"
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  build-system = [ setuptools ];
+
+  dependencies = [
+    webencodings
   ];
+
+  optional-dependencies = {
+    css = [ tinycss2 ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   disabledTests = [
     # Disable network tests
@@ -37,8 +44,8 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "bleach" ];
 
-  meta = with lib; {
-    description = "An easy, HTML5, whitelisting HTML sanitizer";
+  meta = {
+    description = "Easy, HTML5, whitelisting HTML sanitizer";
     longDescription = ''
       Bleach is an HTML sanitizing library that escapes or strips markup and
       attributes based on a white list. Bleach can also linkify text safely,
@@ -52,7 +59,8 @@ buildPythonPackage rec {
     '';
     homepage = "https://github.com/mozilla/bleach";
     downloadPage = "https://github.com/mozilla/bleach/releases";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ prikhi ];
+    changelog = "https://github.com/mozilla/bleach/blob/${finalAttrs.src.tag}/CHANGES";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ prikhi ];
   };
-}
+})

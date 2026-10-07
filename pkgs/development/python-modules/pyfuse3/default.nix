@@ -1,21 +1,51 @@
-{ lib, buildPythonPackage, fetchPypi, pkg-config, fuse3, trio, pytestCheckHook, pytest-trio, which }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  cython,
+  pkg-config,
+  setuptools,
+  setuptools-scm,
+  fuse3,
+  trio,
+  python,
+  pytestCheckHook,
+  pytest-trio,
+  which,
+}:
 
 buildPythonPackage rec {
   pname = "pyfuse3";
-  version = "3.2.1";
+  version = "3.5.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "22d146dac59a8429115e9a93317975ea54b35e0278044a94d3fac5b4ad5f7e33";
+  src = fetchFromGitHub {
+    owner = "libfuse";
+    repo = "pyfuse3";
+    tag = "v${version}";
+    hash = "sha256-HhEtWYWdxJZOMS3dqB2VdQS7aSdpkRhq7EZCJ55n2OE=";
   };
+
+  patches = [
+    # Fix cross compilation by using PKG_CONFIG env variable instead
+    # of hardcoded binary name
+    # https://github.com/libfuse/pyfuse3/pull/148
+    ./fix_cross_parse_pkg_config.patch
+  ];
+
+  build-system = [
+    cython
+    setuptools
+    setuptools-scm
+  ];
 
   nativeBuildInputs = [ pkg-config ];
 
   buildInputs = [ fuse3 ];
 
-  propagatedBuildInputs = [ trio ];
+  dependencies = [ trio ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-trio
     which
@@ -25,10 +55,20 @@ buildPythonPackage rec {
   # Checks if a /usr/bin directory exists, can't work on NixOS
   disabledTests = [ "test_listdir" ];
 
-  meta = with lib; {
+  pythonImportsCheck = [
+    "pyfuse3"
+    "pyfuse3.asyncio"
+  ];
+
+  meta = {
     description = "Python 3 bindings for libfuse 3 with async I/O support";
     homepage = "https://github.com/libfuse/pyfuse3";
-    license = licenses.lgpl2Plus;
-    maintainers = with maintainers; [ nyanloutre ];
+    license = lib.licenses.lgpl2Plus;
+    maintainers = with lib.maintainers; [
+      nyanloutre
+      dotlambda
+    ];
+    changelog = "https://github.com/libfuse/pyfuse3/blob/${src.tag}/Changes.rst";
+    platforms = lib.platforms.linux;
   };
 }

@@ -1,44 +1,49 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, sphinx
-, pytest-cov
-, pytest
-, Mako
-, numpy
-, funcsigs
-, withCuda ? false, pycuda
-, withOpenCL ? true, pyopencl
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  sphinx,
+  pytest-cov-stub,
+  pytestCheckHook,
+  mako,
+  numpy,
+  funcsigs,
+  withCuda ? false,
+  pycuda,
+  withOpenCL ? true,
+  pyopencl,
 }:
 
 buildPythonPackage rec {
   pname = "reikna";
-  version = "0.7.5";
+  version = "0.9.0";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d01f4264c8379ef2962a93aacb002d491b92ef9b5b22b45f77e7821dfa87bef7";
+    hash = "sha256-uzIoGCkIINgmO+r0vAzmihS14GWv5ygakMz3tKIG3zA=";
   };
 
-  checkInputs = [ sphinx pytest-cov pytest ];
+  nativeCheckInputs = [
+    sphinx
+    pytest-cov-stub
+    pytestCheckHook
+  ];
 
-  propagatedBuildInputs = [ Mako numpy funcsigs ]
-    ++ lib.optional withCuda pycuda
-    ++ lib.optional withOpenCL pyopencl;
-
-  checkPhase = ''
-    py.test
-  '';
+  propagatedBuildInputs = [
+    mako
+    numpy
+    funcsigs
+  ]
+  ++ lib.optional withCuda pycuda
+  ++ lib.optional withOpenCL pyopencl;
 
   # Requires device
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "GPGPU algorithms for PyCUDA and PyOpenCL";
     homepage = "https://github.com/fjarri/reikna";
-    license = licenses.mit;
-    maintainers = [ maintainers.fridh ];
-
+    license = lib.licenses.mit;
   };
-
 }

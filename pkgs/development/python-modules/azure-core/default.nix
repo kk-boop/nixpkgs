@@ -1,57 +1,88 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27
-, aiodns
-, aiohttp
-, flask
-, mock
-, msrest
-, pytest
-, pytest-asyncio
-, pytest-trio
-, pytestCheckHook
-, requests
-, six
-, trio
-, typing-extensions
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  aiodns,
+  aiohttp,
+  flask,
+  mock,
+  opentelemetry-api,
+  opentelemetry-instrumentation,
+  opentelemetry-instrumentation-requests,
+  opentelemetry-sdk,
+  pytest-asyncio,
+  pytest-trio,
+  pytest8_3CheckHook,
+  requests,
+  setuptools,
+  six,
+  trio,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
-  version = "1.20.1";
+  version = "1.38.0";
   pname = "azure-core";
-  disabled = isPy27;
+  pyproject = true;
+
+  __darwinAllowLocalNetworking = true;
 
   src = fetchPypi {
-    inherit pname version;
-    extension = "zip";
-    sha256 = "21d06311c9c373e394ed9f9db035306773334a0181932e265889eca34d778d17";
+    pname = "azure_core";
+    inherit version;
+    hash = "sha256-gZTSaCJFo+TjFRpmfGhkZMN4b+15GLOU0DW9zWG7WZM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     requests
     six
-  ];
-
-  checkInputs = [
-    aiodns
-    aiohttp
-    flask
-    mock
-    msrest
-    pytest
-    pytest-trio
-    pytest-asyncio
-    pytestCheckHook
-    trio
     typing-extensions
   ];
+
+  optional-dependencies = {
+    aio = [ aiohttp ];
+    tracing = [ opentelemetry-api ];
+  };
+
+  nativeCheckInputs = [
+    aiodns
+    flask
+    mock
+    opentelemetry-instrumentation
+    opentelemetry-instrumentation-requests
+    opentelemetry-sdk
+    pytest-trio
+    pytest-asyncio
+    pytest8_3CheckHook
+    trio
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   # test server needs to be available
   preCheck = ''
     export PYTHONPATH=tests/testserver_tests/coretestserver:$PYTHONPATH
   '';
 
-  pytestFlagsArray = [ "tests/" ];
+  enabledTestPaths = [ "tests/" ];
+
   # disable tests which touch network
-  disabledTests = [ "aiohttp" "multipart_send" "response" "request" "timeout" ];
+  disabledTests = [
+    "aiohttp"
+    "multipart_send"
+    "response"
+    "request"
+    "timeout"
+    "test_sync_transport_short_read_download_stream"
+    "test_aio_transport_short_read_download_stream"
+    # disable 8 tests failing on some darwin machines with errors:
+    # azure.core.polling.base_polling.BadStatus: Invalid return status 403 for 'GET' operation
+    # azure.core.exceptions.HttpResponseError: Operation returned an invalid status 'Forbidden'
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ "location_polling_fail" ];
+
   disabledTestPaths = [
     # requires testing modules which aren't published, and likely to create cyclic dependencies
     "tests/test_connection_string_parsing.py"
@@ -60,12 +91,24 @@ buildPythonPackage rec {
     "tests/test_streaming.py"
     # testserver tests require being in a very specific working directory to make it work
     "tests/testserver_tests/"
+    # requires missing pytest plugin
+    "tests/async_tests/test_rest_asyncio_transport.py"
+    # needs msrest, which cannot be included in nativeCheckInputs due to circular dependency new in msrest 0.7.1
+    # azure-core needs msrest which needs azure-core
+    "tests/test_polling.py"
+    "tests/async_tests/test_base_polling_async.py"
+    "tests/async_tests/test_polling_async.py"
+    # infinite recursion with azure-storage-blob
+    "tests/async_tests/test_tracing_live_async.py"
+    "tests/test_serialization.py"
+    "tests/test_tracing_live.py"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Microsoft Azure Core Library for Python";
-    homepage = "https://github.com/Azure/azure-sdk-for-python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jonringer ];
+    homepage = "https://github.com/Azure/azure-sdk-for-python/tree/main/sdk/core/azure-core";
+    changelog = "https://github.com/Azure/azure-sdk-for-python/blob/azure-core_${version}/sdk/core/azure-core/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

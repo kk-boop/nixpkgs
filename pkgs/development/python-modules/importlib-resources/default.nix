@@ -1,48 +1,62 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, setuptools-scm
-, importlib-metadata
-, typing ? null
-, singledispatch ? null
-, pythonOlder
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  importlib-metadata,
+
+  # Reverse dependency
+  sage,
+
+  # tests
+  jaraco-collections,
+  jaraco-test,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "importlib-resources";
-  version = "5.4.0";
+  version = "7.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "importlib_resources";
     inherit version;
-    sha256 = "sha256-11bi+F3U3iuom+CyHboqO77C6HGkKjoWcZJYoR+HUGs=";
+    hash = "sha256-ByLUxiEkicUw8qFFo0wKejtHIbyWoV+tpZMOKgt2Bwg=";
   };
 
-  nativeBuildInputs = [
+  postPatch = ''
+    sed -i '/coherent.licensed/d' pyproject.toml
+  '';
+
+  build-system = [
+    setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
-    importlib-metadata
-  ] ++ lib.optional (pythonOlder "3.4") [
-    singledispatch
-  ] ++ lib.optional (pythonOlder "3.5") [
-    typing
+  dependencies = [ importlib-metadata ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    jaraco-collections
+    jaraco-test
   ];
 
-  checkPhase = ''
-    ${python.interpreter} -m unittest discover
-  '';
+  pythonImportsCheck = [ "importlib_resources" ];
 
-  pythonImportsCheck = [
-    "importlib_resources"
-  ];
+  passthru.tests = {
+    inherit sage;
+  };
 
-  meta = with lib; {
+  meta = {
     description = "Read resources from Python packages";
     homepage = "https://importlib-resources.readthedocs.io/";
-    license = licenses.asl20;
+    license = lib.licenses.asl20;
     maintainers = [ ];
   };
 }

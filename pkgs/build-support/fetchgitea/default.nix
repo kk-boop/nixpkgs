@@ -2,6 +2,21 @@
 
 { lib, fetchFromGitHub }:
 
-{ domain, ... }@args:
+lib.makeOverridable (
+  {
+    domain,
+    functionName ? "fetchFromGitea",
+    ...
+  }@args:
 
-fetchFromGitHub ((removeAttrs args [ "domain" ]) // { githubBase = domain; })
+  fetchFromGitHub (
+    (removeAttrs args [
+      "domain"
+      "functionName"
+    ])
+    // {
+      inherit functionName;
+      githubBase = domain;
+    }
+  )
+)

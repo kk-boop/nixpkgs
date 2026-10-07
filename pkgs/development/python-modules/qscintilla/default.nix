@@ -1,43 +1,101 @@
-{ lib
-, buildPythonPackage
-, disabledIf
-, isPy3k
-, isPyPy
-, pkgs
-, python
-, pyqt4
+{
+  lib,
+  stdenv,
+
+  buildPythonPackage,
+  isPy3k,
+  python,
+  pyqt-builder,
+  pyqt5,
+  pyqt6,
+  setuptools,
+  sip,
+
+  libsForQt5,
+  qt6Packages,
+
+  useQt6 ? true,
 }:
 
-disabledIf (isPy3k || isPyPy)
-  (buildPythonPackage {
-    # TODO: Qt5 support
-    pname = "qscintilla";
-    version = pkgs.qscintilla.version;
-    format = "other";
+let
+  qtPackages = if useQt6 then qt6Packages else libsForQt5;
 
-    src = pkgs.qscintilla.src;
+  inherit (qtPackages)
+    qmake
+    qscintilla
+    qtbase
+    ;
 
-    nativeBuildInputs = [ pkgs.xorg.lndir ];
+  qtVersion = lib.versions.major qtbase.version;
+  pyQtPackage = if useQt6 then pyqt6 else pyqt5;
+in
+buildPythonPackage {
+  # Matches the `name` declared in Python/pyproject-qt${qtVersion}.toml upstream,
+  # which is inconsistent between Qt5 ("QScintilla") and Qt6 ("PyQt6-QScintilla").
+  pname = if qtVersion == "5" then "qscintilla" else "pyqt${qtVersion}-qscintilla";
+  version = qscintilla.version;
+  src = qscintilla.src;
+  pyproject = true;
 
-    buildInputs = [ pyqt4.qt pyqt4 ];
+  disabled = !isPy3k;
 
-    preConfigure = ''
-      mkdir -p $out
-      lndir ${pyqt4} $out
-      rm -rf "$out/nix-support"
-      cd Python
-      ${python.executable} ./configure-old.py \
-          --destdir $out/lib/${python.libPrefix}/site-packages/PyQt4 \
-          --apidir $out/api/${python.libPrefix} \
-          -n ${pkgs.qscintilla}/include \
-          -o ${pkgs.qscintilla}/lib \
-          --sipdir $out/share/sip
-    '';
+  nativeBuildInputs = [
+    sip
+    qmake
+    pyqt-builder
+    qscintilla
+    setuptools
+  ];
 
-    meta = with lib; {
-      description = "A Python binding to QScintilla, Qt based text editing control";
-      license = licenses.lgpl21Plus;
-      maintainers = with maintainers; [ danbst ];
-      platforms = platforms.unix;
-    };
-  })
+  buildInputs = [ qtbase ];
+
+  propagatedBuildInputs = [
+    pyQtPackage
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isDarwin && !useQt6) [ libsForQt5.qtmacextras ];
+
+  dontWrapQtApps = true;
+
+  postPatch = ''
+    cd Python
+    cp pyproject-qt${qtVersion}.toml pyproject.toml
+    echo '[tool.sip.project]' >> pyproject.toml
+    echo 'sip-include-dirs = [ "${pyQtPackage}/${python.sitePackages}/PyQt${qtVersion}/bindings"]' \
+       >> pyproject.toml
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    substituteInPlace project.py \
+      --replace \
+      "if self.project.qsci_external_lib:
+                if self.qsci_features_dir is not None:" \
+      "if self.project.qsci_external_lib:
+                self.builder_settings.append('QT += widgets')
+
+                self.builder_settings.append('QT += printsupport')
+
+                if self.qsci_features_dir is not None:"
+  '';
+
+  dontConfigure = true;
+
+  build = ''
+    sip-install --qsci-features-dir ${qscintilla}/mkspecs/features \
+    --qsci-include-dir ${qscintilla}/include \
+    --qsci-library-dir ${qscintilla}/lib --api-dir ${qscintilla}/share";
+  '';
+  postInstall = ''
+    # Needed by pythonImportsCheck to find the module
+    export PYTHONPATH="$out/${python.sitePackages}:$PYTHONPATH"
+  '';
+
+  # Checked using pythonImportsCheck
+  doCheck = false;
+
+  pythonImportsCheck = [ "PyQt${qtVersion}.Qsci" ];
+
+  meta = {
+    description = "Python binding to QScintilla, Qt based text editing control";
+    license = lib.licenses.lgpl21Plus;
+    homepage = "https://www.riverbankcomputing.com/software/qscintilla/";
+  };
+}

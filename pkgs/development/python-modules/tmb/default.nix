@@ -1,30 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "tmb";
-  version = "0.1.1";
+  version = "0.1.5";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "alemuro";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-xwzaJuiQxExUA5W4kW7t1713S6NOvDNagcD3/dwA+DE=";
+    repo = "tmb";
+    tag = finalAttrs.version;
+    hash = "sha256-XuRhRmeTXAplb14UwISyzaqEIrFeg8/aCdMxUccMUos=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  build-system = [ setuptools ];
+
+  env.VERSION = finalAttrs.version;
+
+  dependencies = [ requests ];
+
+  pythonImportsCheck = [ "tmb" ];
 
   # Project has no tests
   doCheck = false;
-  pythonImportsCheck = [ "tmb" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/alemuro/tmb";
+  meta = {
     description = "Python library that interacts with TMB API";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/alemuro/tmb";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

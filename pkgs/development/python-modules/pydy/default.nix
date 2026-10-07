@@ -1,41 +1,47 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
-, cython
-, numpy
-, scipy
-, sympy
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  numpy,
+  scipy,
+  sympy,
+  setuptools,
+  pytestCheckHook,
+  cython,
+  nix-update-script,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pydy";
-  version = "0.5.0";
+  version = "0.8.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "1b487a62b55a8c8664009b09bf789254b2c942cd704a380bedb1057418c94fa2";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-G3iqMzy/W3ctz/c4T3LqYyTTMVbly1GMkmMLi96mzMc=";
   };
 
-  checkInputs = [
-    nose
-    cython
-  ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     numpy
     scipy
     sympy
   ];
 
-  checkPhase = ''
-    nosetests
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    cython
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pydy" ];
+
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "Python tool kit for multi-body dynamics";
     homepage = "http://pydy.org";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ sigmanificient ];
   };
-}
+})

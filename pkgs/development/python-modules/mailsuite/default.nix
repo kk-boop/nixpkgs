@@ -1,39 +1,77 @@
-{ buildPythonPackage
-, fetchPypi
-, pythonOlder
-, lib
-
-# pythonPackages
-, dnspython
-, html2text
-, mail-parser
-, imapclient
+{
+  lib,
+  azure-identity,
+  authres,
+  buildPythonPackage,
+  cryptography,
+  dkimpy,
+  dnspython,
+  expiringdict,
+  fetchFromGitHub,
+  google-api-python-client,
+  google-auth,
+  google-auth-oauthlib,
+  hatchling,
+  html2text,
+  imapclient,
+  mail-parser,
+  msgraph-sdk,
+  publicsuffix2,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mailsuite";
-  version = "1.6.1";
+  version = "2.3.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "17bsnfjjzv8hx5h397p5pa92l6cqc53i0zjjz2p7bjj3xqzhs45a";
+  src = fetchFromGitHub {
+    owner = "seanthegeek";
+    repo = "mailsuite";
+    tag = finalAttrs.version;
+    hash = "sha256-idpgHGvUeg7QIrc9J6IHqcxvqLUcNQNLUSiixMovIbQ=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "mail-parser" ];
+
+  build-system = [ hatchling ];
+
+  dependencies = [
+    authres
+    cryptography
+    dkimpy
     dnspython
+    expiringdict
     html2text
     mail-parser
     imapclient
+    publicsuffix2
   ];
+
+  optional-dependencies = {
+    all = lib.concatAttrValues (lib.removeAttrs finalAttrs.passthru.optional-dependencies [ "all" ]);
+    gmail = [
+      google-api-python-client
+      google-auth
+      google-auth-oauthlib
+    ];
+    msgraph = [
+      azure-identity
+      msgraph-sdk
+    ];
+  };
 
   pythonImportsCheck = [ "mailsuite" ];
 
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
   meta = {
-    description = "A Python package to simplify receiving, parsing, and sending email";
+    description = "Python package to simplify receiving, parsing, and sending email";
     homepage = "https://seanthegeek.github.io/mailsuite/";
-    maintainers = with lib.maintainers; [ talyz ];
+    changelog = "https://github.com/seanthegeek/mailsuite/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ talyz ];
   };
-}
+})

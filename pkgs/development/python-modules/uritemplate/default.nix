@@ -1,26 +1,35 @@
-{ lib, buildPythonPackage, fetchPypi, simplejson, pytest, glibcLocales }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "uritemplate";
-  version = "3.0.1";
+  version = "4.2.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "5af8ad10cec94f215e3f48112de2022e1d5a37ed427fbd88652fa908f2ab7cae";
+    hash = "sha256-SAwu0YCHiVWGMyPuoxsO3maHld4YJhf++cbKCebsnQ4=";
   };
 
-  propagatedBuildInputs = [ simplejson ];
+  nativeBuildInputs = [ setuptools ];
 
-  checkInputs = [ pytest glibcLocales ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  checkPhase = ''
-    LC_ALL=en_US.UTF-8 py.test
-  '';
+  pythonImportsCheck = [ "uritemplate" ];
 
-  meta = with lib; {
+  meta = {
+    description = "Implementation of RFC 6570 URI templates";
     homepage = "https://github.com/python-hyper/uritemplate";
-    description = "URI template parsing for Humans";
-    license = with licenses; [ asl20 bsd3 ];
-    maintainers = with maintainers; [ matthiasbeyer ];
+    changelog = "https://github.com/python-hyper/uritemplate/blob/${version}/HISTORY.rst";
+    license = with lib.licenses; [
+      asl20
+      bsd3
+    ];
+    maintainers = with lib.maintainers; [ matthiasbeyer ];
   };
 }

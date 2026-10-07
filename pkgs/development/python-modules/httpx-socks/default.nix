@@ -1,57 +1,76 @@
-{ lib
-, async-timeout
-, buildPythonPackage
-, curio
-, fetchFromGitHub
-, flask
-, httpcore
-, httpx
-, pytest-asyncio
-, pytest-trio
-, pytestCheckHook
-, python-socks
-, pythonOlder
-, sniffio
-, trio
-, yarl
+{
+  lib,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flask,
+  httpcore,
+  httpx,
+  hypercorn,
+  pytest-asyncio,
+  pytest-trio,
+  pytestCheckHook,
+  python-socks,
+  setuptools,
+  starlette,
+  tiny-proxy,
+  trio,
+  trustme,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "httpx-socks";
-  version = "0.4.1";
-  disabled = pythonOlder "3.6";
+  version = "0.13.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "romis2012";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1rz69z5fcw7d5nzy5q2q0r9gxrsqijgpg70cnyr5br6xnfgy01ar";
+    repo = "httpx-socks";
+    tag = "v${version}";
+    hash = "sha256-sz7A72nvwy8P0VvVYUT2ZTGXXOe5u1eme7PLC38SIz8=";
   };
 
-  propagatedBuildInputs = [
-    async-timeout
-    curio
-    httpcore
+  build-system = [ setuptools ];
+
+  dependencies = [
     httpx
+    httpcore
     python-socks
-    sniffio
-    trio
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    asyncio = [ async-timeout ];
+    trio = [ trio ];
+  };
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
     flask
+    hypercorn
     pytest-asyncio
     pytest-trio
     pytestCheckHook
+    starlette
+    tiny-proxy
+    trustme
     yarl
   ];
 
   pythonImportsCheck = [ "httpx_socks" ];
 
-  meta = with lib; {
+  disabledTests = [
+    # Tests don't work in the sandbox
+    "test_proxy"
+    "test_secure_proxy"
+  ];
+
+  meta = {
     description = "Proxy (HTTP, SOCKS) transports for httpx";
     homepage = "https://github.com/romis2012/httpx-socks";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/romis2012/httpx-socks/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

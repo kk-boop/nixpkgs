@@ -1,48 +1,57 @@
-{ lib
-, asynctest
-, buildPythonPackage
-, fetchFromGitHub
-, pyserial
-, pyserial-asyncio
-, pyusb
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, zigpy }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  gpiozero,
+  mock,
+  pyusb,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
+  voluptuous,
+  zigpy,
+}:
 
 buildPythonPackage rec {
   pname = "zigpy-zigate";
-  version = "0.7.4";
-  # https://github.com/Martiusweb/asynctest/issues/152
-  # broken by upstream python bug with asynctest and
-  # is used exclusively by home-assistant with python 3.8
-  disabled = pythonOlder "3.8";
+  version = "0.14.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "zigpy";
     repo = "zigpy-zigate";
-    rev = version;
-    sha256 = "0xl8qgljvmypi602f52m89iv9pcrzsdal3jw619vrcavp40rc04d";
+    tag = version;
+    hash = "sha256-kimlUwwlecXIBxKkBUJC8JqzMdt6Swf5SuOypOnXZCM=";
   };
 
-  propagatedBuildInputs = [
-    pyserial
-    pyserial-asyncio
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "setuptools-git-versioning<2"' "" \
+      --replace-fail 'dynamic = ["version"]' 'version = "${version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    gpiozero
     pyusb
+    voluptuous
     zigpy
   ];
 
-  checkInputs = [
-    asynctest
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
 
-  meta = with lib; {
-    description = "A library which communicates with ZiGate radios for zigpy";
+  pythonImportsCheck = [ "zigpy_zigate" ];
+
+  meta = {
+    description = "Library which communicates with ZiGate radios for zigpy";
     homepage = "https://github.com/zigpy/zigpy-zigate";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ etu mvnetbiz ];
-    platforms = platforms.linux;
+    changelog = "https://github.com/zigpy/zigpy-zigate/releases/tag/${version}";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ mvnetbiz ];
+    platforms = lib.platforms.linux;
   };
 }

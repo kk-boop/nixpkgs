@@ -1,42 +1,57 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, python-dateutil
-, babelfish
-, rebulk
-, pythonOlder
-, importlib-resources
-, pytestCheckHook
-, pytest-mock
-, pytest-benchmark
-, pyyaml
+{
+  lib,
+  babelfish,
+  buildPythonPackage,
+  fetchPypi,
+  hatchling,
+  py,
+  pytest-benchmark,
+  pytest-mock,
+  pytestCheckHook,
+  python-dateutil,
+  pyyaml,
+  rebulk,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "guessit";
-  version = "3.4.3";
+  version = "4.4.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "731e96e6a1f3b065d05accc8c19f35d4485d880b77ab8dc4b262cc353df294f7";
+    pname = "guessit";
+    inherit (finalAttrs) version;
+    hash = "sha256-zKLBns2HLHXufry9wRB19a6ISILsCtZ/dCw9JfLUe+s=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
     rebulk
     babelfish
     python-dateutil
-  ] ++ lib.optionals (pythonOlder "3.9") [ importlib-resources ];
+  ];
 
-  checkInputs = [ pytestCheckHook pytest-mock pytest-benchmark pyyaml ];
+  nativeCheckInputs = [
+    py
+    pytestCheckHook
+    pytest-mock
+    pytest-benchmark
+    pyyaml
+  ];
 
-  pytestFlagsArray = [ "--benchmark-disable" ];
+  pytestFlags = [ "--benchmark-disable" ];
 
   pythonImportsCheck = [ "guessit" ];
 
   meta = {
-    homepage = "https://doc.guessit.io/";
-    description = "A Python library that extracts as much information as possible from a video filename";
-    changelog = "https://github.com/guessit-io/guessit/raw/v${version}/CHANGELOG.md";
+    description = "Python library that extracts as much information as possible from a video filename";
+    homepage = "https://guessit-io.github.io/guessit/";
+    changelog = "https://github.com/guessit-io/guessit/raw/v${finalAttrs.version}/CHANGELOG.md";
     license = lib.licenses.lgpl3Only;
+    maintainers = [ ];
+    mainProgram = "guessit";
   };
-}
+})

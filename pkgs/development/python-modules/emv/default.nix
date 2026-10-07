@@ -1,45 +1,58 @@
-{ lib, buildPythonPackage, fetchFromGitHub
-, click, enum-compat, pyscard, pycountry, terminaltables
-, pytestCheckHook, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromCodeberg,
+  click,
+  pyscard,
+  pycountry,
+  terminaltables,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "emv";
-  version = "1.0.13";
-  disabled = pythonOlder "3.4";
+  version = "1.0.14";
+  pyproject = true;
 
-  src = fetchFromGitHub {
+  src = fetchFromCodeberg {
     owner = "russss";
     repo = "python-emv";
-    rev = "v${version}";
-    hash = "sha256-Jobw8OyKMaLfVsvMadrUrg5BijFo9G6kjgjhGIV8H1M=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-MnaeQZ0rA3i0CoUA6HgJQpwk5yo4rm9e+pc5XzRd1eg=";
   };
 
-  postPatch = ''
-    # argparse is part of the standard libary since python 2.7/3.2
-    sed -i '/argparse==1.4.0/d' setup.py
+  pythonRelaxDeps = [
+    "click"
+    "pyscard"
+    "pycountry"
+    "terminaltables"
+  ];
 
-    substituteInPlace setup.py \
-      --replace "click==7.1.2" "click" \
-      --replace "pyscard==2.0.0" "pyscard"
-  '';
+  pythonRemoveDeps = [
+    "enum-compat"
+    "argparse"
+  ];
 
-  propagatedBuildInputs = [
-    enum-compat
+  build-system = [ setuptools ];
+
+  dependencies = [
     click
     pyscard
     pycountry
     terminaltables
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    homepage = "https://github.com/russss/python-emv";
+  pythonImportsCheck = [ "emv" ];
+
+  meta = {
     description = "Implementation of the EMV chip-and-pin smartcard protocol";
-    license = licenses.mit;
-    maintainers = with maintainers; [ lukegb ];
+    homepage = "https://codeberg.org/russss/python-emv/";
+    changelog = "https://codeberg.org/russss/python-emv/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ lukegb ];
+    mainProgram = "emvtool";
   };
-}
+})

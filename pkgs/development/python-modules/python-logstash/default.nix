@@ -1,21 +1,25 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+}:
 
 buildPythonPackage rec {
   pname = "python-logstash";
-  version = "0.4.6";
+  version = "0.4.8";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "13763yx0k655y0c8gxv7jj6cqp45zypx2fmnc56jnn9zz1fkx50h";
+    hash = "sha256-0E4c4R7MEH5KTzuAf8V9loEelkpVQIGzu7RHMvdO9fk=";
   };
 
   # no tests
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Python logging handler for Logstash";
     homepage = "https://github.com/vklochan/python-logstash";
-    maintainers = with maintainers; [ peterromfeldhk ];
-    license = licenses.mit;
+    license = lib.licenses.mit;
   };
 }

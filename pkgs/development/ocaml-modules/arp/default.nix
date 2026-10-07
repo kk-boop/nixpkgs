@@ -1,55 +1,55 @@
-{ lib, buildDunePackage, fetchurl
-, cstruct, ipaddr, macaddr, logs, lwt, duration
-, mirage-time, mirage-protocols, mirage-profile
-, alcotest, ethernet, fmt, mirage-vnetif, mirage-random
-, mirage-random-test, mirage-clock-unix, mirage-time-unix
-, bisect_ppx
+{
+  lib,
+  stdenv,
+  buildDunePackage,
+  fetchurl,
+  cstruct,
+  duration,
+  ethernet,
+  ipaddr,
+  logs,
+  lru,
+  lwt,
+  macaddr,
+  mirage-sleep,
+  alcotest,
+  bos,
+  mirage-vnetif,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "arp";
-  version = "2.3.2";
+  version = "4.1.0";
 
   src = fetchurl {
-    url = "https://github.com/mirage/${pname}/releases/download/v${version}/${pname}-v${version}.tbz";
-    sha256 = "1s09ibj9v6pp2ckn96wxmn3mjifcj97asls5xc4zg75pflk0grgz";
+    url = "https://github.com/mirage/arp/releases/download/v${finalAttrs.version}/arp-${finalAttrs.version}.tbz";
+    hash = "sha256-AvjxveUgSRBNhZQvCp1oa+JfEXSIronECk4nNos8hl0=";
   };
-
-  minimumOCamlVersion = "4.06";
-  useDune2 = true;
-
-  nativeBuildInputs = [
-    bisect_ppx
-  ];
 
   propagatedBuildInputs = [
     cstruct
     duration
+    ethernet
     ipaddr
     logs
+    lru
     lwt
     macaddr
-    mirage-profile
-    mirage-protocols
-    mirage-time
+    mirage-sleep
   ];
 
-  doCheck = true;
+  ## NOTE: As of 18 april 2023 and ARP version 3.0.0, tests fail on Darwin.
+  doCheck = !stdenv.hostPlatform.isDarwin;
   checkInputs = [
     alcotest
-    ethernet
-    mirage-clock-unix
-    mirage-profile
-    mirage-random
-    mirage-random-test
-    mirage-time-unix
+    bos
     mirage-vnetif
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Address Resolution Protocol purely in OCaml";
     homepage = "https://github.com/mirage/arp";
-    license = licenses.isc;
-    maintainers = with maintainers; [ sternenseemann ];
+    license = lib.licenses.isc;
+    maintainers = with lib.maintainers; [ sternenseemann ];
   };
-}
+})

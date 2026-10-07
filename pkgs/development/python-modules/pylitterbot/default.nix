@@ -1,47 +1,67 @@
-{ lib
-, authlib
-, buildPythonPackage
-, fetchFromGitHub
-, httpx
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, pytz
+{
+  lib,
+  aiohttp,
+  aiointercept,
+  aioresponses,
+  buildPythonPackage,
+  deepdiff,
+  fastmcp,
+  fetchFromGitHub,
+  hatchling,
+  pycognito,
+  pyjwt,
+  pytest-aiohttp,
+  pytest-cov-stub,
+  pytest-freezegun,
+  pytest-timeout,
+  pytestCheckHook,
+  uv-dynamic-versioning,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pylitterbot";
-  version = "2021.11.0";
-  format = "setuptools";
+  version = "2025.6.5";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  __darwinAllowLocalNetworking = true;
 
   src = fetchFromGitHub {
     owner = "natekspencer";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-HdIxi6RfdXBYEYFEcv/f9wAqKZg/MsEZd6mDYwE45to=";
+    repo = "pylitterbot";
+    tag = finalAttrs.version;
+    hash = "sha256-Rj7vRxrBnx0sghr4RO6KS1y5Sn21xe3ll0ai2hEY/eg=";
   };
 
-  propagatedBuildInputs = [
-    authlib
-    httpx
-    pytz
+  build-system = [
+    hatchling
+    uv-dynamic-versioning
   ];
 
-  checkInputs = [
-    pytest-asyncio
+  dependencies = [
+    aiointercept
+    aiohttp
+    deepdiff
+    fastmcp
+    pycognito
+    pyjwt
+  ];
+
+  nativeCheckInputs = [
+    aioresponses
+    pytest-aiohttp
+    pytest-cov-stub
+    pytest-freezegun
+    pytest-timeout
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "pylitterbot"
-  ];
+  pythonImportsCheck = [ "pylitterbot" ];
 
-  meta = with lib; {
-    description = "Python package for controlling a Litter-Robot";
+  meta = {
+    description = "Modulefor controlling a Litter-Robot";
     homepage = "https://github.com/natekspencer/pylitterbot";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/natekspencer/pylitterbot/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

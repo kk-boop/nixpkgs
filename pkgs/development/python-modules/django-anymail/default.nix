@@ -1,47 +1,82 @@
 {
-    lib,
-    buildPythonPackage,
-    fetchFromGitHub,
-    six,
-    requests,
-    django,
-    boto3,
-    python,
-    mock,
+  lib,
+  boto3,
+  buildPythonPackage,
+  cryptography,
+  django,
+  fetchFromGitHub,
+  hatchling,
+  idna,
+  mock,
+  pytest-django,
+  pytestCheckHook,
+  requests,
+  responses,
+  urllib3,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "django-anymail";
-  version = "8.4";
+  version = "15.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "anymail";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "08ac24hrafkk1jg3milfjky3qni1cz5qggp1rgzq9r7ina4akjma";
+    repo = "django-anymail";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Qlqg7nfhH3vDfbnxIyq6uLDWZfzmaKVX95XEXpSeel8=";
   };
 
-  propagatedBuildInputs = [
-    six
-    requests
+  build-system = [ hatchling ];
+
+  dependencies = [
     django
-    boto3
+    idna
+    requests
+    urllib3
   ];
 
-  checkInputs = [ mock ];
-  checkPhase = ''
-    substituteInPlace setup.py --replace "tests_require=[" "tests_require=[], #"
-    export CONTINUOUS_INTEGRATION=1
-    export ANYMAIL_SKIP_TESTS="sparkpost"
-    ${python.interpreter} setup.py test
+  optional-dependencies = {
+    amazon-ses = [ boto3 ];
+    postal = [ cryptography ];
+    sendgrid = [ cryptography ];
+    # not packaged
+    # resend = [ svix ];
+    # uts46 = [ uts46 ];
+  };
+
+  nativeCheckInputs = [
+    mock
+    responses
+    pytest-django
+    pytestCheckHook
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
+
+  disabledTestMarks = [ "live" ];
+
+  disabledTests = [
+    # misrecognized as a fixture due to function name starting with test_
+    "test_file_content"
+  ];
+
+  disabledTestPaths = [
+    # likely guessed mime type mismatch
+    "tests/test_resend_backend.py::ResendBackendStandardEmailTests::test_attachments"
+  ];
+
+  preCheck = ''
+    export CONTINOUS_INTEGRATION=1
+    export DJANGO_SETTINGS_MODULE=tests.test_settings.settings_${lib.versions.major django.version}_0
   '';
 
-  # this package allows multiple email backends
-  # sparkpost is missing because it's not packaged yet
-  meta = with lib; {
+  pythonImportsCheck = [ "anymail" ];
+
+  meta = {
     description = "Django email backends and webhooks for Mailgun";
     homepage = "https://github.com/anymail/django-anymail";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/anymail/django-anymail/blob/${finalAttrs.src.tag}/CHANGELOG.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ onny ];
   };
-}
+})

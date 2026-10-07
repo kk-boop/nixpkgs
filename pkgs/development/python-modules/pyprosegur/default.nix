@@ -1,25 +1,30 @@
-{ lib
-, aiohttp
-, backoff
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, pythonOlder
+{
+  lib,
+  aiofiles,
+  aiohttp,
+  backoff,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pyprosegur";
-  version = "0.0.5";
-  disabled = pythonOlder "3.7";
+  version = "0.0.14";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dgomes";
-    repo = pname;
-    rev = version;
-    sha256 = "0bpzxm8s548fw6j36brp7bcx9481x2hrypcw3yyg4ihsjhka5qln";
+    repo = "pyprosegur";
+    tag = version;
+    hash = "sha256-FMkz5zZ5+607gfmw4KRmCgfR+TJF2JGLRVEUzZAjTrc=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiofiles
     aiohttp
     backoff
     click
@@ -30,10 +35,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pyprosegur" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to communicate with Prosegur Residential Alarms";
     homepage = "https://github.com/dgomes/pyprosegur";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/dgomes/pyprosegur/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "pyprosegur";
   };
 }

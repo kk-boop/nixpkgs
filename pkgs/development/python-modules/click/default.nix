@@ -1,41 +1,66 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, importlib-metadata
-, locale
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  importlib-metadata,
+  pytestCheckHook,
+
+  # large-rebuild downstream dependencies and applications
+  flask,
+  black,
+  magic-wormhole,
+  mitmproxy,
+  typer,
+  flit-core,
 }:
 
 buildPythonPackage rec {
   pname = "click";
-  version = "8.0.3";
+  version = "8.3.3";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-QQ6TKwUPXu13PEzalN51lxyJzbMVWnKggxE5p55ey1s=";
+  src = fetchFromGitHub {
+    owner = "pallets";
+    repo = "click";
+    tag = version;
+    hash = "sha256-LcnAI4hyiuaJ4qnFnbAR5Cft/yvW5tAIjY6qc6K/Nrw=";
   };
 
-  postPatch = ''
-    substituteInPlace src/click/_unicodefun.py \
-      --replace '"locale"' "'${locale}/bin/locale'"
-  '';
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pytestFlags = [
+    "-Wignore::pytest.PytestRemovedIn10Warning"
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  disabledTests = [
+    # for some reason the tests fail to execute cat, even though they run with less just fine,
+    # even adding coreutils to nativeCheckInputs explicitly does not change anything
+    "test_echo_via_pager"
+    # test fails with filename normalization on zfs
+    "test_file_surrogates"
   ];
 
-  meta = with lib; {
+  passthru.tests = {
+    inherit
+      black
+      flask
+      magic-wormhole
+      mitmproxy
+      typer
+      ;
+  };
+
+  meta = {
+    changelog = "https://github.com/pallets/click/blob/${src.tag}/CHANGES.rst";
     homepage = "https://click.palletsprojects.com/";
     description = "Create beautiful command line interfaces in Python";
     longDescription = ''
       A Python package for creating beautiful command line interfaces in a
       composable way, with as little code as necessary.
     '';
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ nickcao ];
   };
 }

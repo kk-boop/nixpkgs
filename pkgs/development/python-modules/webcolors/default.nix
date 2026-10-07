@@ -1,30 +1,31 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, python
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  pdm-backend,
 }:
 
 buildPythonPackage rec {
   pname = "webcolors";
-  version = "1.11.1";
-  disabled = isPy27;
+  version = "25.10.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "76f360636957d1c976db7466bc71dcb713bb95ac8911944dffc55c01cb516de6";
+    hash = "sha256-YquuhlBPZtD2NkwqhSDeSgxHuAwD/DpfGBX+2+98Gb8=";
   };
 
-  propagatedBuildInputs = [ six ];
+  build-system = [ pdm-backend ];
 
-  checkPhase = ''
-    ${python.interpreter} -m unittest discover -s tests
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "webcolors" ];
 
   meta = {
     description = "Library for working with color names/values defined by the HTML and CSS specifications";
-    homepage = "https://bitbucket.org/ubernostrum/webcolors/overview/";
+    homepage = "https://github.com/ubernostrum/webcolors";
     license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ sigmanificient ];
   };
 }

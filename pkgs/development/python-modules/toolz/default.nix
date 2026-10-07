@@ -1,28 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "toolz";
-  version = "0.11.1";
+  version = "1.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1grz3zvw5ixwqqlbv0n7j11mlcxb66cirh5i9x9zw8kqy0hpk967";
+    hash = "sha256-J6XHcNBowRDZ7ZMj8k8VQ+g7LzAKaHt4kcGm1Wtpe1s=";
   };
 
-  checkInputs = [ nose ];
-
-  checkPhase = ''
-    nosetests toolz/tests
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"setuptools-git-versioning >=2.0",' "" \
+      --replace-fail 'dynamic = ["version"]' 'version = "${version}"'
   '';
 
-  meta = with lib; {
+  build-system = [
+    setuptools
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     homepage = "https://github.com/pytoolz/toolz";
+    changelog = "https://github.com/pytoolz/toolz/releases/tag/${version}";
     description = "List processing tools and functional utilities";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ fridh ];
+    license = lib.licenses.bsd3;
   };
 }

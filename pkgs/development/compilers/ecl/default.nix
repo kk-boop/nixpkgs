@@ -1,47 +1,59 @@
-{lib, stdenv, fetchurl, fetchpatch
-, libtool, autoconf, automake
-, texinfo
-, gmp, mpfr, libffi, makeWrapper
-, noUnicode ? false
-, gcc
-, threadSupport ? true
-, useBoehmgc ? false, boehmgc
+{
+  lib,
+  stdenv,
+  fetchurl,
+  fetchpatch,
+  libtool,
+  autoconf,
+  automake,
+  texinfo,
+  gmp,
+  mpfr,
+  libffi,
+  makeWrapper,
+  noUnicode ? false,
+  gcc,
+  clang,
+  threadSupport ? true,
+  useBoehmgc ? false,
+  boehmgc,
+  sbcl,
+  fixDarwinDylibNames,
 }:
+
 let
-  s = # Generated upstream information
-  rec {
-    baseName="ecl";
-    version="21.2.1";
-    name="${baseName}-${version}";
-    url="https://common-lisp.net/project/ecl/static/files/release/${name}.tgz";
-    sha256="000906nnq25177bgsfndiw3iqqgrjc9spk10hzk653sbz3f7anmi";
-  };
-  nativeBuildInputs = [
-    libtool autoconf automake texinfo makeWrapper
-  ];
-  propagatedBuildInputs = [
-    libffi gmp mpfr gcc
-    # replaces ecl's own gc which other packages can depend on, thus propagated
-  ] ++ lib.optionals useBoehmgc [
-    # replaces ecl's own gc which other packages can depend on, thus propagated
-    boehmgc
-  ];
+  cc = if stdenv.cc.isClang then clang else gcc;
 in
-stdenv.mkDerivation {
-  inherit (s) version;
-  pname = s.baseName;
-  inherit nativeBuildInputs propagatedBuildInputs;
+stdenv.mkDerivation rec {
+  pname = "ecl";
+  version = "26.5.5";
 
   src = fetchurl {
-    inherit (s) url sha256;
+    url = "https://common-lisp.net/project/ecl/static/files/release/ecl-${version}.tgz";
+    hash = "sha256-oBpbzajFtz5Z3aNJT9E+X+xdtqodrXgsPMO7V/FjNDU=";
   };
 
-  patches = [
-    # https://gitlab.com/embeddable-common-lisp/ecl/-/merge_requests/1
-    (fetchpatch {
-      url = "https://git.sagemath.org/sage.git/plain/build/pkgs/ecl/patches/write_error.patch?h=9.2";
-      sha256 = "0hfxacpgn4919hg0mn4wf4m8r7y592r4gw7aqfnva7sckxi6w089";
-    })
+  nativeBuildInputs = [
+    libtool
+    autoconf
+    automake
+    texinfo
+    makeWrapper
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    fixDarwinDylibNames
+  ];
+
+  propagatedBuildInputs = [
+    libffi
+    gmp
+    mpfr
+    cc
+    # replaces ecl's own gc which other packages can depend on, thus propagated
+  ]
+  ++ lib.optionals useBoehmgc [
+    # replaces ecl's own gc which other packages can depend on, thus propagated
+    boehmgc
   ];
 
   configureFlags = [
@@ -50,29 +62,40 @@ stdenv.mkDerivation {
     "--with-gmp-libdir=${lib.getLib gmp}/lib"
     "--with-libffi-incdir=${lib.getDev libffi}/include"
     "--with-libffi-libdir=${lib.getLib libffi}/lib"
-  ] ++ lib.optionals useBoehmgc [
+  ]
+  ++ lib.optionals useBoehmgc [
     "--with-libgc-incdir=${lib.getDev boehmgc}/include"
     "--with-libgc-libdir=${lib.getLib boehmgc}/lib"
-  ] ++ lib.optional (!noUnicode) "--enable-unicode";
+  ]
+  ++ lib.optional (!noUnicode) "--enable-unicode";
 
   hardeningDisable = [ "format" ];
+
+  # ECL’s ‘make check’ only works after install, making it a de-facto
+  # installCheck.
+  doInstallCheck = true;
+  installCheckTarget = "check";
 
   postInstall = ''
     sed -e 's/@[-a-zA-Z_]*@//g' -i $out/bin/ecl-config
     wrapProgram "$out/bin/ecl" --prefix PATH ':' "${
       lib.makeBinPath [
-        gcc                   # for the C compiler
-        gcc.bintools.bintools # for ar
+        cc # for the C compiler
+        cc.bintools.bintools # for ar
       ]
     }"
   '';
 
-  meta = with lib; {
+  # ECL is used as a bootstrap compiler for SBCL.
+  passthru.tests.sbcl = sbcl;
+
+  meta = {
     description = "Lisp implementation aiming to be small, fast and easy to embed";
     homepage = "https://common-lisp.net/project/ecl/";
-    license = licenses.mit ;
-    maintainers = [ maintainers.raskin ];
-    platforms = platforms.unix;
-    changelog = "https://gitlab.com/embeddable-common-lisp/ecl/-/raw/${s.version}/CHANGELOG";
+    license = lib.licenses.mit;
+    mainProgram = "ecl";
+    teams = [ lib.teams.lisp ];
+    platforms = lib.platforms.unix;
+    changelog = "https://gitlab.com/embeddable-common-lisp/ecl/-/raw/${version}/CHANGELOG";
   };
 }

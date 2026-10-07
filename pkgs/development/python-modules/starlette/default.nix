@@ -1,87 +1,73 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, aiofiles
-, anyio
-, contextlib2
-, graphene
-, itsdangerous
-, jinja2
-, python-multipart
-, pyyaml
-, requests
-, aiosqlite
-, databases
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, trio
-, typing-extensions
-, ApplicationServices
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  anyio,
+
+  # optional dependencies
+  itsdangerous,
+  jinja2,
+  python-multipart,
+  pyyaml,
+  httpx,
+  httpx2,
+
+  # tests
+  pytestCheckHook,
+  trio,
+
+  # reverse dependencies
+  fastapi,
 }:
 
 buildPythonPackage rec {
   pname = "starlette";
-  version = "0.16.0";
-  disabled = pythonOlder "3.6";
+  version = "1.3.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "encode";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-/NYhRRZdi6I7CtLCohAqK4prsSUayOxa6sBKIJhPv+w=";
+    owner = "Kludex";
+    repo = "starlette";
+    tag = version;
+    hash = "sha256-0eby4cDIU2bPUv+1qSTnZtfo4kkgMDIDYnZ9wp2wtoI=";
   };
 
-  postPatch = ''
-    # remove coverage arguments to pytest
-    sed -i '/--cov/d' setup.cfg
-  '';
+  build-system = [ hatchling ];
 
-  propagatedBuildInputs = [
-    aiofiles
-    anyio
-    graphene
+  dependencies = [ anyio ];
+
+  optional-dependencies.full = [
     itsdangerous
     jinja2
     python-multipart
     pyyaml
-    requests
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    typing-extensions
-  ] ++ lib.optionals (pythonOlder "3.7") [
-    contextlib2
-  ] ++ lib.optional stdenv.isDarwin [
-    ApplicationServices
+    httpx
+    httpx2
   ];
 
-  checkInputs = [
-    aiosqlite
-    databases
-    pytest-asyncio
+  nativeCheckInputs = [
     pytestCheckHook
     trio
-    typing-extensions
-  ];
-
-  disabledTestPaths = [
-    # fails to import graphql, but integrated graphql support is about to
-    # be removed in 0.15, see https://github.com/encode/starlette/pull/1135.
-    "tests/test_graphql.py"
-  ];
-
-  disabledTests = [
-    # asserts fail due to inclusion of br in Accept-Encoding
-    "test_websocket_headers"
-    "test_request_headers"
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   pythonImportsCheck = [ "starlette" ];
 
-  meta = with lib; {
+  passthru.tests = {
+    inherit fastapi;
+  };
+
+  meta = {
+    changelog = "https://github.com/Kludex/starlette/blob/${src.tag}/docs/release-notes.md";
+    downloadPage = "https://github.com/Kludex/starlette";
     homepage = "https://www.starlette.io/";
-    description = "The little ASGI framework that shines";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ wd15 ];
+    description = "Little ASGI framework that shines";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ wd15 ];
   };
 }

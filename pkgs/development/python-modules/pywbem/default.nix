@@ -1,17 +1,48 @@
-{ lib, buildPythonPackage, fetchPypi, libxml2
-, m2crypto, ply, pyyaml, six, pbr, pythonOlder, nocasedict, nocaselist, yamlloader, requests-mock
-, httpretty, lxml, mock, pytest, requests, decorator, unittest2
-, FormEncode, testfixtures, pytz
+{
+  lib,
+  buildPythonPackage,
+  decorator,
+  fetchPypi,
+  setuptools,
+  setuptools-scm,
+  formencode,
+  httpretty,
+  libxml2,
+  lxml,
+  mock,
+  nocasedict,
+  nocaselist,
+  pbr,
+  ply,
+  pytestCheckHook,
+  pytz,
+  pyyaml,
+  requests,
+  requests-mock,
+  six,
+  testfixtures,
+  yamlloader,
 }:
 
 buildPythonPackage rec {
   pname = "pywbem";
-  version = "1.3.0";
+  version = "1.9.1";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "5df0af28f81891a3914a12f3a30b11b1981f7b30e09c5a42c011797e7fce9b6a";
+    hash = "sha256-tTfr6DfE/W8ifHXdGWF14QW5X66a3PGfeQRXujV1M0M=";
   };
+
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools-scm>=9.2.0" "setuptools-scm"
+  '';
+
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
   propagatedBuildInputs = [
     mock
@@ -20,28 +51,35 @@ buildPythonPackage rec {
     pbr
     ply
     pyyaml
+    requests
     six
     yamlloader
-  ] ++ lib.optionals (pythonOlder "3.0") [ m2crypto ];
+  ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     decorator
-    FormEncode
+    formencode
     httpretty
     libxml2
     lxml
-    pytest
+    pytestCheckHook
     pytz
-    requests
     requests-mock
     testfixtures
-    unittest2
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pywbem" ];
+
+  disabledTestPaths = [
+    "tests/leaktest" # requires 'yagot'
+    "tests/end2endtest" # requires 'pytest_easy_server'
+  ];
+
+  meta = {
     description = "Support for the WBEM standard for systems management";
     homepage = "https://pywbem.github.io";
-    license = licenses.lgpl21Plus;
-    maintainers = with maintainers; [ peterhoeg ];
+    changelog = "https://github.com/pywbem/pywbem/blob/${version}/docs/changes.rst";
+    license = lib.licenses.lgpl21Plus;
+    maintainers = [ ];
   };
 }

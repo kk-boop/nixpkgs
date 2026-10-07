@@ -1,25 +1,40 @@
-{ lib, fetchPypi, buildPythonPackage, pythonOlder, aiohttp, python-socks, attrs }:
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchPypi,
+  python-socks,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "aiohttp-socks";
-  version = "0.6.0";
+  version = "0.12.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit version;
     pname = "aiohttp_socks";
-    sha256 = "04w010bvi719ifpc3sshav95k10hf9nq8czn9yglkj206yxcypdr";
+    hash = "sha256-PK+fWkFkYREi1BK8EbL5EU/SnIXhuie7OAYNPCNr3I0=";
   };
 
-  propagatedBuildInputs = [ aiohttp attrs python-socks ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiohttp
+    python-socks
+  ];
 
   # Checks needs internet access
   doCheck = false;
 
-  disabled = pythonOlder "3.5.3";
+  pythonImportsCheck = [ "aiohttp_socks" ];
 
   meta = {
     description = "SOCKS proxy connector for aiohttp";
-    license = lib.licenses.asl20;
     homepage = "https://github.com/romis2012/aiohttp-socks";
+    changelog = "https://github.com/romis2012/aiohttp-socks/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

@@ -1,22 +1,28 @@
-{ lib
-, python3
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  python3,
+  installShellFiles,
 }:
 
-python3.pkgs.buildPythonApplication rec {
+python3.pkgs.buildPythonApplication (finalAttrs: {
   pname = "homeassistant-cli";
-  version = "0.9.4";
+  version = "1.0.0";
+  pyproject = true;
 
-  src = python3.pkgs.fetchPypi {
-    inherit pname version;
-    sha256 = "03kiyqpp3zf8rg30d12h4fapihh0rqwpv5p8jfxb3iq0chfmjx2f";
+  src = fetchFromGitHub {
+    owner = "home-assistant-ecosystem";
+    repo = "home-assistant-cli";
+    tag = finalAttrs.version;
+    hash = "sha256-LF6JXELAP3Mvta3RuDUs4UiQ7ptNFh0vZmPh3ICJFRY=";
   };
 
-  postPatch = ''
-    # Ignore pinned versions
-    sed -i "s/'\(.*\)\(==\|>=\).*'/'\1'/g" setup.py
-  '';
+  pythonRelaxDeps = true;
 
-  propagatedBuildInputs = with python3.pkgs; [
+  build-system = with python3.pkgs; [ poetry-core ];
+
+  dependencies = with python3.pkgs; [
     aiohttp
     click
     click-log
@@ -30,24 +36,28 @@ python3.pkgs.buildPythonApplication rec {
     tabulate
   ];
 
-  # Completion needs to be ported to work with click > 8.0
-  # https://github.com/home-assistant-ecosystem/home-assistant-cli/issues/367
-  #postInstall = ''
-  #  mkdir -p "$out/share/bash-completion/completions" "$out/share/zsh/site-functions"
-  #  $out/bin/hass-cli completion bash > "$out/share/bash-completion/completions/hass-cli"
-  #  $out/bin/hass-cli completion zsh > "$out/share/zsh/site-functions/_hass-cli"
-  #'';
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd hass-cli \
+      --bash <(_HASS_CLI_COMPLETE=bash_source $out/bin/hass-cli) \
+      --fish <(_HASS_CLI_COMPLETE=fish_source $out/bin/hass-cli) \
+      --zsh <(_HASS_CLI_COMPLETE=zsh_source $out/bin/hass-cli)
+  '';
 
-  checkInputs = with python3.pkgs; [
+  nativeBuildInputs = [ installShellFiles ];
+
+  nativeCheckInputs = with python3.pkgs; [
     pytestCheckHook
     requests-mock
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "homeassistant_cli" ];
+
+  meta = {
     description = "Command-line tool for Home Assistant";
+    mainProgram = "hass-cli";
     homepage = "https://github.com/home-assistant-ecosystem/home-assistant-cli";
-    changelog = "https://github.com/home-assistant-ecosystem/home-assistant-cli/releases/tag/${version}";
-    license = licenses.asl20;
-    maintainers = teams.home-assistant.members;
+    changelog = "https://github.com/home-assistant-ecosystem/home-assistant-cli/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.home-assistant ];
   };
-}
+})

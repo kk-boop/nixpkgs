@@ -1,29 +1,33 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, python
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  setuptools-scm,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "isodate";
-  version = "0.6.0";
+  version = "0.7.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "2e364a3d5759479cdb2d37cce6b9376ea504db2ff90252a2e5b7cc89cc9ff2d8";
+    hash = "sha256-TNGqD0PKdvSmxsApKoX0CzXsLkPjFbWfBubTIXGpU+Y=";
   };
 
-  propagatedBuildInputs = [ six ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  checkPhase = ''
-    ${python.interpreter} -m unittest discover -s src/isodate/tests
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/gweis/isodate/blob/${version}/CHANGES.txt";
     description = "ISO 8601 date/time parser";
-    homepage = "http://cheeseshop.python.org/pypi/isodate";
-    license = licenses.bsd0;
+    homepage = "https://github.com/gweis/isodate/";
+    license = lib.licenses.bsd0;
   };
-
 }

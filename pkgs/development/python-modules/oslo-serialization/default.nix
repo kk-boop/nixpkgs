@@ -1,46 +1,53 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, msgpack
-, oslo-utils
-, oslotest
-, pbr
-, pytz
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  msgpack,
+  oslo-utils,
+  oslotest,
+  pbr,
+  setuptools,
+  stestr,
 }:
 
 buildPythonPackage rec {
   pname = "oslo-serialization";
-  version = "4.2.0";
+  version = "5.11.0";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "oslo.serialization";
+    pname = "oslo_serialization";
     inherit version;
-    sha256 = "3007e1b017ad3754cce54def894054cbcd05887e85928556657434b0fc7e4d83";
+    hash = "sha256-gyboWoCFbBBoAHQj/Pb+Kd0v5Xoy9dh//wEgtVW0tnw=";
   };
 
-  postPatch = ''
-    # only a small portion of the listed packages are actually needed for running the tests
-    # so instead of removing them one by one remove everything
-    rm test-requirements.txt
-  '';
+  build-system = [
+    pbr
+    setuptools
+  ];
 
-  nativeBuildInputs = [ pbr ];
+  dependencies = [
+    msgpack
+    oslo-utils
+  ];
 
-  propagatedBuildInputs = [ msgpack oslo-utils pytz ];
-
-  checkInputs = [ oslotest stestr ];
+  nativeCheckInputs = [
+    oslotest
+    stestr
+  ];
 
   checkPhase = ''
+    runHook preCheck
     stestr run
+    runHook postCheck
   '';
 
   pythonImportsCheck = [ "oslo_serialization" ];
 
-  meta = with lib; {
+  meta = {
     description = "Oslo Serialization library";
     homepage = "https://github.com/openstack/oslo.serialization";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
 }

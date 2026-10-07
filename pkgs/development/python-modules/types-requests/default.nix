@@ -1,29 +1,39 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  types-urllib3,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "types-requests";
-  version = "2.26.2";
-  format = "setuptools";
+  version = "2.32.4.20260107";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "0e22d9cdeff4c3eb068eb883d59b127c98d80525f3d0412a1c4499c6ae1f711e";
+    pname = "types_requests";
+    inherit version;
+    hash = "sha256-AYoRrBWPgBv6hIV93sFlB1Djk9+KAEqKmuKpvsb8sk8=";
   };
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    types-urllib3
+    urllib3
+  ];
 
   # Module doesn't have tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "requests-stubs"
-  ];
+  pythonImportsCheck = [ "requests-stubs" ];
 
-  meta = with lib; {
+  meta = {
     description = "Typing stubs for requests";
     homepage = "https://github.com/python/typeshed";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

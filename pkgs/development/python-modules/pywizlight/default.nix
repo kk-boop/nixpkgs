@@ -1,36 +1,35 @@
-{ lib
-, asyncio-dgram
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pywizlight";
-  version = "0.4.16";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "0.6.6";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sbidy";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-Da5hkmzGJtfqiDPV9X02opv54Ry6sGiSbDnej9a2QDA=";
+    repo = "pywizlight";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-rfrmsfotCHqwKUiqC0NO7kvv/oKODwxZi4AjvJQCXlM=";
   };
 
-  propagatedBuildInputs = [
-    asyncio-dgram
-    click
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ click ];
+
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
+
+  pytestFlags = [ "--asyncio-mode=auto" ];
 
   disabledTests = [
     # Tests requires network features (e. g., discovery testing)
@@ -41,15 +40,14 @@ buildPythonPackage rec {
     "test_error_PilotBuilder_cold_white_lower"
   ];
 
-  pythonImportsCheck = [
-    "pywizlight"
-  ];
+  pythonImportsCheck = [ "pywizlight" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python connector for WiZ light bulbs";
     homepage = "https://github.com/sbidy/pywizlight";
-    changelog = "https://github.com/sbidy/pywizlight/releases/tag/v${version}";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/sbidy/pywizlight/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "wizlight";
   };
-}
+})

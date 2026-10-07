@@ -1,27 +1,36 @@
-{ lib, buildPythonPackage, fetchPypi, isPy3k, funcsigs, pytest, numpy }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  hatchling,
+  numpy,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
-  version = "1.3.0";
   pname = "mockito";
+  version = "1.5.5";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "5d41a5f6ec0b8fc32b6d796480d4849ee5fb0ac75d12f13862f1622684f5f578";
+    hash = "sha256-SYJuOQHcgm0CBOk7Ftzhxh3enTqU6tycIJqw4TAoM5M=";
   };
 
-  propagatedBuildInputs = lib.optionals (!isPy3k) [ funcsigs ];
-  checkInputs = [ pytest numpy ];
+  nativeBuildInputs = [ hatchling ];
 
-  # tests are no longer packaged in pypi tarball
-  doCheck = false;
-  checkPhase = ''
-    pytest
-  '';
+  nativeCheckInputs = [
+    numpy
+    pytestCheckHook
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "mockito" ];
+
+  meta = {
     description = "Spying framework";
     homepage = "https://github.com/kaste/mockito-python";
-    license = licenses.mit;
-    maintainers = [ maintainers.marsam ];
+    changelog = "https://github.com/kaste/mockito-python/blob/${version}/CHANGES.txt";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

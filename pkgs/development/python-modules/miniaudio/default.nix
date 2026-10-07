@@ -1,37 +1,40 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, cffi
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  cffi,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "miniaudio";
-  version = "1.45";
-
-  disabled = pythonOlder "3.6";
+  version = "1.71";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "irmen";
     repo = "pyminiaudio";
-    rev = "v${version}";
-    sha256 = "1yx4n4zax103fmjzdiqzw37zibsh68b2p2l5qvgcnx2zrrjd31yl";
+    tag = "v${version}";
+    hash = "sha256-fBdRricV0eqQknOQInB3cj8reZGKS9hrJTMF1ILASpY=";
   };
 
-  propagatedNativeBuildInputs = [ cffi ];
-  propagatedBuildInputs = [ cffi ];
+  # TODO: Properly unvendor miniaudio c library
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  build-system = [ setuptools ];
+
+  propagatedNativeBuildInputs = [ cffi ];
+  dependencies = [ cffi ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "miniaudio" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/irmen/pyminiaudio/releases/tag/v${version}";
     description = "Python bindings for the miniaudio library and its decoders";
     homepage = "https://github.com/irmen/pyminiaudio";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

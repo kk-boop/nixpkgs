@@ -1,77 +1,92 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, pytestCheckHook
-, aiofiles
-, cbor2
-, ddt
-, gunicorn
-, httpx
-, hypercorn
-, jsonschema
-, msgpack
-, mujson
-, nose
-, orjson
-, pecan
-, pytest-asyncio
-, python-mimeparse
-, pyyaml
-, rapidjson
-, requests
-, testtools
-, ujson
-, uvicorn
-, websockets
+{
+  lib,
+  buildPythonPackage,
+  pythonAtLeast,
+  isPyPy,
+  fetchFromGitHub,
+
+  # build
+  cython,
+  setuptools,
+
+  # tests
+  aiofiles,
+  cbor2,
+  httpx,
+  msgpack,
+  mujson,
+  orjson,
+  pytest7CheckHook,
+  pyyaml,
+  rapidjson,
+  requests,
+  ujson,
+  uvicorn,
+  websockets,
 }:
 
 buildPythonPackage rec {
   pname = "falcon";
-  version = "3.0.1";
-  format = "pyproject";
-  disabled = pythonOlder "3.5";
+  version = "4.3.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-xB2E2zJYgahw6LcSnV7P2XL6QyPPd7cRmh0qIZZu5oE=";
+  src = fetchFromGitHub {
+    owner = "falconry";
+    repo = "falcon";
+    tag = version;
+    hash = "sha256-f+UoGYyrg8OZow4qONqzXuDVnrZalqUNDyavDoQ7QHE=";
   };
 
-  checkInputs = [
-    aiofiles
-    cbor2
-    ddt
-    gunicorn
-    httpx
-    hypercorn
-    jsonschema
-    msgpack
-    mujson
-    nose
-    orjson
-    pecan
-    pytest-asyncio
-    pytestCheckHook
-    python-mimeparse
+  build-system = [ setuptools ] ++ lib.optionals (!isPyPy) [ cython ];
+
+  __darwinAllowLocalNetworking = true;
+
+  preCheck = ''
+    export HOME=$TMPDIR
+    cp -R tests examples $TMPDIR
+    pushd $TMPDIR
+  '';
+
+  postCheck = ''
+    popd
+  '';
+
+  nativeCheckInputs = [
+    # https://github.com/falconry/falcon/blob/master/requirements/tests
+    pytest7CheckHook
     pyyaml
-    rapidjson
     requests
-    testtools
-    ujson
+    rapidjson
+    orjson
+
+    # ASGI specific
+    aiofiles
+    httpx
     uvicorn
     websockets
+
+    # handler specific
+    cbor2
+    msgpack
+    mujson
+    ujson
   ];
+
+  enabledTestPaths = [ "tests" ];
 
   disabledTestPaths = [
-    # missing optional nuts package
-    "falcon/bench/nuts/nuts/tests/test_functional.py"
+    # needs a running server
+    "tests/asgi/test_asgi_servers.py"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.12") [
+    # ModuleNotFoundError: No module named 'distutils'
+    "tests/asgi/test_cythonized_asgi.py"
   ];
 
-  meta = with lib; {
-    description = "An unladen web framework for building APIs and app backends";
+  meta = {
+    changelog = "https://falcon.readthedocs.io/en/stable/changes/${src.tag}.html";
+    description = "Ultra-reliable, fast ASGI+WSGI framework for building data plane APIs at scale";
     homepage = "https://falconframework.org/";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ desiderius ];
+    license = lib.licenses.asl20;
   };
-
 }

@@ -1,41 +1,40 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, webencodings
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flit-core,
+  webencodings,
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "tinycss2";
-  version = "1.1.0";
-  disabled = pythonOlder "3.5";
-  format = "flit";
+  version = "1.5.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "kozea";
     repo = "tinycss2";
-    rev = "v${version}";
+    tag = "v${version}";
     # for tests
     fetchSubmodules = true;
-    sha256 = "sha256-WA88EYolL76WqeA1UKR3Sfw11j8NuOGOxPezujYizH8=";
+    hash = "sha256-ZVmdHrqfF5fvBvHLaG2B4m1zek4wfEYArkntWzOqhfM=";
   };
 
-  propagatedBuildInputs = [ webencodings ];
+  build-system = [ flit-core ];
 
-  checkInputs = [
+  dependencies = [ webencodings ];
+
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace "'pytest-cov', 'pytest-flake8', 'pytest-isort', 'coverage[toml]'" "" \
-      --replace "--isort --flake8 --cov" ""
-  '';
-
-  meta = with lib; {
+  meta = {
     description = "Low-level CSS parser for Python";
     homepage = "https://github.com/Kozea/tinycss2";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ onny ];
   };
 }

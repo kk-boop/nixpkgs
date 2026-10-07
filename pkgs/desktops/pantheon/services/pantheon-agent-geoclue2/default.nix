@@ -1,34 +1,30 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, pkg-config
-, meson
-, ninja
-, vala
-, glib
-, gtk3
-, libgee
-, desktop-file-utils
-, geoclue2
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  pkg-config,
+  meson,
+  ninja,
+  vala,
+  glib,
+  gtk3,
+  libgee,
+  desktop-file-utils,
+  geoclue2,
+  granite,
+  wrapGAppsHook3,
 }:
 
 stdenv.mkDerivation rec {
   pname = "pantheon-agent-geoclue2";
-  version = "1.0.5";
+  version = "1.0.6";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
+    repo = "pantheon-agent-geoclue2";
     rev = version;
-    sha256 = "0hx3sky0vd2vshkscy3w5x3s18gd45cfqh510xhbmvc0sa32q9gd";
-  };
-
-  passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    sha256 = "sha256-DvE0/bR4mVfqCw/c/1h75M8DfCiNPZ2h6Jl6ySk1qxs=";
   };
 
   nativeBuildInputs = [
@@ -37,11 +33,12 @@ stdenv.mkDerivation rec {
     ninja
     pkg-config
     vala
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
 
   buildInputs = [
     geoclue2
+    granite
     gtk3
     libgee
   ];
@@ -51,11 +48,15 @@ stdenv.mkDerivation rec {
     ${glib.dev}/bin/glib-compile-schemas $out/share/glib-2.0/schemas
   '';
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Pantheon Geoclue2 Agent";
     homepage = "https://github.com/elementary/pantheon-agent-geoclue2";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

@@ -1,31 +1,52 @@
-{ lib, stdenv, fetchFromGitHub, pkg-config
-, libelf, zlib
-, fetchpatch
+{
+  fetchFromGitHub,
+  elfutils,
+  pkg-config,
+  stdenv,
+  zlib,
+  lib,
+
+  # for passthru.tests
+  knot-dns,
+  nixosTests,
+  systemd,
+  tracee,
 }:
 
-with builtins;
-
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "libbpf";
-  version = "0.6.0";
+  version = "1.7.0";
 
   src = fetchFromGitHub {
-    owner  = "libbpf";
-    repo   = "libbpf";
-    rev    = "v${version}";
-    sha256 = "sha256-p9wUDC7r6+ElbheNkTkZW4eMNAvPbvpUyQjTjCE34ck=";
+    owner = "libbpf";
+    repo = "libbpf";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-F92msxkYp4yZA3qUoSwS5GKUhcEO6DrYNln7w6U+jt0=";
   };
 
   nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ libelf zlib ];
+  buildInputs = [
+    elfutils
+    zlib
+  ];
 
-  sourceRoot = "source/src";
+  strictDeps = true;
+
   enableParallelBuilding = true;
-  makeFlags = [ "PREFIX=$(out)" ];
+  makeFlags = [
+    "PREFIX=$(out)"
+    "--directory=src"
+  ];
+
+  passthru.tests = {
+    inherit knot-dns tracee;
+    bpf = nixosTests.bpf;
+    systemd = systemd.override { withLibBPF = true; };
+  };
 
   postInstall = ''
     # install linux's libbpf-compatible linux/btf.h
-    install -Dm444 ../include/uapi/linux/btf.h -t $out/include/linux
+    install -Dm444 include/uapi/linux/*.h -t $out/include/linux
   '';
 
   # FIXME: Multi-output requires some fixes to the way the pkg-config file is
@@ -34,11 +55,22 @@ stdenv.mkDerivation rec {
 
   # outputs = [ "out" "dev" ];
 
-  meta = with lib; {
-    description = "Upstream mirror of libbpf";
-    homepage    = "https://github.com/libbpf/libbpf";
-    license     = with licenses; [ lgpl21 /* or */ bsd2 ];
-    maintainers = with maintainers; [ thoughtpolice vcunat saschagrunert martinetd ];
-    platforms   = platforms.linux;
+  __structuredAttrs = true;
+
+  meta = {
+    description = "Library for loading eBPF programs and reading and manipulating eBPF objects from user-space";
+    homepage = "https://github.com/libbpf/libbpf";
+    license = with lib.licenses; [
+      lgpl21 # or
+      bsd2
+    ];
+    maintainers = with lib.maintainers; [
+      thoughtpolice
+      vcunat
+      saschagrunert
+      martinetd
+    ];
+    platforms = lib.platforms.linux;
+    identifiers.cpeParts = lib.meta.cpeFullVersionWithVendor "libbpf_project" finalAttrs.version;
   };
-}
+})

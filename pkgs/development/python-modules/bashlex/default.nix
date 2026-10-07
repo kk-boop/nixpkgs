@@ -1,40 +1,42 @@
-{ enum-compat
-, lib
-, buildPythonPackage
-, fetchFromGitHub
-, nose
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  python,
+  setuptools,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "bashlex";
-  version = "0.15";
+  version = "0.18";
+
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "idank";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-kKVorAIKlyC9vUzLOlaZ/JrG1kBBRIvLwBmHNj9nx84=";
+    repo = "bashlex";
+    tag = finalAttrs.version;
+    hash = "sha256-ddZN91H95RiTLXx4lpES1Dmz7nNsSVUeuFuOEpJ7LQI=";
   };
 
-  checkInputs = [ nose ];
-  propagatedBuildInputs = [ enum-compat ];
+  build-system = [ setuptools ];
 
   # workaround https://github.com/idank/bashlex/issues/51
   preBuild = ''
-    ${python.interpreter} -c 'import bashlex'
+    ${python.pythonOnBuildForHost.interpreter} -c 'import bashlex'
   '';
 
-  checkPhase = ''
-    ${python.interpreter} -m nose --with-doctest
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "bashlex" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python parser for bash";
-    license = licenses.gpl3Plus;
+    license = lib.licenses.gpl3Plus;
     homepage = "https://github.com/idank/bashlex";
-    maintainers = with maintainers; [ multun ];
+    maintainers = with lib.maintainers; [ multun ];
   };
-}
+})

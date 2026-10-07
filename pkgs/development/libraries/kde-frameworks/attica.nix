@@ -1,8 +1,19 @@
-{ mkDerivation, extra-cmake-modules, qtbase }:
+{
+  mkDerivation,
+  cmake,
+  extra-cmake-modules,
+  qtbase,
+}:
 
 mkDerivation {
-  name = "attica";
-  nativeBuildInputs = [ extra-cmake-modules ];
+  pname = "attica";
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+  ];
   buildInputs = [ qtbase ];
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 }

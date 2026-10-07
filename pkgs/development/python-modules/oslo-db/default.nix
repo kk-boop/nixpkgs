@@ -1,57 +1,74 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, alembic
-, oslo-config
-, oslo-context
-, oslo-utils
-, oslotest
-, pbr
-, sqlalchemy
-, sqlalchemy-migrate
-, stestr
-, testresources
-, testscenarios
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  aiosqlite,
+  alembic,
+  debtcollector,
+  oslo-config,
+  oslo-context,
+  oslo-i18n,
+  oslo-utils,
+  oslotest,
+  pbr,
+  psycopg2,
+  setuptools,
+  sqlalchemy,
+  stevedore,
+  stestr,
+  testresources,
+  testscenarios,
 }:
 
 buildPythonPackage rec {
   pname = "oslo-db";
-  version = "11.1.0";
+  version = "18.1.1";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "oslo.db";
+    pname = "oslo_db";
     inherit version;
-    sha256 = "8469c54544f1c0d7ac0a998477033eab13733b186d159554311c6132b43862e9";
+    hash = "sha256-Ujm6BZuUw4HGG1q+YHrc0V6u6N8RXerduKNtyzZuRPo=";
   };
 
-  nativeBuildInputs = [ pbr ];
+  build-system = [
+    pbr
+    setuptools
+  ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     alembic
+    debtcollector
     oslo-config
-    oslo-context
+    oslo-i18n
     oslo-utils
     sqlalchemy
-    sqlalchemy-migrate
+    stevedore
+  ]
+  ++ sqlalchemy.optional-dependencies.asyncio;
+
+  nativeCheckInputs = [
+    aiosqlite
+    oslo-context
+    oslotest
+    stestr
+    psycopg2
     testresources
     testscenarios
   ];
 
-  checkInputs = [
-    oslotest
-    stestr
-  ];
-
   checkPhase = ''
+    runHook preCheck
     stestr run
+    runHook postCheck
   '';
 
   pythonImportsCheck = [ "oslo_db" ];
 
-  meta = with lib; {
+  meta = {
     description = "Oslo Database library";
     homepage = "https://github.com/openstack/oslo.db";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
 }

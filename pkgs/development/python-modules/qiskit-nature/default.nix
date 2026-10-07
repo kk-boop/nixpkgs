@@ -1,80 +1,80 @@
-{ lib
-, pythonOlder
-, buildPythonPackage
-, fetchFromGitHub
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
   # Python Inputs
-, h5py
-, numpy
-, psutil
-, qiskit-terra
-, retworkx
-, scikit-learn
-, scipy
-, withPyscf ? false
-, pyscf
+  h5py,
+  numpy,
+  psutil,
+  qiskit,
+  rustworkx,
+  scikit-learn,
+  scipy,
+  withPyscf ? false,
+  pyscf,
   # Check Inputs
-, pytestCheckHook
-, ddt
-, pylatexenc
+  pytestCheckHook,
+  ddt,
+  pylatexenc,
+  qiskit-aer,
 }:
 
 buildPythonPackage rec {
   pname = "qiskit-nature";
-  version = "0.2.2";
-
-  disabled = pythonOlder "3.6";
+  version = "0.7.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "qiskit";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-nQbvH911Gt4KddG23qwmiXfRJTWwVEsrzPvuTQfy4FY=";
+    owner = "Qiskit";
+    repo = "qiskit-nature";
+    tag = version;
+    hash = "sha256-SVzg3McB885RMyAp90Kr6/iVKw3Su9ucTob2jBckBo0=";
   };
 
-  postPatch = ''
-    substituteInPlace requirements.txt --replace "h5py<3.3" "h5py"
-  '';
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [
     h5py
     numpy
     psutil
-    qiskit-terra
-    retworkx
+    qiskit
+    rustworkx
     scikit-learn
     scipy
-  ] ++ lib.optional withPyscf pyscf;
+  ]
+  ++ lib.optional withPyscf pyscf;
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     ddt
     pylatexenc
+    qiskit-aer
   ];
 
   pythonImportsCheck = [ "qiskit_nature" ];
 
-  pytestFlagsArray = [
-    "--durations=10"
-  ] ++ lib.optionals (!withPyscf) [
-    "--ignore=test/algorithms/excited_state_solvers/test_excited_states_eigensolver.py"
-  ];
+  pytestFlags = [ "--durations=10" ];
 
   disabledTests = [
-    # small math error < 0.05 (< 9e-6 %)
-    "test_vqe_uvccsd_factory"
-    # unsure of failure reason. Might be related to recent cvxpy update?
-    "test_two_qubit_reduction"
-  ] ++ lib.optionals (!withPyscf) [
-    "test_h2_bopes_sampler"
-    "test_potential_interface"
+    "test_two_qubit_reduction" # failure cause unclear
   ];
 
-  meta = with lib; {
+  meta = {
+    # broken because it depends on qiskit-algorithms which is not yet packaged in nixpkgs
+    broken = true;
     description = "Software for developing quantum computing programs";
     homepage = "https://qiskit.org";
-    downloadPage = "https://github.com/QISKit/qiskit-optimization/releases";
+    downloadPage = "https://github.com/QISKit/qiskit-nature/releases";
     changelog = "https://qiskit.org/documentation/release_notes.html";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ drewrisinger ];
+    sourceProvenance = with lib.sourceTypes; [
+      fromSource
+      binaryNativeCode # drivers/gaussiand/gauopen/*.so
+    ];
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

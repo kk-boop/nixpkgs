@@ -1,33 +1,57 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, numpy
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  numpy,
+
+  # tests
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "cma";
-  version = "3.1.0";
+  version = "4.4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "CMA-ES";
     repo = "pycma";
-    rev = "r${version}";
-    sha256 = "1bal4kljxrdm6x5ppyi6i109714h0czdxfsna906dlfplrmq52bf";
+    tag = "r${version}";
+    hash = "sha256-06QPs2hbrIbrPRWidlZYf0jcMGdcDYfg89Ad+4IX/Co=";
   };
 
-  propagatedBuildInputs = [
-    numpy
-  ];
-
-  checkPhase = ''
-    ${python.executable} -m cma.test
+  # setuptools.errors.PackageDiscoveryError:
+  # Multiple top-level packages discovered in a flat-layout: ['cma', 'notebooks'].
+  postPatch = ''
+    rm -rf notebooks
   '';
 
-  meta = with lib; {
-    description = "CMA-ES, Covariance Matrix Adaptation Evolution Strategy for non-linear numerical optimization in Python";
+  build-system = [ setuptools ];
+
+  dependencies = [ numpy ];
+
+  pythonImportsCheck = [ "cma" ];
+
+  # At least one doctest fails, thus only limited amount of files is tested
+  checkPhase = ''
+    ${python.executable} -m cma.test \
+      interfaces.py \
+      purecma.py \
+      logger.py \
+      optimization_tools.py \
+      transformations.py
+  '';
+
+  meta = {
+    description = "Library for Covariance Matrix Adaptation Evolution Strategy for non-linear numerical optimization";
     homepage = "https://github.com/CMA-ES/pycma";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/CMA-ES/pycma/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

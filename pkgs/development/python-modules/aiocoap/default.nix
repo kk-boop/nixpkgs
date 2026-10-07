@@ -1,32 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pygments
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  cbor-diag,
+  cbor2,
+  cryptography,
+  dtlssocket,
+  fetchFromGitHub,
+  filelock,
+  ge25519,
+  pygments,
+  pytestCheckHook,
+  setuptools,
+  termcolor,
+  websockets,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiocoap";
-  version = "0.4.3";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "0.4.17";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "chrysn";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-fTRDx9VEXDoMKM78YYL+mBEdvhbLtHiHdo66kwRnNhA=";
+    repo = "aiocoap";
+    tag = finalAttrs.version;
+    hash = "sha256-l9MChfvBTJn/ABTqrw4i+YUNGJnDZmOJS/kumImaa/s=";
   };
 
-  propagatedBuildInputs = [
-    pygments
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  optional-dependencies = {
+    oscore = [
+      cbor2
+      cryptography
+      filelock
+      ge25519
+    ];
+    tinydtls = [ dtlssocket ];
+    ws = [ websockets ];
+    prettyprint = [
+      termcolor
+      cbor2
+      pygments
+      cbor-diag
+    ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   disabledTestPaths = [
     # Don't test the plugins
@@ -38,16 +58,20 @@ buildPythonPackage rec {
   disabledTests = [
     # Communication is not properly mocked
     "test_uri_parser"
+    # Doctest
+    "test_001"
+    # CLI test
+    "test_help"
+    "test_blame"
   ];
 
-  pythonImportsCheck = [
-    "aiocoap"
-  ];
+  pythonImportsCheck = [ "aiocoap" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python CoAP library";
     homepage = "https://aiocoap.readthedocs.io/";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/chrysn/aiocoap/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

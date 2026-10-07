@@ -1,41 +1,43 @@
-{ lib, stdenv, fetchFromGitHub, kernel, bc }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  bc,
+}:
 
 stdenv.mkDerivation {
   pname = "rtl8188eus-aircrack";
-  version = "${kernel.version}-unstable-2021-05-04";
+  version = "${kernel.version}-unstable-2026-08-18";
 
   src = fetchFromGitHub {
-    owner = "aircrack-ng";
+    owner = "gglluukk";
     repo = "rtl8188eus";
-    rev = "6146193406b62e942d13d4d43580ed94ac70c218";
-    sha256 = "sha256-85STELbFB7QmTaM8GvJNlWvAg6KPAXeYRiMb4cGA6RY=";
+    rev = "f48878a7a66b1281e6eab0cf2b55e7149510daf2";
+    hash = "sha256-uothRY0G4FFKYDDhzoHTWnlLcuULBNWOz22Bps7yujw=";
   };
-
-  nativeBuildInputs = [ bc ];
-
-  buildInputs = kernel.moduleBuildDependencies;
-
-  hardeningDisable = [ "pic" ];
 
   prePatch = ''
     substituteInPlace ./Makefile \
-      --replace /lib/modules/ "${kernel.dev}/lib/modules/" \
-      --replace '$(shell uname -r)' "${kernel.modDirVersion}" \
-      --replace /sbin/depmod \# \
-      --replace '$(MODDESTDIR)' "$out/lib/modules/${kernel.modDirVersion}/kernel/net/wireless/"
+      --replace-fail /lib/modules/ "${kernel.dev}/lib/modules/" \
+      --replace-fail /sbin/depmod \# \
+      --replace-fail '$(MODDESTDIR)' "$out/lib/modules/${kernel.modDirVersion}/kernel/net/wireless/"
   '';
+
+  hardeningDisable = [ "pic" ];
+
+  enableParallelBuilding = true;
+
+  nativeBuildInputs = [ bc ] ++ kernel.moduleBuildDependencies;
 
   preInstall = ''
     mkdir -p "$out/lib/modules/${kernel.modDirVersion}/kernel/net/wireless/"
   '';
 
-  enableParallelBuilding = true;
-
-  meta = with lib; {
+  meta = {
     description = "RealTek RTL8188eus WiFi driver with monitor mode & frame injection support";
-    homepage = "https://github.com/aircrack-ng/rtl8188eus";
-    license = licenses.gpl2Only;
-    maintainers = with maintainers; [ fortuneteller2k ];
-    broken = kernel.kernelAtLeast "5.15" || kernel.isHardened;
+    homepage = "https://github.com/gglluukk/rtl8188eus";
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ moni ];
   };
 }

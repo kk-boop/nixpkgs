@@ -1,40 +1,57 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, click
-, cloudpickle
-, dask
-, msgpack
-, psutil
-, sortedcontainers
-, tblib
-, toolz
-, tornado
-, zict
-, pyyaml
-, mpi4py
-, bokeh
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  click,
+  cloudpickle,
+  dask,
+  jinja2,
+  locket,
+  msgpack,
+  packaging,
+  psutil,
+  pyyaml,
+  sortedcontainers,
+  tblib,
+  toolz,
+  tornado,
+  zict,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "distributed";
-  version = "2021.10.0";
-  disabled = pythonOlder "3.6";
+  version = "2026.8.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  # get full repository need conftest.py to run tests
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0kfq7lwv2n2wiws4v2rj36wx56jvkp2fl6zxg04p2lc3vcgha9za";
+  src = fetchFromGitHub {
+    owner = "dask";
+    repo = "distributed";
+    tag = finalAttrs.version;
+    hash = "sha256-Z7T/ik8GDnFESDl2OuvSGFo+SBcEY7gpVx31CoTTvao=";
   };
 
-  propagatedBuildInputs = [
-    bokeh
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
+
+  pythonRelaxDeps = [ "dask" ];
+
+  dependencies = [
     click
     cloudpickle
     dask
-    mpi4py
+    jinja2
+    locket
     msgpack
+    packaging
     psutil
     pyyaml
     sortedcontainers
@@ -44,16 +61,16 @@ buildPythonPackage rec {
     zict
   ];
 
-  # when tested random tests would fail and not repeatably
+  # When tested random tests would fail and not repeatably
   doCheck = false;
 
   pythonImportsCheck = [ "distributed" ];
 
-  meta = with lib; {
+  meta = {
     description = "Distributed computation in Python";
     homepage = "https://distributed.readthedocs.io/";
-    license = licenses.bsd3;
-    platforms = platforms.x86; # fails on aarch64
-    maintainers = with maintainers; [ teh costrouc ];
+    changelog = "https://github.com/dask/distributed/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ teh ];
   };
-}
+})

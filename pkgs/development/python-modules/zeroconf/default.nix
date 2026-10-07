@@ -1,46 +1,56 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchFromGitHub
-, ifaddr
-, pytest-asyncio
-, pythonOlder
-, pytestCheckHook
+{
+  lib,
+  cython,
+  buildPythonPackage,
+  fetchFromGitHub,
+  ifaddr,
+  poetry-core,
+  pytest-asyncio,
+  pytest-codspeed,
+  pytest-cov-stub,
+  pytest-timeout,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "zeroconf";
-  version = "0.37.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "0.151.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jstasiak";
     repo = "python-zeroconf";
-    rev = version;
-    sha256 = "sha256-KdcRG1YKtvhcqq/FNiOVQeXlyYepvPjRL5EZJA8Axyk=";
+    tag = finalAttrs.version;
+    hash = "sha256-iMWlTX+GnJ7A2roh5aryoEf+9+963W2i4HVjtb5I00Q=";
   };
 
-  propagatedBuildInputs = [
-    ifaddr
+  build-system = [
+    cython
+    poetry-core
+    setuptools
   ];
 
-  checkInputs = [
+  dependencies = [ ifaddr ];
+
+  nativeCheckInputs = [
     pytest-asyncio
+    pytest-codspeed
+    pytest-cov-stub
+    pytest-timeout
     pytestCheckHook
   ];
 
   disabledTests = [
-    # tests that require network interaction
+    # OSError: [Errno 19] No such device
     "test_close_multiple_times"
+    "test_context_manager_marks_done"
+    "test_default_interface_warns_when_ipv6_requested"
+    "test_open_and_close_cleanly"
+    "test_integration_with_listener_ipv6"
     "test_launch_and_close"
     "test_launch_and_close_context_manager"
     "test_launch_and_close_v4_v6"
-    "test_launch_and_close_v6_only"
-    "test_integration_with_listener_ipv6"
-  ] ++ lib.optionals stdenv.isDarwin [
-    "test_lots_of_names"
   ];
 
   __darwinAllowLocalNetworking = true;
@@ -50,10 +60,11 @@ buildPythonPackage rec {
     "zeroconf.asyncio"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python implementation of multicast DNS service discovery";
-    homepage = "https://github.com/jstasiak/python-zeroconf";
-    license = licenses.lgpl21Only;
-    maintainers = with maintainers; [ abbradar ];
+    homepage = "https://github.com/python-zeroconf/python-zeroconf";
+    changelog = "https://github.com/python-zeroconf/python-zeroconf/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.lgpl21Only;
+    maintainers = [ ];
   };
-}
+})

@@ -1,22 +1,48 @@
-{ lib, buildPythonPackage, fetchPypi
-, asttokens, colorama, executing, pygments
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  asttokens,
+  colorama,
+  executing,
+  pygments,
+
+  # tests
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "icecream";
-  version = "2.1.1";
+  version = "2.2.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "47e00e3f4e8477996e7dc420b6fa8ba53f8ced17de65320fedb5b15997b76589";
+  src = fetchFromGitHub {
+    owner = "gruns";
+    repo = "icecream";
+    tag = "v${version}";
+    hash = "sha256-8y109lTvZS50sBNzsgxxyIDf5w3gAou7RK1NxiGIziQ=";
   };
 
-  propagatedBuildInputs = [ asttokens colorama executing pygments ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "A little library for sweet and creamy print debugging";
+  dependencies = [
+    asttokens
+    colorama
+    executing
+    pygments
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
+    description = "Little library for sweet and creamy print debugging";
     homepage = "https://github.com/gruns/icecream";
-    license = licenses.mit;
-    maintainers = with maintainers; [ renatoGarcia ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ renatoGarcia ];
   };
 }

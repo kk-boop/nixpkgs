@@ -1,28 +1,41 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, sphinx
-, blockdiag
-, nwdiag
+{
+  lib,
+  blockdiag,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  nwdiag,
+  sphinx,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sphinxcontrib-nwdiag";
   version = "2.0.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
+    inherit (finalAttrs) pname version;
     hash = "sha256-bula1DutRv6NwfZRhciZfLHRZmXu42p+qvbeExN/+Fk=";
   };
 
-  propagatedBuildInputs = [ sphinx blockdiag nwdiag ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    blockdiag
+    nwdiag
+    sphinx
+  ];
 
   pythonImportsCheck = [ "sphinxcontrib.nwdiag" ];
 
-  meta = with lib; {
+  pythonNamespaces = [ "sphinxcontrib" ];
+
+  meta = {
     description = "Sphinx nwdiag extension";
     homepage = "https://github.com/blockdiag/sphinxcontrib-nwdiag";
-    maintainers = with maintainers; [ davidtwco ];
-    license = licenses.bsd2;
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

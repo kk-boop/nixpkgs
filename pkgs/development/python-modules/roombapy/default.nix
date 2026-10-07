@@ -1,38 +1,47 @@
-{ lib
-, amqtt
-, buildPythonPackage
-, fetchFromGitHub
-, paho-mqtt
-, poetry-core
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  click,
+  fetchFromGitHub,
+  mashumaro,
+  orjson,
+  paho-mqtt,
+  poetry-core,
+  pytest-asyncio,
+  pytestCheckHook,
+  tabulate,
 }:
 
 buildPythonPackage rec {
   pname = "roombapy";
-  version = "1.6.4";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "1.9.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pschmitt";
     repo = "roombapy";
-    rev = version;
-    sha256 = "sha256-EN+em+lULAUplXlhcU409ZVPk9BfMmD2oNwO0ETuqoA=";
+    tag = version;
+    hash = "sha256-63PqNmJC0IWPPMVyZdKoZikvBA4phMcYxlTBk/m1cq0=";
   };
 
   nativeBuildInputs = [
     poetry-core
   ];
 
+  pythonRelaxDeps = [ "orjson" ];
+
   propagatedBuildInputs = [
+    mashumaro
+    orjson
     paho-mqtt
   ];
 
-  checkInputs = [
-    amqtt
+  optional-dependencies.cli = [
+    click
+    tabulate
+  ];
+
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
@@ -47,14 +56,14 @@ buildPythonPackage rec {
     "test_roomba_connect"
   ];
 
-  pythonImportsCheck = [
-    "roombapy"
-  ];
+  pythonImportsCheck = [ "roombapy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python program and library to control Wi-Fi enabled iRobot Roombas";
+    mainProgram = "roombapy";
     homepage = "https://github.com/pschmitt/roombapy";
-    license = licenses.mit;
-    maintainers = with maintainers; [ justinas ];
+    changelog = "https://github.com/pschmitt/roombapy/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

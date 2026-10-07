@@ -1,43 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy3k
-, setuptools
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  cython,
+  fetchFromGitHub,
+  pytest-cov-stub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pglast";
-  version = "3.7";
+  version = "7.13";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "3f0f36cebdb68d5b3aaacb11cbf09db44250194845fbf3b49b0aef93c30991bf";
+  src = fetchFromGitHub {
+    owner = "lelit";
+    repo = "pglast";
+    tag = "v${version}";
+    fetchSubmodules = true;
+    hash = "sha256-q5QiP8UPQQnG2Ehgj9hngXnhCKvZyCy8mKA0rzWM7EY=";
   };
 
-  disabled = !isPy3k;
-
-  # ModuleNotFoundError: No module named 'pkg_resources'
-  propagatedBuildInputs = [ setuptools ];
-
   postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "--cov=pglast --cov-report term-missing" ""
+    substituteInPlace pyproject.toml \
+      --replace-fail cython==3.2.3 cython \
+      --replace-fail setuptools==80.9.0 setuptools
   '';
 
-  checkInputs = [ pytest ];
+  build-system = [
+    cython
+    setuptools
+  ];
 
-  # pytestCheckHook doesn't work
-  # ImportError: cannot import name 'parse_sql' from 'pglast'
-  checkPhase = ''
-    pytest
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+  ];
+
+  preCheck = ''
+    # import from $out
+    rm -r pglast
   '';
 
-  meta = with lib; {
-    homepage = "https://github.com/lelit/pglast";
+  pythonImportsCheck = [
+    "pglast"
+    "pglast.parser"
+  ];
+
+  meta = {
     description = "PostgreSQL Languages AST and statements prettifier";
-    changelog = "https://github.com/lelit/pglast/raw/v${version}/CHANGES.rst";
-    license = licenses.gpl3Plus;
-    maintainers = [ maintainers.marsam ];
+    homepage = "https://github.com/lelit/pglast";
+    changelog = "https://github.com/lelit/pglast/blob/v${version}/CHANGES.rst";
+    license = lib.licenses.gpl3Plus;
+    maintainers = [ ];
+    mainProgram = "pgpp";
   };
 }

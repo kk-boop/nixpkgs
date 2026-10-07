@@ -1,37 +1,56 @@
-{ buildPythonPackage
-, fetchFromGitHub
-, lib
-, matplotlib
-, palettable
-, pandas
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools-scm,
+
+  # dependencies
+  matplotlib,
+  palettable,
+  pandas,
+  scipy,
+
+  # tests
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mizani";
-  version = "0.7.3";
+  version = "0.14.6";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "has2k1";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "04r53dp5jbklv8l9ncgc5wiq0gx25y73h65gmmbbfkxwgsl3w78l";
+    repo = "mizani";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-YbBHgfcyyK5hCjeILgvl03+uWsOJwLF55UKecd8g4Y0=";
   };
 
-  postPatch = ''
-    substituteInPlace pytest.ini --replace " --cov=mizani --cov-report=xml" ""
-  '';
+  build-system = [ setuptools-scm ];
 
-  propagatedBuildInputs = [ matplotlib palettable pandas ];
+  dependencies = [
+    matplotlib
+    palettable
+    pandas
+    scipy
+  ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [
+    pytest-cov-stub
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "mizani" ];
 
-  meta = with lib; {
+  meta = {
     description = "Scales for Python";
     homepage = "https://github.com/has2k1/mizani";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ samuela ];
+    changelog = "https://github.com/has2k1/mizani/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ samuela ];
   };
-}
+})

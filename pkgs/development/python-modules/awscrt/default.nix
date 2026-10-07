@@ -1,34 +1,42 @@
-{ lib, buildPythonPackage, fetchPypi, cmake, perl, stdenv, gcc10, CoreFoundation, Security }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  cmake,
+  perl,
+  stdenv,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "awscrt";
-  version = "0.12.6";
+  version = "0.33.0";
+  pyproject = true;
 
-  buildInputs = lib.optionals stdenv.isDarwin [ CoreFoundation Security ];
+  src = fetchPypi {
+    inherit (finalAttrs) pname version;
+    hash = "sha256-K0wP8DsZQmeNhvcJQ0LeyUZLTfC6PjaSsoQXyVuVp9s=";
+  };
 
-  # Required to suppress -Werror
-  # https://github.com/NixOS/nixpkgs/issues/39687
-  hardeningDisable = lib.optional stdenv.cc.isClang "strictoverflow";
+  build-system = [ setuptools ];
 
-  nativeBuildInputs = [ cmake ] ++
-    # gcc <10 is not supported, LLVM on darwin is just fine
-    lib.optionals (!stdenv.isDarwin && stdenv.isAarch64) [ gcc10 perl ];
+  nativeBuildInputs = [ cmake ] ++ lib.optionals (!stdenv.hostPlatform.isDarwin) [ perl ];
+
+  hardeningDisable = [ "fortify" ]; # needed for jitterentropy
 
   dontUseCmakeConfigure = true;
+
+  pythonImportsCheck = [ "awscrt" ];
 
   # Unable to import test module
   # https://github.com/awslabs/aws-crt-python/issues/281
   doCheck = false;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "65d71b4cd78165bea962dfbda361b47b9b5a6198d8074046b8667da9653d0752";
-  };
-
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/awslabs/aws-crt-python";
+    changelog = "https://github.com/awslabs/aws-crt-python/releases/tag/v${finalAttrs.version}";
     description = "Python bindings for the AWS Common Runtime";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ davegallant ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ davegallant ];
   };
-}
+})

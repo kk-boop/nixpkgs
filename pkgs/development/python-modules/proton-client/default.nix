@@ -1,24 +1,27 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, bcrypt
-, pyopenssl
-, python-gnupg
-, requests
-, openssl
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  replaceVars,
+  bcrypt,
+  pyopenssl,
+  python-gnupg,
+  pytestCheckHook,
+  requests,
+  openssl,
 }:
 
 buildPythonPackage rec {
   pname = "proton-client";
-  version = "0.7.0";
-  disabled = pythonOlder "3.7";
+  version = "0.7.1";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "ProtonMail";
     repo = "proton-python-client";
     rev = version;
-    sha256 = "sha256-98tEL3DUYtx27JcI6pPFS2iDJXS8K3yyvCU9UVrg1EM=";
+    hash = "sha256-mhPq9O/LCu3+E1jKlaJmrI8dxbA9BIwlc34qGwoxi5g=";
   };
 
   propagatedBuildInputs = [
@@ -30,21 +33,32 @@ buildPythonPackage rec {
 
   buildInputs = [ openssl ];
 
-  # This patch is supposed to indicate where to load OpenSSL library,
-  # but it is not working as intended.
-  #patchPhase = ''
-  #  substituteInPlace proton/srp/_ctsrp.py --replace \
-  #    "ctypes.cdll.LoadLibrary('libssl.so.10')" "'${openssl.out}/lib/libssl.so'"
-  #'';
-  # Regarding the issue above, I'm disabling tests for now
-  doCheck = false;
+  patches = [
+    # Patches library by fixing the openssl path
+    (replaceVars ./0001-OpenSSL-path-fix.patch {
+      openssl = openssl.out;
+      ext = stdenv.hostPlatform.extensions.sharedLibrary;
+    })
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = [
+    #ValueError: Invalid modulus
+    "test_modulus_verification"
+    # bcrypt 5.0 rejects test fixture password longer than 72 bytes
+    "test_compute_v"
+    "test_generate_v"
+    "test_srp"
+  ];
 
   pythonImportsCheck = [ "proton" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python Proton client module";
     homepage = "https://github.com/ProtonMail/proton-python-client";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ wolfangaukang ];
+    license = lib.licenses.gpl3Only;
+    maintainers = [ ];
+    platforms = lib.platforms.linux;
   };
 }

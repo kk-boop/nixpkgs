@@ -1,26 +1,27 @@
-{ lib
-, aiohttp
-, async-timeout
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools_80,
 }:
 
 buildPythonPackage rec {
   pname = "mill-local";
-  version = "0.1.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "0.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Danielhiversen";
     repo = "pyMillLocal";
-    rev = version;
-    sha256 = "0q0frwj9yxdmqi5axl7gxirfflgn8xh1932c6lhp9my2v1d0gdrk";
+    tag = version;
+    hash = "sha256-t6nZ6KXX5GFIcdNIXyFxYtSjOuuUJmCekaBITNgcIkU=";
   };
 
-  propagatedBuildInputs = [
+  buildInputs = [ setuptools_80 ];
+
+  dependencies = [
     aiohttp
     async-timeout
   ];
@@ -28,14 +29,13 @@ buildPythonPackage rec {
   # Project has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "mill_local"
-  ];
+  pythonImportsCheck = [ "mill_local" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to communicate locally with Mill heaters";
     homepage = "https://github.com/Danielhiversen/pyMillLocal";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/Danielhiversen/pyMillLocal/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

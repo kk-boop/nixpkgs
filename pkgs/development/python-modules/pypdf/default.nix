@@ -1,25 +1,91 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy3k
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  flit-core,
+
+  # docs
+  sphinxHook,
+  sphinx-rtd-theme,
+  myst-parser,
+
+  # optionals
+  arabic-reshaper,
+  cryptography,
+  fonttools,
+  pillow,
+  python-bidi,
+
+  # tests
+  fpdf2,
+  pytestCheckHook,
+  pytest-timeout,
 }:
 
-buildPythonPackage rec {
-  pname = "pyPdf";
-  version = "1.13";
+buildPythonPackage (finalAttrs: {
+  pname = "pypdf";
+  version = "6.19.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "3aede4c3c9c6ad07c98f059f90db0b09ed383f7c791c46100f649e1cabda0e3b";
+  src = fetchFromGitHub {
+    owner = "py-pdf";
+    repo = "pypdf";
+    tag = finalAttrs.version;
+    # fetch sample files used in tests
+    fetchSubmodules = true;
+    hash = "sha256-9idq59BNXL0fqQOxk2+Joj4q3khEGv5uGUpbjrokHHs=";
   };
 
-  # Not supported. Package is no longer maintained.
-  disabled = isPy3k;
+  outputs = [
+    "out"
+    "doc"
+  ];
 
-  meta = with lib; {
-    description = "Pure-Python PDF toolkit";
-    homepage = "http://pybrary.net/pyPdf/";
-    license = licenses.bsd3;
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "--disable-socket" ""
+  '';
+
+  build-system = [ flit-core ];
+
+  nativeBuildInputs = [
+    sphinxHook
+    sphinx-rtd-theme
+    myst-parser
+  ];
+
+  optional-dependencies = rec {
+    full = crypto ++ fonts ++ image ++ rtl_text;
+    crypto = [ cryptography ];
+    fonts = [ fonttools ];
+    image = [ pillow ];
+    rtl_text = [
+      arabic-reshaper
+      python-bidi
+    ];
   };
 
-}
+  pythonImportsCheck = [ "pypdf" ];
+
+  nativeCheckInputs = [
+    (fpdf2.overridePythonAttrs { doCheck = false; }) # avoid reference loop
+    pytestCheckHook
+    pytest-timeout
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.full;
+
+  disabledTestMarks = [
+    # don't access the network
+    "enable_socket"
+  ];
+
+  meta = {
+    description = "Pure-python PDF library capable of splitting, merging, cropping, and transforming the pages of PDF files";
+    homepage = "https://github.com/py-pdf/pypdf";
+    changelog = "https://github.com/py-pdf/pypdf/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ javaes ];
+  };
+})

@@ -1,20 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, numpy
-, scipy
-, pytest
-, pybind11
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  numpy,
+  scipy,
+  pytest,
+  python,
+  pybind11,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "pyamg";
-  version = "4.1.0";
+  version = "5.3.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "b4cacfcfd13379762a4551ac059a2e52a093b476ca1ad44b9202e736490a8863";
+    hash = "sha256-UyPQ8aTNmZviRqkNWAyeHptYS5iIf2KY05dhEIfvhgs=";
   };
+
+  # removed by next version, https://github.com/pyamg/pyamg/pull/420
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail \
+        'setuptools_scm[toml]==8.3.0' \
+        'setuptools_scm>=8.3.0' \
+  '';
+
+  nativeBuildInputs = [ setuptools-scm ];
 
   propagatedBuildInputs = [
     numpy
@@ -23,14 +38,29 @@ buildPythonPackage rec {
     pybind11
   ];
 
-  preBuild = ''
-    export HOME=$(mktemp -d)
+  checkPhase = ''
+    runHook preCheck
+
+    # The `pyamg` directory in PWD doesn't have the compiled Cython modules in it, but has higher import priority compared to the properly built and installed `pyamg`.
+    # It's easier to just remove the package directory in PWD.
+    rm -r pyamg
+    ${python.interpreter} -c "import pyamg; pyamg.test()"
+
+    runHook postCheck
   '';
 
-  meta = with lib; {
+  pythonImportsCheck = [
+    "pyamg"
+    "pyamg.amg_core.evolution_strength"
+  ];
+
+  meta = {
     description = "Algebraic Multigrid Solvers in Python";
     homepage = "https://github.com/pyamg/pyamg";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/pyamg/pyamg/blob/v${version}/changelog.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ stephen-huan ];
+    # last successful hydra build on darwin was in 2025
+    broken = stdenv.hostPlatform.isDarwin;
   };
 }

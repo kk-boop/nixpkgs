@@ -1,16 +1,31 @@
-{ lib, fetchPypi, buildPythonPackage }:
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  pycodestyle,
+}:
 
 buildPythonPackage rec {
   pname = "flake8-blind-except";
-  version = "0.2.0";
+  version = "0.2.1";
+  format = "setuptools";
+
   src = fetchPypi {
     inherit pname version;
-    sha256 = "02a860a1a19cb602c006a3fe0778035b0d14d3f57929b4b798bc7d6684f204e5";
+    hash = "sha256-8lpXWp3LPus8dgv5wi22C4taIxICJO0fqppD913X3RY=";
   };
+
+  propagatedBuildInputs = [ pycodestyle ];
+
+  # Module has no tests
+  doCheck = false;
+
+  pythonImportsCheck = [ "flake8_blind_except" ];
+
   meta = {
+    description = "Flake8 extension that checks for blind except: statements";
     homepage = "https://github.com/elijahandrews/flake8-blind-except";
-    description = "A flake8 extension that checks for blind except: statements";
-    maintainers = with lib.maintainers; [ johbo ];
     license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ johbo ];
   };
 }

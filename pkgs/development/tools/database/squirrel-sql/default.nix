@@ -1,19 +1,28 @@
 # To enable specific database drivers, override this derivation and pass the
 # driver packages in the drivers argument (e.g. mysql_jdbc, postgresql_jdbc).
-{ lib, stdenv, fetchurl, makeDesktopItem, makeWrapper, unzip
-, jre
-, drivers ? []
+{
+  lib,
+  stdenv,
+  fetchurl,
+  makeDesktopItem,
+  makeWrapper,
+  unzip,
+  jre,
+  drivers ? [ ],
 }:
 stdenv.mkDerivation rec {
   pname = "squirrel-sql";
-  version = "4.2.0";
+  version = "5.1.0";
 
   src = fetchurl {
     url = "mirror://sourceforge/project/squirrel-sql/1-stable/${version}-plainzip/squirrelsql-${version}-standard.zip";
-    sha256 = "sha256-pNcmIey50nWZghoXVGnm0EFzGoqBpAaJ2lhYvVzjWto=";
+    sha256 = "sha256-aYwA2TRXI74s1BXfhlatBqPzC1xCfEqTe/yK8DCMo4E=";
   };
 
-  nativeBuildInputs = [ makeWrapper unzip ];
+  nativeBuildInputs = [
+    makeWrapper
+    unzip
+  ];
   buildInputs = [ jre ];
 
   unpackPhase = ''
@@ -63,15 +72,16 @@ stdenv.mkDerivation rec {
     comment = meta.description;
     desktopName = "SQuirreL SQL";
     genericName = "SQL Client";
-    categories = "Development;";
+    categories = [ "Development" ];
     icon = "squirrel-sql";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Universal SQL Client";
+    mainProgram = "squirrel-sql";
     homepage = "http://squirrel-sql.sourceforge.net/";
-    license = licenses.lgpl21;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ khumba ];
+    sourceProvenance = with lib.sourceTypes; [ binaryBytecode ];
+    license = lib.licenses.lgpl21Plus;
+    platforms = lib.platforms.linux;
   };
 }

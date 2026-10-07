@@ -1,46 +1,45 @@
-{ lib
-, isPy3k
-, fetchFromGitHub
-, buildPythonPackage
-, flake8-import-order
-, pyflakes
-, mock
-, setuptools
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  flake8-import-order,
+  pyflakes,
+  tomli,
+  setuptools,
+  pytestCheckHook,
+  pythonAtLeast,
 }:
 
 buildPythonPackage rec {
   pname = "zimports";
-  version = "0.2.0";
+  version = "0.7.0";
+  format = "setuptools";
+
+  # upstream technically support 3.7 through 3.9, but 3.10 happens to work while 3.11 breaks with an import error
+  disabled = pythonAtLeast "3.11";
 
   src = fetchFromGitHub {
     owner = "sqlalchemyorg";
     repo = "zimports";
-    rev = version;
-    sha256 = "0a5axflkk0wv0rdnrh8l2rgj8gh2pfkg5lrvr8x4yxxiifawrafc";
+    tag = "v${version}";
+    hash = "sha256-5RSVRI1sgCXkkkMQo4azKj8AlShxDWEF6qQoU3VfoI8=";
   };
 
-  disabled = !isPy3k;
-
   propagatedBuildInputs = [
-    pyflakes
     flake8-import-order
+    pyflakes
     setuptools
+    tomli
   ];
 
-  checkInputs = [
-    mock
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  checkPhase = ''
-    runHook preInstallCheck
-    PYTHONPATH= $out/bin/zimports --help >/dev/null
-    runHook postInstallCheck
-  '';
+  pythonImportsCheck = [ "zimports" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python import rewriter";
     homepage = "https://github.com/sqlalchemyorg/zimports";
-    license = licenses.mit;
-    maintainers = with maintainers; [ timokau ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ timokau ];
   };
 }

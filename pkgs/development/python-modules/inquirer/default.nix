@@ -1,35 +1,55 @@
-{ lib, buildPythonPackage, fetchFromGitHub, python-editor, readchar, blessed, pytest, pytest-cov, pexpect, pytest-mock }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # native
+  poetry-core,
+
+  # propagated
+  blessed,
+  editor,
+  readchar,
+
+  # tests
+  pytest-mock,
+  pytestCheckHook,
+  pexpect,
+}:
 
 buildPythonPackage rec {
   pname = "inquirer";
-  version = "2.7.0";
+  version = "3.4.1";
+  pyproject = true;
 
-  # PyPi archive currently broken: https://github.com/magmax/python-inquirer/issues/106
-  src = fetchFromGitHub rec {
+  src = fetchFromGitHub {
     owner = "magmax";
     repo = "python-inquirer";
-    rev = version;
-    sha256 = "152l5qjgkag8zkr69ax2i5s8xcac1qvyngisrplbnbzwbpf77d0d";
+    tag = "v${version}";
+    hash = "sha256-xVHmdJGN5yOxbEkZIiOLqeUwcfdj+o7jTTWBD75szII=";
   };
 
-  propagatedBuildInputs = [ blessed python-editor readchar ];
+  build-system = [ poetry-core ];
 
-  postPatch = ''
-   substituteInPlace requirements.txt \
-     --replace "blessed==1.17.6" "blessed~=1.17" \
-     --replace "readchar==2.0.1" "readchar>=2.0.0"
-  '';
+  dependencies = [
+    blessed
+    editor
+    readchar
+  ];
 
-  checkInputs = [ pytest pytest-cov pexpect pytest-mock ];
+  nativeCheckInputs = [
+    pexpect
+    pytest-mock
+    pytestCheckHook
+  ];
 
-  checkPhase = ''
-    pytest --cov-report=term-missing  --cov inquirer --no-cov-on-fail tests/unit tests/integration
-  '';
+  pythonImportsCheck = [ "inquirer" ];
 
-  meta = with lib; {
+  meta = {
+    description = "Collection of common interactive command line user interfaces, based on Inquirer.js";
     homepage = "https://github.com/magmax/python-inquirer";
-    description = "A collection of common interactive command line user interfaces, based on Inquirer.js";
-    license = licenses.mit;
-    maintainers = [ maintainers.mmahut ];
+    changelog = "https://github.com/magmax/python-inquirer/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mmahut ];
   };
 }

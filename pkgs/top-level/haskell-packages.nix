@@ -1,25 +1,24 @@
-{ buildPackages, pkgsBuildTarget, pkgs, newScope, stdenv }:
+{
+  buildPackages,
+  pkgsBuildBuild,
+  pkgsBuildTarget,
+  pkgs,
+  newScope,
+  stdenv,
+  config,
+}:
 
 let
-  # These are attributes in compiler and packages that don't support integer-simple.
-  integerSimpleExcludes = [
-    "ghc865Binary"
-    "ghc8102Binary"
-    "ghc8102BinaryMinimal"
-    "ghc8107Binary"
-    "ghc8107BinaryMinimal"
-    "ghcjs"
-    "ghcjs810"
-    "integer-simple"
+  nativeBignumExcludes = [
+    # haskell.compiler sub groups
     "native-bignum"
-    "ghcHEAD"
+    # Binary GHCs
+    "ghc902Binary"
+    "ghc966DebianBinary"
+    "ghc984Binary"
   ];
 
-  nativeBignumIncludes = [
-    "ghcHEAD"
-  ];
-
-  haskellLibUncomposable = import ../development/haskell-modules/lib.nix {
+  haskellLibUncomposable = import ../development/haskell-modules/lib {
     inherit (pkgs) lib;
     inherit pkgs;
   };
@@ -30,240 +29,312 @@ let
   };
 
   bootstrapPackageSet = self: super: {
-    mkDerivation = drv: super.mkDerivation (drv // {
-      doCheck = false;
-      doHaddock = false;
-      enableExecutableProfiling = false;
-      enableLibraryProfiling = false;
-      enableSharedExecutables = false;
-      enableSharedLibraries = false;
-    });
+    mkDerivation =
+      drv:
+      super.mkDerivation (
+        drv
+        // {
+          doCheck = false;
+          doHaddock = false;
+          enableExecutableProfiling = false;
+          enableLibraryProfiling = false;
+          enableSharedExecutables = false;
+          enableSharedLibraries = false;
+        }
+      );
   };
 
   # Use this rather than `rec { ... }` below for sake of overlays.
   inherit (pkgs.haskell) compiler packages;
 
-in {
+  # The GHC LLVM backend rarely sees significant changes relating to
+  # LLVM version support, as it uses the textual IR format and invokes
+  # the LLVM binary tools rather than linking to the C++ libraries.
+  #
+  # Consider backporting upstream GHC changes to support new LLVM
+  # versions in `common-llvm-patches.nix` to allow the version to be
+  # shared across our supported versions of GHC. If the required
+  # changes are too invasive, it’s fine to decouple individual versions
+  # from this default or disable their LLVM support if it’s not load‐
+  # bearing (e.g. GHC 9.4.8 is important for cross‐compiling GHC).
+  buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_20;
+  llvmPackages = pkgs.llvmPackages_20;
+
+  # Note the Nixpkgs default version is chosen in all-packages.nix.
+  chooseDefaultVersions = sets: {
+    ghc94 = sets.ghc948;
+    ghc96 = sets.ghc967;
+    ghc98 = sets.ghc984;
+    ghc910 = sets.ghc9103;
+    ghc912 = sets.ghc9123;
+    ghc914 = sets.ghc9141;
+
+    microhs_0_15 = sets.microhs_0_15_4_0;
+    microhs = sets.microhs_0_15;
+  };
+in
+{
   lib = haskellLibUncomposable;
 
-  package-list = callPackage ../development/haskell-modules/package-list.nix {};
+  package-list = callPackage ../development/haskell-modules/package-list.nix { };
 
-  compiler = {
+  # Always get boot compilers from `pkgsBuildBuild`. The boot (stage0) compiler
+  # is used to build another compiler (stage1) that'll be used to build the
+  # final compiler (stage2) (except when building a cross-compiler). This means
+  # that stage1's host platform is the same as stage0: build. Consequently,
+  # stage0 needs to be build->build.
+  #
+  # Note that we use bb.haskell.packages.*. haskell.packages.*.ghc is similar to
+  # stdenv: The ghc comes from the previous package set, i.e. this predicate holds:
+  # `name: pkgs: pkgs.haskell.packages.${name}.ghc == pkgs.buildPackages.haskell.compiler.${name}.ghc`.
+  # This isn't problematic since pkgsBuildBuild.buildPackages is also build->build,
+  # just something to keep in mind.
+  compiler = pkgs.lib.recurseIntoAttrs (
+    let
+      bb = pkgsBuildBuild.haskell;
+    in
+    {
+      # Required to bootstrap 9.4.8.
+      ghc902Binary = callPackage ../development/compilers/ghc/9.0.2-binary.nix {
+        inherit llvmPackages;
+      };
 
-    ghc865Binary = callPackage ../development/compilers/ghc/8.6.5-binary.nix {
-      llvmPackages = pkgs.llvmPackages_6;
-    };
+      ghc966DebianBinary = callPackage ../development/compilers/ghc/9.6.6-debian-binary.nix { };
 
-    ghc8102Binary = callPackage ../development/compilers/ghc/8.10.2-binary.nix {
-      llvmPackages = pkgs.llvmPackages_9;
-    };
+      ghc984Binary = callPackage ../development/compilers/ghc/9.8.4-binary.nix { };
 
-    ghc8102BinaryMinimal = callPackage ../development/compilers/ghc/8.10.2-binary.nix {
-      llvmPackages = pkgs.llvmPackages_9;
-      minimal = true;
-    };
+      ghc948 = callPackage ../development/compilers/ghc/9.4.8.nix {
+        bootPkgs =
+          # Building with 9.2 is broken due to
+          # https://gitlab.haskell.org/ghc/ghc/-/issues/21914 krank:ignore-line
+          bb.packages.ghc902Binary;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghc967 = callPackage ../development/compilers/ghc/9.6.7.nix {
+        bootPkgs =
+          if
+            stdenv.buildPlatform.isPower64
+            && stdenv.buildPlatform.isBigEndian
+            && pkgs.stdenv.hostPlatform.isAbiElfv1
+          then
+            # No bindist, "borrowing" the GHC from Debian
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isRiscV64 then
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isLoongArch64 then
+            bb.packages.ghc966DebianBinary
+          else
+            bb.packages.ghc948;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghc984 = callPackage ../development/compilers/ghc/9.8.4.nix {
+        bootPkgs =
+          if
+            stdenv.buildPlatform.isPower64
+            && stdenv.buildPlatform.isBigEndian
+            && pkgs.stdenv.hostPlatform.isAbiElfv1
+          then
+            # No bindist, "borrowing" the GHC from Debian
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isRiscV64 then
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isLoongArch64 then
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isi686 then
+            bb.packages.ghc948
+          else
+            bb.packages.ghc984Binary;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghc9103 = callPackage ../development/compilers/ghc/9.10.3.nix {
+        bootPkgs =
+          if
+            stdenv.buildPlatform.isPower64
+            && stdenv.buildPlatform.isBigEndian
+            && pkgs.stdenv.hostPlatform.isAbiElfv1
+          then
+            # No bindist, "borrowing" the GHC from Debian
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isRiscV64 then
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isLoongArch64 then
+            bb.packages.ghc966DebianBinary
+          else if stdenv.buildPlatform.isi686 then
+            bb.packages.ghc967
+          else
+            bb.packages.ghc984Binary;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghc9123 = callPackage ../development/compilers/ghc/9.12.3.nix {
+        bootPkgs =
+          # No suitable bindist packaged yet
+          bb.packages.ghc9103;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghc9124 = callPackage ../development/compilers/ghc/9.12.4.nix {
+        bootPkgs =
+          # No suitable bindist packaged yet
+          bb.packages.ghc9103;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghc9141 = callPackage ../development/compilers/ghc/9.14.1.nix {
+        bootPkgs =
+          # No suitable bindist packaged yet
+          bb.packages.ghc9103;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
+      ghcHEAD = callPackage ../development/compilers/ghc/head.nix {
+        bootPkgs =
+          # No suitable bindist packaged yet
+          bb.packages.ghc910;
+        inherit (buildPackages.python3Packages) sphinx;
+        inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
+        inherit buildTargetLlvmPackages llvmPackages;
+      };
 
-    ghc8107Binary = callPackage ../development/compilers/ghc/8.10.7-binary.nix {
-      llvmPackages = pkgs.llvmPackages_12;
-    };
+      # Starting from GHC 9, integer-{simple,gmp} is replaced by ghc-bignum
+      # with "native" and "gmp" backends.
+      native-bignum =
+        let
+          isNativeBignumGhc =
+            name: pkgs.lib.hasPrefix "ghc" name && !(builtins.elem name nativeBignumExcludes);
+          nativeBignumGhcNames = pkgs.lib.filter isNativeBignumGhc (pkgs.lib.attrNames compiler);
+        in
+        pkgs.lib.recurseIntoAttrs (
+          pkgs.lib.genAttrs nativeBignumGhcNames (
+            name: compiler.${name}.override { enableNativeBignum = true; }
+          )
+        );
 
-    ghc8107BinaryMinimal = callPackage ../development/compilers/ghc/8.10.7-binary.nix {
-      llvmPackages = pkgs.llvmPackages_12;
-      minimal = true;
-    };
+      microhs-boot = callPackage ../development/compilers/microhs/boot.nix {
+        microhs-src = bb.compiler.microhs_0_15_4_0;
+      };
 
-    ghc884 = callPackage ../development/compilers/ghc/8.8.4.nix {
-      bootPkgs =
-        # aarch64 ghc865Binary gets SEGVs due to haskell#15449 or similar
-        # Musl bindists do not exist for ghc 8.6.5, so we use 8.10.* for them
-        if stdenv.isAarch64 || stdenv.hostPlatform.isMusl then
-          packages.ghc8102BinaryMinimal
-        else
-          packages.ghc865Binary;
-      inherit (buildPackages.python3Packages) sphinx;
-      buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_7;
-      llvmPackages = pkgs.llvmPackages_7;
-    };
-    ghc8107 = callPackage ../development/compilers/ghc/8.10.7.nix {
-      bootPkgs =
-        # aarch64 ghc865Binary gets SEGVs due to haskell#15449 or similar
-        # the oldest ghc with aarch64-darwin support is 8.10.5
-        # Musl bindists do not exist for ghc 8.6.5, so we use 8.10.* for them
-        if stdenv.isAarch64 || stdenv.isAarch32 then
-          packages.ghc8107BinaryMinimal
-        else
-          packages.ghc8107Binary;
-      inherit (buildPackages.python3Packages) sphinx;
-      # Need to use apple's patched xattr until
-      # https://github.com/xattr/xattr/issues/44 and
-      # https://github.com/xattr/xattr/issues/55 are solved.
-      inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
-      buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_12;
-      llvmPackages = pkgs.llvmPackages_12;
-    };
-    ghc901 = callPackage ../development/compilers/ghc/9.0.1.nix {
-      bootPkgs =
-        # aarch64 ghc8107Binary exceeds max output size on hydra
-        # the oldest ghc with aarch64-darwin support is 8.10.5
-        if stdenv.isAarch64 || stdenv.isAarch32 then
-          packages.ghc8107BinaryMinimal
-        else
-          packages.ghc8107Binary;
-      inherit (buildPackages.python3Packages) sphinx;
-      inherit (buildPackages.darwin) autoSignDarwinBinariesHook;
-      buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_9;
-      llvmPackages = pkgs.llvmPackages_9;
-    };
-    ghc921 = callPackage ../development/compilers/ghc/9.2.1.nix {
-      bootPkgs =
-        # aarch64 ghc8107Binary exceeds max output size on hydra
-        if stdenv.isAarch64 || stdenv.isAarch32 then
-          packages.ghc8107BinaryMinimal
-        else
-          packages.ghc8107Binary;
-      inherit (buildPackages.python3Packages) sphinx;
-      # Need to use apple's patched xattr until
-      # https://github.com/xattr/xattr/issues/44 and
-      # https://github.com/xattr/xattr/issues/55 are solved.
-      inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
-      buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_12;
-      llvmPackages = pkgs.llvmPackages_12;
-    };
-    ghcHEAD = callPackage ../development/compilers/ghc/head.nix {
-      bootPkgs = packages.ghc8107Binary;
-      inherit (buildPackages.python3Packages) sphinx;
-      # Need to use apple's patched xattr until
-      # https://github.com/xattr/xattr/issues/44 and
-      # https://github.com/xattr/xattr/issues/55 are solved.
-      inherit (buildPackages.darwin) xattr autoSignDarwinBinariesHook;
-      buildTargetLlvmPackages = pkgsBuildTarget.llvmPackages_12;
-      llvmPackages = pkgs.llvmPackages_12;
-      libffi = pkgs.libffi;
-    };
-
-    ghcjs = compiler.ghcjs810;
-    ghcjs810 = callPackage ../development/compilers/ghcjs/8.10 {
-      bootPkgs = packages.ghc8107;
-      ghcjsSrcJson = ../development/compilers/ghcjs/8.10/git.json;
-      stage0 = ../development/compilers/ghcjs/8.10/stage0.nix;
-    };
-
-    # The integer-simple attribute set contains all the GHC compilers
-    # build with integer-simple instead of integer-gmp.
-    integer-simple = let
-      integerSimpleGhcNames = pkgs.lib.filter
-        (name: ! builtins.elem name integerSimpleExcludes)
-        (pkgs.lib.attrNames compiler);
-    in pkgs.recurseIntoAttrs (pkgs.lib.genAttrs
-      integerSimpleGhcNames
-      (name: compiler.${name}.override { enableIntegerSimple = true; }));
-
-    # Starting from GHC 9, integer-{simple,gmp} is replaced by ghc-bignum
-    # with "native" and "gmp" backends.
-    native-bignum = let
-      nativeBignumGhcNames = pkgs.lib.filter
-        (name: builtins.elem name nativeBignumIncludes)
-        (pkgs.lib.attrNames compiler);
-    in pkgs.recurseIntoAttrs (pkgs.lib.genAttrs
-      nativeBignumGhcNames
-      (name: compiler.${name}.override { enableNativeBignum = true; }));
-  };
+      microhs_0_15_4_0 = callPackage ../development/compilers/microhs/0.15.4.0.nix {
+        inherit (bb.compiler) microhs-boot;
+      };
+    }
+    // chooseDefaultVersions compiler
+    // pkgs.lib.optionalAttrs config.allowAliases {
+      ghc810 = throw "'haskell.compiler.ghc810' has been removed."; # Added 2025-09-07
+      ghc90 = throw "'haskell.compiler.ghc90' has been removed."; # Added 2025-09-07
+      ghc92 = throw "'haskell.compiler.ghc92' has been removed."; # Added 2025-09-07
+      ghcjs = throw "'haskell.compiler.ghcjs' has been removed. Please use 'pkgsCross.ghcjs' instead."; # Added 2025-09-06
+      ghcjs810 = throw "'haskell.compiler.ghcjs810' has been removed. Please use 'pkgsCross.ghcjs' instead."; # Added 2025-09-06
+      integer-simple = throw "All GHC versions with integer-simple support have been removed."; # Added 2025-09-07
+    }
+  );
 
   # Default overrides that are applied to all package sets.
-  packageOverrides = self : super : {};
+  packageOverrides = self: super: { };
 
   # Always get compilers from `buildPackages`
-  packages = let bh = buildPackages.haskell; in {
-
-    ghc865Binary = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc865Binary;
-      ghc = bh.compiler.ghc865Binary;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.6.x.nix { };
-      packageSetConfig = bootstrapPackageSet;
-    };
-    ghc8102Binary = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc8102Binary;
-      ghc = bh.compiler.ghc8102Binary;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
-      packageSetConfig = bootstrapPackageSet;
-    };
-    ghc8102BinaryMinimal = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc8102BinaryMinimal;
-      ghc = bh.compiler.ghc8102BinaryMinimal;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
-      packageSetConfig = bootstrapPackageSet;
-    };
-    ghc8107Binary = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc8107Binary;
-      ghc = bh.compiler.ghc8107Binary;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
-      packageSetConfig = bootstrapPackageSet;
-    };
-    ghc8107BinaryMinimal = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc8107BinaryMinimal;
-      ghc = bh.compiler.ghc8107BinaryMinimal;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
-      packageSetConfig = bootstrapPackageSet;
-    };
-    ghc884 = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc884;
-      ghc = bh.compiler.ghc884;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.8.x.nix { };
-    };
-    ghc8107 = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc8107;
-      ghc = bh.compiler.ghc8107;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
-    };
-    ghc901 = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc901;
-      ghc = bh.compiler.ghc901;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.0.x.nix { };
-    };
-    ghc921 = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghc921;
-      ghc = bh.compiler.ghc921;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.2.x.nix { };
-    };
-    ghcHEAD = callPackage ../development/haskell-modules {
-      buildHaskellPackages = bh.packages.ghcHEAD;
-      ghc = bh.compiler.ghcHEAD;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-head.nix { };
-    };
-
-    ghcjs = packages.ghcjs810;
-    ghcjs810 = callPackage ../development/haskell-modules rec {
-      buildHaskellPackages = ghc.bootPkgs;
-      ghc = bh.compiler.ghcjs810;
-      compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-8.10.x.nix { };
-      packageSetConfig = callPackage ../development/haskell-modules/configuration-ghcjs.nix { };
-    };
-
-    # The integer-simple attribute set contains package sets for all the GHC compilers
-    # using integer-simple instead of integer-gmp.
-    integer-simple = let
-      integerSimpleGhcNames = pkgs.lib.filter
-        (name: ! builtins.elem name integerSimpleExcludes)
-        (pkgs.lib.attrNames packages);
-    in pkgs.lib.genAttrs integerSimpleGhcNames (name: packages.${name}.override {
-      ghc = bh.compiler.integer-simple.${name};
-      buildHaskellPackages = bh.packages.integer-simple.${name};
-      overrides = _self : _super : {
-        integer-simple = null;
-        integer-gmp = null;
+  packages =
+    let
+      bh = buildPackages.haskell;
+    in
+    {
+      ghc902Binary = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc902Binary;
+        ghc = bh.compiler.ghc902Binary;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.0.x.nix { };
+        packageSetConfig = bootstrapPackageSet;
       };
-    });
-
-    native-bignum = let
-      nativeBignumGhcNames = pkgs.lib.filter
-        (name: builtins.elem name nativeBignumIncludes)
-        (pkgs.lib.attrNames compiler);
-    in pkgs.lib.genAttrs nativeBignumGhcNames (name: packages.${name}.override {
-      ghc = bh.compiler.native-bignum.${name};
-      buildHaskellPackages = bh.packages.native-bignum.${name};
-      overrides = _self : _super : {
-        integer-gmp = null;
+      ghc966DebianBinary = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc966DebianBinary;
+        ghc = bh.compiler.ghc966DebianBinary;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.6.x.nix { };
+        packageSetConfig = bootstrapPackageSet;
       };
-    });
-  };
+      ghc984Binary = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc984Binary;
+        ghc = bh.compiler.ghc984Binary;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.8.x.nix { };
+        packageSetConfig = bootstrapPackageSet;
+      };
+      ghc948 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc948;
+        ghc = bh.compiler.ghc948;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.4.x.nix { };
+      };
+      ghc967 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc967;
+        ghc = bh.compiler.ghc967;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.6.x.nix { };
+      };
+      ghc984 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc984;
+        ghc = bh.compiler.ghc984;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.8.x.nix { };
+      };
+      ghc9103 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc9103;
+        ghc = bh.compiler.ghc9103;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.10.x.nix { };
+      };
+      ghc9123 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc9123;
+        ghc = bh.compiler.ghc9123;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.12.x.nix { };
+      };
+      ghc9124 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc9124;
+        ghc = bh.compiler.ghc9124;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.12.x.nix { };
+      };
+      ghc9141 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghc9141;
+        ghc = bh.compiler.ghc9141;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.14.x.nix { };
+      };
+      ghcHEAD = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.ghcHEAD;
+        ghc = bh.compiler.ghcHEAD;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-ghc-9.16.x.nix { };
+      };
+
+      native-bignum =
+        let
+          nativeBignumGhcNames = pkgs.lib.filter (name: !(builtins.elem name nativeBignumExcludes)) (
+            pkgs.lib.attrNames packages
+          );
+        in
+        pkgs.lib.genAttrs nativeBignumGhcNames (
+          name:
+          packages.${name}.override {
+            ghc = bh.compiler.native-bignum.${name};
+            buildHaskellPackages = bh.packages.native-bignum.${name};
+          }
+        );
+
+      microhs_0_15_4_0 = callPackage ../development/haskell-modules {
+        buildHaskellPackages = bh.packages.microhs_0_15_4_0;
+        ghc = bh.compiler.microhs_0_15_4_0;
+        compilerConfig = callPackage ../development/haskell-modules/configuration-microhs.nix { };
+        packageSetConfig = bootstrapPackageSet;
+      };
+    }
+    // chooseDefaultVersions packages
+    // pkgs.lib.optionalAttrs config.allowAliases {
+      ghc810 = throw "'haskell.packages.ghc810' has been removed."; # Added 2025-09-07
+      ghc90 = throw "'haskell.packages.ghc90' has been removed."; # Added 2025-09-07
+      ghc92 = throw "'haskell.packages.ghc92' has been removed."; # Added 2025-09-07
+      ghcjs = throw "'haskell.packages.ghcjs' has been removed. Please use 'pkgsCross.ghcjs' instead."; # Added 2025-09-06
+      ghcjs810 = throw "'haskell.packages.ghcjs810' has been removed. Please use 'pkgsCross.ghcjs' instead."; # Added 2025-09-06
+      integer-simple = throw "All GHC versions with integer-simple support have been removed."; # Added 2025-09-07
+    };
 }

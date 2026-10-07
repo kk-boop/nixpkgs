@@ -1,35 +1,34 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, urwid
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  urwid,
 }:
 
 buildPythonPackage rec {
   pname = "hachoir";
-  version = "3.1.2";
+  version = "3.4.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "vstinner";
-    repo = pname;
-    rev = version;
-    sha256 = "06544qmmimvaznwcjs8wwfih1frdd7anwcw5z07cf69l8p146p0y";
+    repo = "hachoir";
+    tag = version;
+    hash = "sha256-K4spxgaGasouOBK5uwcogCFBY7W7a5uR+TkkuH6QISM=";
   };
 
-  propagatedBuildInputs = [
-    urwid
-  ];
+  propagatedBuildInputs = [ urwid ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "hachoir" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to view and edit a binary stream";
     homepage = "https://hachoir.readthedocs.io/";
-    license = with licenses; [ gpl2Only ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/vstinner/hachoir/blob/${version}/doc/changelog.rst";
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

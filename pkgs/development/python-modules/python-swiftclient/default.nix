@@ -1,44 +1,87 @@
-{ lib
-, buildPythonApplication
-, fetchPypi
-, mock
-, openstacksdk
-, pbr
-, python-keystoneclient
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pbr,
+  setuptools,
+  installShellFiles,
+
+  # direct
+  python-keystoneclient,
+
+  # tests
+  stestrCheckHook,
+  versionCheckHook,
+  hacking,
+  keystoneauth1,
+  stestr,
+  openstacksdk,
+
+  # docs
+  sphinxHook,
+  openstackdocstheme,
+  sphinxcontrib-apidoc,
 }:
 
-buildPythonApplication rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-swiftclient";
-  version = "3.12.0";
+  version = "4.10.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-MTtEShTQ+bYoy/PoxS8sQnFlj56KM9QiKFHC5PD3t6A=";
-  };
-
-  propagatedBuildInputs = [ pbr python-keystoneclient ];
-
-  checkInputs = [
-    mock
-    openstacksdk
-    stestr
+  build-system = [
+    pbr
+    setuptools
   ];
 
-  postInstall = ''
-    install -Dm644 tools/swift.bash_completion $out/share/bash_completion.d/swift
-  '';
+  env.PBR_VERSION = finalAttrs.version;
 
-  checkPhase = ''
-    stestr run
-  '';
-
-  pythonImportsCheck = [ "swiftclient" ];
-
-  meta = with lib; {
-    homepage = "https://github.com/openstack/python-swiftclient";
-    description = "Python bindings to the OpenStack Object Storage API";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+  src = fetchFromGitHub {
+    owner = "openstack";
+    repo = "python-swiftclient";
+    tag = finalAttrs.version;
+    hash = "sha256-G3o9R3+hDQgvSnmle0paZo/KV56OMU38tIXqUJGmUaQ=";
   };
-}
+
+  nativeBuildInputs = [
+    openstackdocstheme
+    sphinxcontrib-apidoc
+    sphinxHook
+    installShellFiles
+  ];
+
+  sphinxBuilders = [ "man" ];
+
+  dependencies = [
+    python-keystoneclient
+  ];
+
+  nativeCheckInputs = [
+    stestrCheckHook
+    openstacksdk
+    hacking
+    keystoneauth1
+    stestr
+    openstacksdk
+  ];
+
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
+
+  postInstall = ''
+    installShellCompletion --cmd swift --bash tools/swift.bash_completion
+    installManPage doc/manpages/*
+  '';
+
+  pythonImportsCheck = [
+    "swiftclient"
+  ];
+
+  meta = {
+    description = "Client library for OpenStack Swift API";
+    mainProgram = "swift";
+    homepage = "https://docs.openstack.org/python-swiftclient/latest/";
+    downloadPage = "https://github.com/openstack/python-swiftclient/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
+  };
+})

@@ -1,61 +1,55 @@
-{ lib
-, aenum
-, aiohttp
-, aiohttp-wsgi
-, async-timeout
-, buildPythonPackage
-, fetchFromGitHub
-, fetchpatch
-, pytestCheckHook
-, pythonOlder
-, pytest-aiohttp
-, pytest-asyncio
-, requests
-, websocket-client
-, websockets
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  httpx,
+  pytest-aiohttp,
+  pytest-mock,
+  pytestCheckHook,
+  requests,
+  setuptools-scm,
+  setuptools,
+  websockets,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "homematicip";
-  version = "1.0.1";
-  disabled = pythonOlder "3.6";
+  version = "2.18.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "coreGreenberet";
+    owner = "hahn-th";
     repo = "homematicip-rest-api";
-    rev = version;
-    sha256 = "008snxx9ijpi1zr1pi1v4a6g74j821hyw0khs9lmi08v2mcabm36";
+    tag = finalAttrs.version;
+    hash = "sha256-I3D83Pdsdz0eWrebFgRtq/ejfJh8kN8w7Z82HJcjsjQ=";
   };
 
-  patches = [
-    (fetchpatch {
-      # Drop loop kwarg from async_timeout.timeout
-      # https://github.com/coreGreenberet/homematicip-rest-api/pull/424
-      url = "https://github.com/coreGreenberet/homematicip-rest-api/commit/90efb335667e3d462b7f9ef113d2e0b8bb4e96b4.patch";
-      sha256 = "0f2bbs0666mf6sc7p4n8fwh29yjilkq36qf5pn0waf6iqdzxqwih";
-    })
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  propagatedBuildInputs = [
-    aenum
+  dependencies = [
     aiohttp
-    async-timeout
+    httpx
     requests
-    websocket-client
     websockets
   ];
 
-  checkInputs = [
-    aiohttp-wsgi
+  nativeCheckInputs = [
     pytest-aiohttp
-    pytest-asyncio
+    pytest-mock
     pytestCheckHook
   ];
+
+  pytestFlags = [ "--asyncio-mode=auto" ];
 
   disabledTests = [
     # Assert issues with datetime
     "test_contact_interface_device"
     "test_dimmer"
+    "test_external_device"
     "test_heating_failure_alert_group"
     "test_heating"
     "test_humidity_warning_rule_group"
@@ -79,10 +73,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "homematicip" ];
 
-  meta = with lib; {
-    description = "Python module for the homematicIP REST API";
-    homepage = "https://github.com/coreGreenberet/homematicip-rest-api";
-    license = with licenses; [ gpl3Only ];
-    maintainers = with maintainers; [ fab ];
+  meta = {
+    description = "Module for the homematicIP REST API";
+    homepage = "https://github.com/hahn-th/homematicip-rest-api";
+    changelog = "https://github.com/hahn-th/homematicip-rest-api/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

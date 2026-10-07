@@ -1,46 +1,57 @@
-{ lib
-, buildPythonPackage
-, cookies
-, fetchPypi
-, mock
-, pytest-localserver
-, pytestCheckHook
-, pythonOlder
-, requests
-, six
-, urllib3
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-asyncio,
+  pytest-httpserver,
+  pytestCheckHook,
+  pyyaml,
+  requests,
+  setuptools,
+  tomli-w,
+  types-pyyaml,
+  types-toml,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "responses";
-  version = "0.15.0";
+  version = "0.26.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-hmdXmH0ZYqqQjZyLMYVzn679cqNZ6VRZ3gwuTlNpybI=";
+  __darwinAllowLocalNetworking = true;
+
+  src = fetchFromGitHub {
+    owner = "getsentry";
+    repo = "responses";
+    tag = version;
+    hash = "sha256-8+zc7UebB9pBLC5nc7QtuXQIoQ+k+NH1XvajQMGIXNg=";
   };
 
+  nativeBuildInputs = [ setuptools ];
+
   propagatedBuildInputs = [
+    pyyaml
     requests
+    types-pyyaml
+    types-toml
     urllib3
-    six
-  ] ++ lib.optionals (pythonOlder "3.4") [
-    cookies
-  ] ++ lib.optionals (pythonOlder "3.3") [
-    mock
   ];
 
-  checkInputs = [
-    pytest-localserver
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-httpserver
     pytestCheckHook
+    tomli-w
   ];
 
   pythonImportsCheck = [ "responses" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for mocking out the requests Python library";
     homepage = "https://github.com/getsentry/responses";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/getsentry/responses/blob/${src.tag}/CHANGES";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

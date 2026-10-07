@@ -1,19 +1,22 @@
-{ lib, buildDunePackage, dune_2 }:
+{
+  lib,
+  buildDunePackage,
+  dune,
+  stdune,
+}:
 
-buildDunePackage rec {
+buildDunePackage {
   pname = "dune-private-libs";
 
-  useDune2 = true;
-
-  inherit (dune_2) src version patches;
-
-  minimumOCamlVersion = "4.08";
+  inherit (dune) src version;
 
   dontAddPrefix = true;
 
-  meta = with lib; {
+  propagatedBuildInputs = [ stdune ];
+
+  meta = {
     description = "Private libraries of Dune";
-    maintainers = [ maintainers.marsam ];
-    license = licenses.mit;
+    maintainers = [ ];
+    license = lib.licenses.mit;
   };
 }

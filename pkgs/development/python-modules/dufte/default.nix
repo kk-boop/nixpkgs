@@ -1,43 +1,47 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, importlib-metadata
-, matplotlib
-, numpy
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  matplotlib,
+  numpy,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "dufte";
-  version = "0.2.27";
-  disabled = pythonOlder "3.6";
+  version = "0.2.29";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "nschloe";
-    repo = pname;
-    rev = version;
-    sha256 = "1i68h224hx9clxj3l0rd2yigsi6fqsr3x10vj5hf3j6s69iah7r3";
+    repo = "dufte";
+    rev = "v${version}";
+    hash = "sha256:0ccsmpj160xj6w503a948aw8icj55mw9414xnmijmmjvlwhm0p48";
   };
-  format = "pyproject";
+
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [
     matplotlib
     numpy
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  preCheck = ''
+    export HOME=$(mktemp -d)
+    mkdir -p $HOME/.config/matplotlib
+    echo "backend: ps" > $HOME/.config/matplotlib/matplotlibrc
+    ln -s $HOME/.config/matplotlib $HOME/.matplotlib
+  '';
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "dufte" ];
 
-  meta = with lib; {
+  meta = {
     description = "Clean matplotlib plots";
     homepage = "https://github.com/nschloe/dufte";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ ris ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ ris ];
   };
 }

@@ -1,41 +1,59 @@
-{ buildPythonPackage
-, callPackage
-, fetchPypi
-, packaging
-, tomli
-, lib
+{
+  lib,
+  buildPythonPackage,
+  callPackage,
+  fetchPypi,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  vcs-versioning,
+
+  # optional-dependencies
+  rich,
 }:
 
 buildPythonPackage rec {
   pname = "setuptools-scm";
-  version = "6.3.2";
+  version = "10.0.5";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "setuptools_scm";
     inherit version;
-    sha256 = "1wm0i27siyy1yqr9rv7lqvb65agay9051yi8jzmi8dgb3q4ai6m4";
+    hash = "sha256-u7qP51RRbN79AX9EVnIXdebvlmK9eIf7Uq4mgT1IOMM=";
   };
 
-  propagatedBuildInputs = [
-    packaging
-    tomli
+  postPatch = null;
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    setuptools
+    vcs-versioning
   ];
 
-  pythonImportsCheck = [
-    "setuptools_scm"
-  ];
+  optional-dependencies = {
+    rich = [ rich ];
+  };
 
-  # check in passhtru.tests.pytest to escape infinite recursion on pytest
+  pythonImportsCheck = [ "setuptools_scm" ];
+
+  # check in passthru.tests.pytest to escape infinite recursion on pytest
   doCheck = false;
 
   passthru.tests = {
     pytest = callPackage ./tests.nix { };
   };
 
-  meta = with lib; {
+  setupHook = ./setup-hook.sh;
+
+  meta = {
+    changelog = "https://github.com/pypa/setuptools_scm/blob/${version}/CHANGELOG.md";
     homepage = "https://github.com/pypa/setuptools_scm/";
     description = "Handles managing your python package versions in scm metadata";
-    license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ nickcao ];
   };
 }

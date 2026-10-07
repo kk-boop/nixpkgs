@@ -1,138 +1,251 @@
-{ config
-, lib
-, stdenv
-, mkDerivation
-, fetchFromGitHub
-, addOpenGLRunpath
-, cmake
-, fdk_aac
-, ffmpeg
-, jansson
-, libjack2
-, libxkbcommon
-, libpthreadstubs
-, libXdmcp
-, qtbase
-, qtx11extras
-, qtsvg
-, speex
-, libv4l
-, x264
-, curl
-, wayland
-, xorg
-, pkg-config
-, libvlc
-, mbedtls
-, wrapGAppsHook
-, scriptingSupport ? true
-, luajit
-, swig
-, python3
-, alsaSupport ? stdenv.isLinux
-, alsa-lib
-, pulseaudioSupport ? config.pulseaudio or stdenv.isLinux
-, libpulseaudio
-, libcef
-, pipewireSupport ? stdenv.isLinux
-, pipewire
+{
+  config,
+  uthash,
+  lib,
+  stdenv,
+  ninja,
+  nv-codec-headers-12,
+  fetchFromGitHub,
+  fetchurl,
+  addDriverRunpath,
+  autoAddDriverRunpath,
+  cudaSupport ? config.cudaSupport,
+  cmake,
+  fdk_aac,
+  ffmpeg,
+  jansson,
+  libjack2,
+  libxkbcommon,
+  libpthread-stubs,
+  libxdmcp,
+  qtbase,
+  qtsvg,
+  speex,
+  libv4l,
+  x264,
+  curl,
+  wayland,
+  libx11,
+  pkg-config,
+  libvlc,
+  libGL,
+  mbedtls,
+  wrapGAppsHook3,
+  scriptingSupport ? true,
+  luajit,
+  swig,
+  python3,
+  alsaSupport ? stdenv.hostPlatform.isLinux,
+  alsa-lib,
+  pulseaudioSupport ? config.pulseaudio or stdenv.hostPlatform.isLinux,
+  libpulseaudio,
+  browserSupport ? true,
+  cef-binary,
+  pciutils,
+  pipewireSupport ? stdenv.hostPlatform.isLinux,
+  withFdk ? true,
+  pipewire,
+  libdrm,
+  librist,
+  cjson,
+  libva,
+  srt,
+  qtwayland,
+  wrapQtAppsHook,
+  nlohmann_json,
+  websocketpp,
+  asio,
+  decklinkSupport ? false,
+  blackmagic-desktop-video,
+  libdatachannel,
+  libvpl,
+  qrcodegencpp,
+  simde,
+  nix-update-script,
+  kdePackages,
 }:
 
 let
   inherit (lib) optional optionals;
 
+  selectSystem =
+    attrs:
+    attrs.${stdenv.hostPlatform.system} or (throw "Unsupported system ${stdenv.hostPlatform.system}");
+
+  cef = cef-binary.overrideAttrs (
+    oldAttrs:
+    let
+      version = "6533";
+      revision = "6";
+    in
+    {
+      inherit version;
+
+      src = fetchurl {
+        url = "https://cdn-fastly.obsproject.com/downloads/cef_binary_${version}_linux_${
+          selectSystem {
+            aarch64-linux = "aarch64";
+            x86_64-linux = "x86_64";
+          }
+        }_v${revision}.tar.xz";
+        hash = selectSystem {
+          aarch64-linux = "sha256-ZCUURp6qKaXIh4kQhNLnP33C10Bfffp3JrLbwkswmZk=";
+          x86_64-linux = "sha256-eWMzVRmhnM3FIz9zNMWrAjAm4vPpoMxBcAfAnYZggUY=";
+        };
+      };
+    }
+  );
 in
-mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "obs-studio";
-  version = "27.0.1";
+  version = "32.2.2";
 
   src = fetchFromGitHub {
     owner = "obsproject";
     repo = "obs-studio";
-    rev = version;
-    sha256 = "04fzsr9yizmxy0r7z2706crvnsnybpnv5kgfn77znknxxjacfhkn";
+    rev = finalAttrs.version;
+    hash = "sha256-JAV3UvM89asUj6P5pD9a+6/Qfa2kFIVQqVfMOZn5MJE=";
     fetchSubmodules = true;
   };
 
-  patches = [
-    # Lets obs-browser build against CEF 90.1.0+
-    ./Enable-file-access-and-universal-access-for-file-URL.patch
+  separateDebugInfo = true;
 
-    # Lets obs-browser build against CEF 91.1.0+
-    ./Change-product_version-to-user_agent_product.patch
+  patches = [
+    ./fix-nix-plugin-path.patch
   ];
 
   nativeBuildInputs = [
-    addOpenGLRunpath
+    addDriverRunpath
     cmake
+    ninja
     pkg-config
-    wrapGAppsHook
+    wrapGAppsHook3
+    wrapQtAppsHook
+    kdePackages.extra-cmake-modules
   ]
-  ++ optional scriptingSupport swig;
+  ++ optional scriptingSupport swig
+  ++ optional cudaSupport autoAddDriverRunpath;
 
   buildInputs = [
     curl
-    fdk_aac
     ffmpeg
     jansson
-    libcef
     libjack2
     libv4l
     libxkbcommon
-    libpthreadstubs
-    libXdmcp
+    libpthread-stubs
+    libxdmcp
     qtbase
-    qtx11extras
     qtsvg
     speex
     wayland
     x264
     libvlc
     mbedtls
+    pciutils
+    librist
+    cjson
+    libva
+    srt
+    qtwayland
+    nlohmann_json
+    websocketpp
+    asio
+    libdatachannel
+    libvpl
+    qrcodegencpp
+    uthash
+    nv-codec-headers-12
   ]
-  ++ optionals scriptingSupport [ luajit python3 ]
+  ++ optionals scriptingSupport [
+    luajit
+    python3
+  ]
   ++ optional alsaSupport alsa-lib
   ++ optional pulseaudioSupport libpulseaudio
-  ++ optional pipewireSupport pipewire;
+  ++ optionals pipewireSupport [
+    pipewire
+    libdrm
+  ]
+  ++ optional browserSupport cef
+  ++ optional withFdk fdk_aac;
+
+  propagatedBuildInputs = [ simde ];
 
   # Copied from the obs-linuxbrowser
-  postUnpack = ''
-    mkdir -p cef/Release cef/Resources cef/libcef_dll_wrapper/
-    for i in ${libcef}/share/cef/*; do
-      cp -r $i cef/Release/
-      cp -r $i cef/Resources/
-    done
-    cp -r ${libcef}/lib/libcef.so cef/Release/
-    cp -r ${libcef}/lib/libcef_dll_wrapper.a cef/libcef_dll_wrapper/
-    cp -r ${libcef}/include cef/
+  postUnpack = lib.optionalString browserSupport ''
+    ln -s ${cef} cef
   '';
 
-  # obs attempts to dlopen libobs-opengl, it fails unless we make sure
-  # DL_OPENGL is an explicit path. Not sure if there's a better way
-  # to handle this.
+  postPatch = ''
+    cp ${./CMakeUserPresets.json} ./CMakeUserPresets.json
+  '';
+
   cmakeFlags = [
-    "-DCMAKE_CXX_FLAGS=-DDL_OPENGL=\\\"$(out)/lib/libobs-opengl.so\\\""
-    "-DOBS_VERSION_OVERRIDE=${version}"
+    "--preset"
+    "nixpkgs-${if stdenv.hostPlatform.isDarwin then "darwin" else "linux"}"
+    "-DOBS_VERSION_OVERRIDE=${finalAttrs.version}"
     "-Wno-dev" # kill dev warnings that are useless for packaging
-    # Add support for browser source
-    "-DBUILD_BROWSER=ON"
-    "-DCEF_ROOT_DIR=../../cef"
+    "-DENABLE_JACK=ON"
+    "-DENABLE_WEBRTC=ON"
+    (lib.cmakeBool "ENABLE_QSV11" stdenv.hostPlatform.isx86_64)
+    (lib.cmakeBool "ENABLE_LIBFDK" withFdk)
+    (lib.cmakeBool "ENABLE_SCRIPTING" scriptingSupport)
+    (lib.cmakeBool "ENABLE_ALSA" alsaSupport)
+    (lib.cmakeBool "ENABLE_PULSEAUDIO" pulseaudioSupport)
+    (lib.cmakeBool "ENABLE_PIPEWIRE" pipewireSupport)
+    (lib.cmakeBool "ENABLE_AJA" false) # TODO: fix linking against libajantv2
+    (lib.cmakeBool "ENABLE_BROWSER" browserSupport)
+  ]
+  ++ lib.optional browserSupport "-DCEF_ROOT_DIR=../../cef";
+
+  env.NIX_CFLAGS_COMPILE = toString [
+    "-Wno-error=deprecated-declarations"
+    "-Wno-error=sign-compare" # https://github.com/obsproject/obs-studio/issues/10200
+    "-Wno-error=stringop-overflow="
   ];
 
   dontWrapGApps = true;
-  preFixup = ''
-    qtWrapperArgs+=(
-      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath [ xorg.libX11 libvlc ]}"
-      ''${gappsWrapperArgs[@]}
-    )
-  '';
+  preFixup =
+    let
+      wrapperLibraries = [
+        libx11
+        libvlc
+        libGL
+      ]
+      ++ optionals decklinkSupport [ blackmagic-desktop-video ];
+    in
+    ''
+      qtWrapperArgs+=(
+        --prefix LD_LIBRARY_PATH : "$out/lib:${lib.makeLibraryPath wrapperLibraries}"
+        ''${gappsWrapperArgs[@]}
+      )
+    ''
+    + lib.optionalString browserSupport ''
+      # Remove cef components before patchelf, otherwise it will fail
+      rm $out/lib/obs-plugins/libcef.so
+      rm $out/lib/obs-plugins/libEGL.so
+      rm $out/lib/obs-plugins/libGLESv2.so
+      rm $out/lib/obs-plugins/libvk_swiftshader.so
+      rm $out/lib/obs-plugins/libvulkan.so.1
+      rm $out/lib/obs-plugins/chrome-sandbox
+    '';
 
-  postFixup = lib.optionalString stdenv.isLinux ''
-    addOpenGLRunpath $out/lib/lib*.so
-    addOpenGLRunpath $out/lib/obs-plugins/*.so
-  '';
+  postFixup = lib.concatStrings [
+    (lib.optionalString stdenv.hostPlatform.isLinux ''
+      addDriverRunpath $out/lib/lib*.so
+      addDriverRunpath $out/lib/obs-plugins/*.so
+    '')
 
-  meta = with lib; {
+    (lib.optionalString browserSupport ''
+      # Link cef components again after patchelfing other libs
+      ln -sf ${cef}/${cef.buildType}/* $out/lib/obs-plugins/
+    '')
+  ];
+
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "Free and open source software for video recording and live streaming";
     longDescription = ''
       This project is a rewrite of what was formerly known as "Open Broadcaster
@@ -140,8 +253,18 @@ mkDerivation rec {
       video content, efficiently
     '';
     homepage = "https://obsproject.com";
-    maintainers = with maintainers; [ jb55 MP2E V ];
-    license = licenses.gpl2Plus;
-    platforms = [ "x86_64-linux" "i686-linux" "aarch64-linux" ];
+    changelog = "https://github.com/obsproject/obs-studio/releases/tag/${finalAttrs.version}";
+    maintainers = with lib.maintainers; [
+      jb55
+      materus
+      fpletz
+    ];
+    license = with lib.licenses; [ gpl2Plus ] ++ optional withFdk fraunhofer-fdk;
+    platforms = [
+      "x86_64-linux"
+      "i686-linux"
+      "aarch64-linux"
+    ];
+    mainProgram = "obs";
   };
-}
+})

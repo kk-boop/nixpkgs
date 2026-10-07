@@ -1,39 +1,39 @@
-{ lib, stdenv, fetchFromGitHub, ocaml, findlib, libffi, pkg-config, ncurses, integers, bigarray-compat }:
+{
+  lib,
+  ocaml,
+  fetchFromGitHub,
+  buildDunePackage,
+  dune-configurator,
+  integers,
+  bigarray-compat,
+  ounit2,
+}:
 
-if !lib.versionAtLeast ocaml.version "4.02"
-then throw "ctypes is not available for OCaml ${ocaml.version}"
-else
-
-stdenv.mkDerivation rec {
-  pname = "ocaml${ocaml.version}-ctypes";
-  version = "0.18.0";
+buildDunePackage (finalAttrs: {
+  pname = "ctypes";
+  version = "0.24.0";
 
   src = fetchFromGitHub {
-    owner = "ocamllabs";
+    owner = "yallop";
     repo = "ocaml-ctypes";
-    rev = version;
-    sha256 = "sha256-eu5RAuPYC97IM4XUsUw3HQ1BJlEHQ+eBpsdUE6hd+Q8=";
+    rev = finalAttrs.version;
+    hash = "sha256-Wlpk+/MSWmnIRsJfVQMTCYDRixuqLzDpdFNpkQyscA8=";
   };
 
-  nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ ocaml findlib ncurses ];
-  propagatedBuildInputs = [ integers libffi bigarray-compat ];
+  buildInputs = [ dune-configurator ];
 
-  buildPhase = ''
-    make XEN=false libffi.config ctypes-base ctypes-stubs
-    make XEN=false ctypes-foreign
-  '';
+  propagatedBuildInputs = [
+    integers
+    bigarray-compat
+  ];
 
-  installPhase = ''
-    mkdir -p $out/lib/ocaml/${ocaml.version}/site-lib/stublibs
-    make install XEN=false
-  '';
+  doCheck = lib.versionAtLeast ocaml.version "4.08";
+  checkInputs = [ ounit2 ];
 
-  meta = with lib; {
-    homepage = "https://github.com/ocamllabs/ocaml-ctypes";
+  meta = {
+    homepage = "https://github.com/yallop/ocaml-ctypes";
     description = "Library for binding to C libraries using pure OCaml";
-    license = licenses.mit;
-    maintainers = [ maintainers.ericbmerritt ];
-    inherit (ocaml.meta) platforms;
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.ericbmerritt ];
   };
-}
+})

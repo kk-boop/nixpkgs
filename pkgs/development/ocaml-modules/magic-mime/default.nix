@@ -1,21 +1,24 @@
-{ lib, fetchurl, buildDunePackage }:
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "magic-mime";
-  version = "1.1.3";
+  version = "1.3.1";
 
   src = fetchurl {
-    url = "https://github.com/mirage/ocaml-magic-mime/releases/download/v${version}/magic-mime-v${version}.tbz";
-    sha256 = "1xqjs8bba567yzrzgnr88j5ck97d36zw68zr9v29liya37k6rcvz";
+    url = "https://github.com/mirage/ocaml-magic-mime/releases/download/v${finalAttrs.version}/magic-mime-${finalAttrs.version}.tbz";
+    hash = "sha256-4CNNA2Jduh76xY5X44dnLXWl6aYh/0ms/g9gnADxOwg=";
   };
 
   minimalOCamlVersion = "4.03";
-  useDune2 = true;
 
-  meta = with lib; {
+  meta = {
     description = "Convert file extensions to MIME types";
     homepage = "https://github.com/mirage/ocaml-magic-mime";
-    license = licenses.isc;
-    maintainers = with maintainers; [ vbgl ];
+    license = lib.licenses.isc;
+    maintainers = with lib.maintainers; [ vbgl ];
   };
-}
+})

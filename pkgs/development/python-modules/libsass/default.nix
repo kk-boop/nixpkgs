@@ -1,44 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, libsass
-, six
-, pytestCheckHook
-, werkzeug
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  libsass,
+  setuptools_80,
+  pytestCheckHook,
+  werkzeug,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "libsass";
-  version = "0.21.0";
+  version = "0.23.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sass";
     repo = "libsass-python";
-    rev = version;
-    sha256 = "sha256-4doz3kkRlyfVfeUarYw2tcybeDVeE2jpgmHxFJsPiVc=";
+    tag = finalAttrs.version;
+    hash = "sha256-CiSr9/3EDwpDEzu6VcMBAlm3CtKTmGYbZMnMEjyZVxI=";
   };
+
+  build-system = [ setuptools_80 ];
 
   buildInputs = [ libsass ];
 
-  propagatedBuildInputs = [ six ];
+  env.SYSTEM_SASS = "true";
 
-  preBuild = ''
-    export SYSTEM_SASS=true;
-  '';
-
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     werkzeug
   ];
 
-  pytestFlagsArray = [ "sasstests.py" ];
+  enabledTestPaths = [ "sasstests.py" ];
 
   pythonImportsCheck = [ "sass" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python binding for libsass to compile Sass/SCSS";
+    mainProgram = "pysassc";
     homepage = "https://sass.github.io/libsass-python/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    downloadPage = "https://github.com/sass/libsass-python";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ sigmanificient ];
   };
-}
+})

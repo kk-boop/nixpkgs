@@ -1,28 +1,38 @@
-{ lib
-, buildPythonPackage
-, fetchurl
-, nose
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
 }:
 
 buildPythonPackage rec {
-  version = "1.2.8";
   pname = "minimock";
+  version = "1.3.0";
+  pyproject = true;
 
-  src = fetchurl {
-    url = "https://bitbucket.org/jab/minimock/get/${version}.zip";
-    sha256 = "c88fa8a7120623f23990a7f086a9657f6ced09025a55e3be8649a30b4945441a";
+  src = fetchFromGitHub {
+    owner = "lowks";
+    repo = "minimock";
+    rev = "v${version}";
+    hash = "sha256-Ut3iKc7Sr28uGgWCV3K3CS+gBta2icvbUPMjjo4fflU=";
   };
 
-  checkInputs = [ nose ];
-
-  checkPhase = ''
-    ./test
+  postPatch = ''
+    substituteInPlace minimock.py \
+      --replace-fail "__version__ = '1.2.10.dev0'" "__version__ = '${version}'"
   '';
 
-  meta = with lib; {
-    description = "A minimalistic mocking library for python";
-    homepage = "https://pypi.python.org/pypi/MiniMock";
-    license = licenses.mit;
-  };
+  nativeBuildInputs = [ setuptools ];
 
+  # Module has no tests
+  doCheck = false;
+
+  pythonImportsCheck = [ "minimock" ];
+
+  meta = {
+    description = "Minimalistic mocking library";
+    homepage = "https://pypi.org/project/MiniMock/";
+    license = lib.licenses.mit;
+    maintainers = [ ];
+  };
 }

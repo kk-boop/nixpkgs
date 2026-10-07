@@ -1,20 +1,25 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, requests
-, ciso8601
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  hatchling,
+  requests,
+  ciso8601,
 }:
 
 buildPythonPackage rec {
   pname = "dwdwfsapi";
-  version = "1.0.4";
+  version = "1.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-JOIg6rLrU8v39z1I6smIPEeiUPdSdJcD2avUsTQq+bU=";
+    hash = "sha256-7dIVD+4MiYtsjAM5j67MlbiUN2Q5DpK6bUU0ZuHN2rk=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
     requests
     ciso8601
   ];
@@ -24,10 +29,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "dwdwfsapi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python client to retrieve data provided by DWD via their geoserver WFS API";
     homepage = "https://github.com/stephan192/dwdwfsapi";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ elohmeier ];
+    changelog = "https://github.com/stephan192/dwdwfsapi/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
   };
 }

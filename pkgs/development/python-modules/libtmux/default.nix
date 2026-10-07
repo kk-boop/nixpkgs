@@ -1,26 +1,74 @@
-{ lib, fetchPypi, buildPythonPackage, pytest }:
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  ncurses,
+  procps,
+  pytest-rerunfailures,
+  pytest-xdist,
+  pytestCheckHook,
+  tmux,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "libtmux";
-  version = "0.10.2";
+  version = "0.61.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "a0e958b85ec14cdaabecfa738a0dd51846f05e5c5e9d6749a2bf5160b9f7e1d2";
+  src = fetchFromGitHub {
+    owner = "tmux-python";
+    repo = "libtmux";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ZhVwe6JQTDQDozHHOpwkzWsfSxiP43W4asRngokC7gU=";
   };
 
-  checkInputs = [ pytest ];
+  patches = [ ./0001-fix-test_control_mode_stdout_preserves_non_ascii_out.patch ];
+
   postPatch = ''
-    sed -i 's/==.*$//' requirements/test.txt
+    substituteInPlace pyproject.toml \
+      --replace-fail '"--doctest-docutils-modules",' ""
   '';
 
-  # No tests in archive
-  doCheck = false;
+  build-system = [ hatchling ];
 
-  meta = with lib; {
-    description = "Scripting library for tmux";
-    homepage = "https://libtmux.readthedocs.io/";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ ];
+  nativeCheckInputs = [
+    ncurses
+    procps
+    pytestCheckHook
+    pytest-rerunfailures
+    pytest-xdist
+    tmux
+  ];
+
+  enabledTestPaths = [ "tests" ];
+
+  disabledTestPaths = lib.optionals stdenv.hostPlatform.isDarwin [ "tests/test/test_retry.py" ];
+  disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [
+    # basename for sleep is coreutils, not sleep
+    "test_break_pane_no_name_uses_natural_name"
+    # Fail with: 'no server running on /tmp/tmux-1000/libtmux_test8sorutj1'.
+    "test_new_session_width_height"
+    # AssertionError: assert '' == '$'
+    "test_capture_pane"
+    # AssertionError: assert '' == '$'
+    "test_capture_pane_start"
+    # AssertionError: assert '' == '$'
+    "test_capture_pane_end"
+    # IndexError: list index out of range
+    "test_new_window_with_environment"
+  ];
+
+  pythonImportsCheck = [ "libtmux" ];
+
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
+    description = "Typed scripting library / ORM / API wrapper for tmux";
+    homepage = "https://libtmux.git-pull.com/";
+    changelog = "https://github.com/tmux-python/libtmux/raw/${finalAttrs.src.tag}/CHANGES";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ otavio ];
   };
-}
+})

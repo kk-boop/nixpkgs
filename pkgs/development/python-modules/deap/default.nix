@@ -1,27 +1,44 @@
-{ lib, buildPythonPackage, fetchPypi, python, numpy, matplotlib, nose }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  moocore,
+  numpy,
+  pytestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "deap";
-  version = "1.3.1";
+  version = "1.4.4";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "0bvshly83c4h5jhxaa97z192viczymz5fxp6vl8awjmmrs9l9x8i";
+    inherit (finalAttrs) version;
+    pname = "deap";
+    hash = "sha256-UNS9kk/KWhaj26i/2xFApV6cJM5QgWq09Wg9LzHC1zQ=";
   };
 
-  propagatedBuildInputs = [ numpy matplotlib ];
+  build-system = [
+    setuptools
+  ];
 
-  checkInputs = [ nose ];
-  checkPhase = ''
-    ${python.interpreter} setup.py nosetests --verbosity=3
-  '';
+  dependencies = [
+    moocore
+    numpy
+  ];
 
-  meta = with lib; {
-    description = "DEAP is a novel evolutionary computation framework for rapid prototyping and testing of ideas.";
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
+    description = "Novel evolutionary computation framework for rapid prototyping and testing of ideas";
     homepage = "https://github.com/DEAP/deap";
-    license = licenses.lgpl3;
-    maintainers = with maintainers; [ psyanticy ];
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [
+      getpsyched
+      psyanticy
+    ];
   };
-
-}
-
+})

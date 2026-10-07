@@ -1,29 +1,64 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, rednose
-, six
-, mock
-, isPyPy
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
+  pytest-cov-stub,
+  mock,
+  six,
+  isPyPy,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sure";
-  version = "2.0.0";
-  disabled = isPyPy;
+  version = "2.0.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "34ae88c846046742ef074036bf311dc90ab152b7bc09c342b281cebf676727a2";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-yPxvq8Dn9phO6ruUJUDkVkblvvC7mf5Z4C2mNOTUuco=";
   };
 
-  buildInputs = [ rednose ];
-  propagatedBuildInputs = [ six mock ];
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail version=version 'version="${finalAttrs.version}"'
 
-  meta = with lib; {
+    substituteInPlace setup.cfg \
+      --replace "rednose = 1" ""
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    mock
+    six
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+    mock
+  ];
+
+  disabledTestPaths = [
+    "tests/test_old_api.py" # require nose
+  ];
+
+  disabledTests = lib.optionals isPyPy [
+    # test extension of 'dict' object is broken
+    "test_should_compare_dict_with_non_orderable_key_types"
+    "test_should_compare_dict_with_enum_keys"
+  ];
+
+  pythonImportsCheck = [ "sure" ];
+
+  meta = {
     description = "Utility belt for automated testing";
-    homepage = "https://sure.readthedocs.io/en/latest/";
-    license = licenses.gpl3Plus;
+    mainProgram = "sure";
+    homepage = "https://sure.readthedocs.io/";
+    changelog = "https://github.com/gabrielfalcao/sure/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ sigmanificient ];
   };
-
-}
+})

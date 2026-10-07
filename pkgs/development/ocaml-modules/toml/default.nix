@@ -1,25 +1,29 @@
-{ lib, fetchFromGitHub, buildDunePackage
-, iso8601, menhir
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  iso8601,
+  menhir,
 }:
 
 buildDunePackage rec {
   pname = "toml";
-  version = "6.0.0";
-
-  useDune2 = true;
+  version = "7.1.0";
+  minimalOCamlVersion = "4.08";
+  duneVersion = "3";
 
   src = fetchFromGitHub {
     owner = "ocaml-toml";
     repo = "to.ml";
     rev = version;
-    sha256 = "08ywzqckllvwawl1wpgg7qzvx6jhq7d6vysa0d5hj7qdwq213ggm";
+    hash = "sha256-uk14Py7lEEDJhFsRRtStXqKlJLtx0o8eS9DEIes4SHw=";
   };
 
-  buildInputs = [ menhir ];
+  nativeBuildInputs = [ menhir ];
   propagatedBuildInputs = [ iso8601 ];
 
   meta = {
-    description = "Implementation in OCaml of the Toml minimal langage";
+    description = "Implementation in OCaml of the Toml minimal language";
     homepage = "http://ocaml-toml.github.io/To.ml";
     license = lib.licenses.lgpl3;
     maintainers = [ lib.maintainers.vbgl ];

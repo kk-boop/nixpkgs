@@ -1,46 +1,65 @@
-{ lib
-, stdenv
-, pythonOlder
-, rustPlatform
-, fetchFromGitHub
-, buildPythonPackage
-, libiconv
-, numpy
-, psutil
-, pytestCheckHook
-, python-dateutil
-, pytz
-, xxhash
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  rustPlatform,
+  cffi,
+
+  # native dependencies
+  libiconv,
+
+  # tests
+  numpy,
+  psutil,
+  pytestCheckHook,
+  python-dateutil,
+  pytz,
+  xxhash,
+
+  # for passthru.tests
+  falcon,
+  fastapi,
+  gradio,
+  mashumaro,
+  ufolib2,
 }:
 
 buildPythonPackage rec {
   pname = "orjson";
-  version = "3.6.4";
-  disabled = pythonOlder "3.7";
+  version = "3.11.9";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ijl";
-    repo = pname;
-    rev = version;
-    sha256 = "0xpna70s5v7d4lwsb6ijc0f2rm6p7jqmac9yayx9qb1dasbki6zd";
+    repo = "orjson";
+    tag = version;
+    hash = "sha256-CCwpD6pzO80GlMvjJt4HURQxbghYg53OG/6ZIJWggNU=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit src;
-    name = "${pname}-${version}";
-    sha256 = "0m4f8lc0zwxh4lmxkpxvdd2lc2g3lkq0ymllqbyr31sbxvwnxk56";
-  };
-
-  format = "pyproject";
-
-  nativeBuildInputs = with rustPlatform; [
-    cargoSetupHook
-    maturinBuildHook
+  patches = lib.optionals (stdenv.buildPlatform != stdenv.hostPlatform) [
+    # fix architecture checks in build.rs to fix build for non x86_64
+    ./cross-arch-compat.patch
   ];
 
-  buildInputs = lib.optionals stdenv.isDarwin [ libiconv ];
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit pname version src;
+    hash = "sha256-F1TFEj26trVV0TjK6tkS8kiorWRF0uijb1jQko7RDSM=";
+  };
 
-  checkInputs = [
+  nativeBuildInputs = [
+    cffi
+  ]
+  ++ (with rustPlatform; [
+    cargoSetupHook
+    maturinBuildHook
+  ]);
+
+  buildInputs = lib.optionals stdenv.hostPlatform.isDarwin [ libiconv ];
+
+  nativeCheckInputs = [
     numpy
     psutil
     pytestCheckHook
@@ -49,13 +68,27 @@ buildPythonPackage rec {
     xxhash
   ];
 
-  pythonImportsCheck = [ pname ];
+  pythonImportsCheck = [ "orjson" ];
 
-  meta = with lib; {
+  passthru.tests = {
+    inherit
+      falcon
+      fastapi
+      gradio
+      mashumaro
+      ufolib2
+      ;
+  };
+
+  meta = {
     description = "Fast, correct Python JSON library supporting dataclasses, datetimes, and numpy";
     homepage = "https://github.com/ijl/orjson";
-    license = with licenses; [ asl20 mit ];
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ misuzu ];
+    changelog = "https://github.com/ijl/orjson/blob/${version}/CHANGELOG.md";
+    license = with lib.licenses; [
+      asl20
+      mit
+    ];
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [ misuzu ];
   };
 }

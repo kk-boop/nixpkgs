@@ -1,45 +1,60 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pillow
-, libX11
-, libXcursor
-, libpng
-, python
-, pytestCheckHook
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  attrs,
+  pillow,
+  toml,
+  numpy,
+  pyyaml,
+  python,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "clickgen";
-  version = "1.1.9";
+  version = "2.2.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ful1e5";
     repo = "clickgen";
-    rev = "v${version}";
-    sha256 = "108f3sbramd3hhs4d84s3i3lbwllfrkvjakjq4gdmbw6xpilvm0l";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-yFEkE1VyeHBuebpsumc6CTvv2kpAw7XAWlyUlXibqz0=";
   };
 
-  buildInputs = [ libXcursor libX11 libpng ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ pillow ];
+  dependencies = [
+    attrs
+    numpy
+    pillow
+    pyyaml
+    toml
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  postInstall = ''
+    # Copying scripts directory needed by clickgen script at $out/bin/
+    cp -R src/clickgen/scripts $out/${python.sitePackages}/clickgen/scripts
+  '';
 
   pythonImportsCheck = [ "clickgen" ];
 
-  postInstall = ''
-    install -m644 clickgen/xcursorgen.so $out/${python.sitePackages}/clickgen/xcursorgen.so
-  '';
-
-  checkInputs = [ pytestCheckHook ];
-
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/ful1e5/clickgen";
-    description = "The hassle-free cursor building toolbox";
+    description = "Hassle-free cursor building toolbox";
     longDescription = ''
       clickgen is API for building X11 and Windows Cursors from
       .png files. clickgen is using anicursorgen and xcursorgen under the hood.
     '';
-    license = licenses.mit;
-    maintainers = with maintainers; [ AdsonCicilioti ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
+    # fails with:
+    # ld: unknown option: -zdefs
+    broken = stdenv.hostPlatform.isDarwin;
   };
-}
+})

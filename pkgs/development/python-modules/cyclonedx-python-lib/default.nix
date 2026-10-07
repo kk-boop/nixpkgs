@@ -1,66 +1,96 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, importlib-metadata
-, packageurl-python
-, poetry-core
-, pytestCheckHook
-, pythonOlder
-, requirements-parser
-, setuptools
-, toml
-, types-setuptools
-, types-toml
-, tox
+{
+  lib,
+  buildPythonPackage,
+  ddt,
+  fetchFromGitHub,
+  importlib-metadata,
+  jsonschema,
+  license-expression,
+  lxml,
+  packageurl-python,
+  py-serializable,
+  poetry-core,
+  pytestCheckHook,
+  requirements-parser,
+  sortedcontainers,
+  setuptools,
+  toml,
+  types-setuptools,
+  types-toml,
+  xmldiff,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cyclonedx-python-lib";
-  version = "0.12.3";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.6";
+  version = "11.12.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "CycloneDX";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1404wcwjglq025n8ncsrl2h64g1sly83cs9sc6jpiw1g5ay4a1vi";
+    repo = "cyclonedx-python-lib";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-wkESW3xK0h9tlUDNmOgNMxIlA/PKEoPn6JqhDou408c=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  pythonRelaxDeps = [ "py-serializable" ];
 
-  propagatedBuildInputs = [
+  build-system = [ poetry-core ];
+
+  dependencies = [
     importlib-metadata
+    license-expression
     packageurl-python
     requirements-parser
     setuptools
+    sortedcontainers
     toml
+    py-serializable
     types-setuptools
     types-toml
   ];
 
-  checkInputs = [
-    pytestCheckHook
-    tox
-  ];
+  optional-dependencies = {
+    validation = [
+      jsonschema
+      lxml
+    ];
+    json-validation = [ jsonschema ];
+    xml-validation = [ lxml ];
+  };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'setuptools = "^50.3.2"' 'setuptools = "*"' \
-      --replace 'importlib-metadata = "^4.8.1"' 'importlib-metadata = "*"'
+  nativeCheckInputs = [
+    ddt
+    pytestCheckHook
+    xmldiff
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
+
+  pythonImportsCheck = [ "cyclonedx" ];
+
+  preCheck = ''
+    export PYTHONPATH=tests''${PYTHONPATH+:$PYTHONPATH}
   '';
 
-  pythonImportsCheck = [
-    "cyclonedx"
+  enabledTestPaths = [ "tests/" ];
+
+  disabledTests = [
+    # These tests require network access
+    "test_bom_v1_3_with_metadata_component"
+    "test_bom_v1_4_with_metadata_component"
+    # AssertionError: <ValidationError: "{'algorithm': 'ES256', ...
+    "TestJson"
   ];
 
-  meta = with lib; {
+  disabledTestPaths = [
+    # Test failures seem py-serializable related
+    "tests/test_output_xml.py"
+  ];
+
+  meta = {
     description = "Python library for generating CycloneDX SBOMs";
     homepage = "https://github.com/CycloneDX/cyclonedx-python-lib";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/CycloneDX/cyclonedx-python-lib/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

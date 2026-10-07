@@ -1,15 +1,14 @@
-{ buildPythonPackage
-, cliff
-, docutils
-, stestr
-, testscenarios
+{
+  buildPythonPackage,
+  cliff,
+  sphinx,
+  stestrCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "cliff";
-  inherit (cliff) version;
-
-  src = cliff.src;
+  inherit (cliff) version src;
+  pyproject = false;
 
   postPatch = ''
     # only a small portion of the listed packages are actually needed for running the tests
@@ -20,14 +19,9 @@ buildPythonPackage rec {
   dontBuild = true;
   dontInstall = true;
 
-  checkInputs = [
+  nativeCheckInputs = [
     cliff
-    docutils
-    stestr
-    testscenarios
+    sphinx
+    stestrCheckHook
   ];
-
-  checkPhase = ''
-    stestr run
-  '';
 }

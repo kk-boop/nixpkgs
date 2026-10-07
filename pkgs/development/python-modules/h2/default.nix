@@ -1,42 +1,41 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, fetchpatch
-, hpack
-, hyperframe
-, pytestCheckHook
-, hypothesis
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  hpack,
+  hyperframe,
+  pytestCheckHook,
+  hypothesis,
 }:
 
 buildPythonPackage rec {
   pname = "h2";
-  version = "4.0.0";
-  format = "setuptools";
-  disabled = pythonOlder "3.6";
+  version = "4.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "bb7ac7099dd67a857ed52c815a6192b6b1f5ba6b516237fc24a085341340593d";
+  src = fetchFromGitHub {
+    owner = "python-hyper";
+    repo = "h2";
+    tag = "v${version}";
+    hash = "sha256-04we2xeh5LtLA4La9WPfXQVczDIz7NpL/6y9TmIELgM=";
   };
 
-  patches = [
-    # Workaround issues with hypothesis 6.6
-    # https://github.com/python-hyper/h2/pull/1248
-    (fetchpatch {
-      url = "https://github.com/python-hyper/h2/commit/0646279dab694a89562846c810202ce2c0b49be3.patch";
-      sha256 = "1k0fsxwq9wbv15sc9ixls4qmxxghlzpflf3awm66ar9m2ikahiak";
-    })
-  ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     hpack
     hyperframe
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     hypothesis
+  ];
+
+  disabledTests = [
+    # timing sensitive
+    "test_changing_max_frame_size"
   ];
 
   pythonImportsCheck = [
@@ -44,9 +43,11 @@ buildPythonPackage rec {
     "h2.config"
   ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/python-hyper/h2/blob/${src.tag}/CHANGELOG.rst";
     description = "HTTP/2 State-Machine based protocol implementation";
-    homepage = "http://hyper.rtfd.org/";
-    license = licenses.mit;
+    homepage = "https://github.com/python-hyper/h2";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

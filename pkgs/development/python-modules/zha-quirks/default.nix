@@ -1,40 +1,65 @@
-{ lib
-, aiohttp
-, asynctest
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, zigpy
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-asyncio,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  time-machine,
+  zha,
+  zigpy,
 }:
 
 buildPythonPackage rec {
   pname = "zha-quirks";
-  version = "0.0.65";
+  version = "2.2.2";
+  pyproject = true;
+
+  disabled = pythonOlder "3.12";
 
   src = fetchFromGitHub {
     owner = "zigpy";
     repo = "zha-device-handlers";
-    rev = version;
-    sha256 = "sha256-3Lcmc95KotFMlL44zDugIQkHtplMMlyWjSb+SLehaqs=";
+    tag = version;
+    hash = "sha256-3EcRB412I+0yazAXX2qtqhrSzR8D/52b4HZkuAmQaoM=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "setuptools-git-versioning<2"' "" \
+      --replace-fail 'dynamic = ["version"]' 'version = "${version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     aiohttp
+    zha
     zigpy
   ];
 
-  checkInputs = [
-    asynctest
+  nativeCheckInputs = [
+    pytest-asyncio
     pytestCheckHook
+    time-machine
+  ];
+
+  disabledTests = [
+    # AssertionError: expected call not found
+    "test_tuya_mcu_set_time"
+    "test_moes"
   ];
 
   pythonImportsCheck = [ "zhaquirks" ];
 
-  meta = with lib; {
+  meta = {
     description = "ZHA Device Handlers are custom quirks implementations for Zigpy";
-    homepage = "https://github.com/dmulcahey/zha-device-handlers";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ etu ];
-    platforms = platforms.linux;
+    homepage = "https://github.com/zigpy/zha-device-handlers";
+    changelog = "https://github.com/zigpy/zha-device-handlers/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
+    platforms = lib.platforms.linux;
   };
 }

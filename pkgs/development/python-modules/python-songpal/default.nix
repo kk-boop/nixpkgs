@@ -1,56 +1,33 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, fetchpatch
-, poetry-core
-, aiohttp
-, async-upnp-client
-, attrs
-, click
-, importlib-metadata
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  aiohttp,
+  async-upnp-client,
+  attrs,
+  click,
 }:
 
 buildPythonPackage rec {
   pname = "python-songpal";
-  version = "0.13";
-
-  format = "pyproject";
-
-  disabled = pythonOlder "3.6";
+  version = "0.16.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "rytilahti";
     repo = "python-songpal";
-    rev = version;
-    sha256 = "124w6vfn992845k09bjv352havk8pg590b135m37h1x1m7fmbpwa";
+    tag = "release/${version}";
+    hash = "sha256-PYw6xlUtBrxl+YeVO/2Njt5LYWEprzGPVNk1Mlr83HM=";
   };
 
-  patches = [
-    # https://github.com/rytilahti/python-songpal/pull/90
-    (fetchpatch {
-      name = "switch-to-poetry-core.patch";
-      url = "https://github.com/rytilahti/python-songpal/commit/56b634790d94b2f9788d5af3d5cedff47f1e42c2.patch";
-      sha256 = "0yc0mrb91ywk77nd4mxvyc0p2kjz2w1p395755a32ls30zw2bs27";
-    })
-  ];
+  build-system = [ poetry-core ];
 
-  postPatch = ''
-    # https://github.com/rytilahti/python-songpal/issues/91
-    substituteInPlace pyproject.toml \
-      --replace 'click = "^7"' 'click = "*"'
-  '';
-
-  nativeBuildInputs = [
-    poetry-core
-  ];
-
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
     async-upnp-client
     attrs
     click
-    importlib-metadata
   ];
 
   # no tests implemented
@@ -58,10 +35,12 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "songpal" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for interfacing with Sony's Songpal devices";
+    mainProgram = "songpal";
     homepage = "https://github.com/rytilahti/python-songpal";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ dotlambda ];
+    changelog = "https://github.com/rytilahti/python-songpal/blob/release/${version}/CHANGELOG.md";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

@@ -1,31 +1,29 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, configparser
-, pytest
-, isPy3k
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  flit-core,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "entrypoints";
-  version = "0.3";
+  version = "0.4";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "c70dd71abe5a8c85e55e12c19bd91ccfeec11a6e99044204511f9ed547d48451";
+    hash = "sha256-twbt2qkhihnrzWe1aBjwW7J1ibHKno15e3Sv+tTMrNQ=";
   };
 
-  checkInputs = [ pytest ];
+  nativeBuildInputs = [ flit-core ];
 
-  propagatedBuildInputs = lib.optional (!isPy3k) configparser;
-
-  checkPhase = ''
-    py.test tests
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
   meta = {
     description = "Discover and load entry points from installed packages";
     homepage = "https://github.com/takluyver/entrypoints";
     license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

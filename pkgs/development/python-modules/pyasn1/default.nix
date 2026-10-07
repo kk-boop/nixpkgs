@@ -1,18 +1,34 @@
-{ lib, buildPythonPackage, fetchPypi, }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyasn1";
-  version = "0.4.8";
+  version = "0.6.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "aef77c9fb94a3ac588e87841208bdec464471d9871bd5050a287cc9a475cd0ba";
+  src = fetchFromGitHub {
+    owner = "pyasn1";
+    repo = "pyasn1";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ZtsHANVUGk+LF17dEjePDm8ofX61P4f2/BTHqlscNd0=";
   };
 
-  meta = with lib; {
-    description = "ASN.1 tools for Python";
-    homepage = "http://pyasn1.sourceforge.net/";
-    license = "mBSD";
-    platforms = platforms.unix;  # arbitrary choice
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "pyasn1" ];
+
+  meta = {
+    description = "Generic ASN.1 library for Python";
+    homepage = "https://pyasn1.readthedocs.io";
+    changelog = "https://github.com/pyasn1/pyasn1/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

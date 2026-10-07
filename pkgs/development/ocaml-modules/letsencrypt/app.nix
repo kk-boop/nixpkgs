@@ -1,17 +1,17 @@
-{ lib
-, buildDunePackage
-, letsencrypt
-, letsencrypt-dns
-, cmdliner
-, cohttp-lwt-unix
-, logs
-, fmt
-, lwt
-, mirage-crypto-rng
-, ptime
-, bos
-, fpath
-, randomconv
+{
+  buildDunePackage,
+  letsencrypt,
+  letsencrypt-dns,
+  cmdliner,
+  cohttp-lwt-unix,
+  logs,
+  fmt,
+  lwt,
+  mirage-crypto-rng,
+  ptime,
+  bos,
+  fpath,
+  randomconv,
 }:
 
 buildDunePackage {
@@ -20,8 +20,6 @@ buildDunePackage {
   inherit (letsencrypt)
     src
     version
-    useDune2
-    minimumOCamlVersion
     ;
 
   buildInputs = [
@@ -40,6 +38,7 @@ buildDunePackage {
   ];
 
   meta = letsencrypt.meta // {
-    description = "An ACME client implementation of the ACME protocol (RFC 8555) for OCaml";
+    description = "ACME client implementation of the ACME protocol (RFC 8555) for OCaml";
+    mainProgram = "oacmel";
   };
 }

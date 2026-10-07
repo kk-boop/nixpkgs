@@ -1,49 +1,50 @@
-{ lib
-, beautifultable
-, buildPythonPackage
-, click
-, click-default-group
-, fetchFromGitHub
-, humanize
-, keyring
-, python
-, python-dateutil
-, requests
+{
+  lib,
+  beautifultable,
+  buildPythonPackage,
+  click-default-group,
+  click,
+  fetchFromGitHub,
+  humanize,
+  keyring,
+  requests,
+  setuptools,
+  unittestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mwdblib";
-  version = "3.4.1";
+  version = "4.7.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "CERT-Polska";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-jCtK3Fk725EaA26GG6j6xqEMFH4Qq92QWrJ7sxcWRaY=";
+    repo = "mwdblib";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-eP8q5G97vfe7eN3+/+UF7Qda5/xzwC/GRrTorucjEGo=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     beautifultable
     click
     click-default-group
     humanize
     keyring
-    python-dateutil
     requests
   ];
 
-  checkPhase = ''
-    runHook preCheck
-    ${python.interpreter} -m unittest discover
-    runHook postCheck
-  '';
+  nativeCheckInputs = [ unittestCheckHook ];
 
   pythonImportsCheck = [ "mwdblib" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python client library for the mwdb service";
     homepage = "https://github.com/CERT-Polska/mwdblib";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/CERT-Polska/mwdblib/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "mwdb";
   };
-}
+})

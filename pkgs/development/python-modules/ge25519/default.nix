@@ -1,50 +1,46 @@
-{ lib
-, bitlist
-, buildPythonPackage
-, fe25519
-, fetchPypi
-, fountains
-, nose
-, parts
-, pytestCheckHook
+{
+  lib,
+  bitlist,
+  buildPythonPackage,
+  fe25519,
+  fetchPypi,
+  fountains,
+  parts,
+  pytest-cov-stub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "ge25519";
-  version = "1.0.0";
-  format = "setuptools";
+  version = "2.0.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-f7xvZ92zRO3GLSdfgEyhkWVwAFT2TvKHy6+iF+k43bI=";
+    hash = "sha256-eqduw1nMHMiMIvhzXA1Zg2foqQscQwFLhgm9aJYvmuo=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     fe25519
     parts
     bitlist
     fountains
   ];
 
-  checkInputs = [
-    nose
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "bitlist~=0.5.1" "bitlist>=0.5.1" \
-      --replace "parts~=1.1.2" "parts>=1.1.2"
-  '';
+  pythonImportsCheck = [ "ge25519" ];
 
-  pythonImportsCheck = [
-    "ge25519"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Python implementation of Ed25519 group elements and operations";
     homepage = "https://github.com/nthparty/ge25519";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

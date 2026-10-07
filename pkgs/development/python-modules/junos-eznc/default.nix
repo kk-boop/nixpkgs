@@ -1,51 +1,84 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, six
-, scp
-, pyserial
-, paramiko
-, netaddr
-, ncclient
-, ntc-templates
-, lxml
-, jinja2
-, pyyaml
-, transitions
-, yamlordereddictloader
-, nose
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  jinja2,
+  lxml,
+  mock,
+  ncclient,
+  netaddr,
+  nose2,
+  ntc-templates,
+  paramiko,
+  pyparsing,
+  pyserial,
+  pyyaml,
+  scp,
+  setuptools,
+  pytestCheckHook,
+  six,
+  transitions,
+  yamlloader,
 }:
 
 buildPythonPackage rec {
   pname = "junos-eznc";
-  version = "2.6.3";
+  version = "2.7.6";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "4eee93d0af203af7cee54a8f0c7bd28af683e829edf1fd68feba85d0ad737395";
+  src = fetchFromGitHub {
+    owner = "Juniper";
+    repo = "py-junos-eznc";
+    tag = version;
+    hash = "sha256-+bheNSRcFnq/07Y6BaTqsUAVxEQcdQwtz39cX1nKOBs=";
   };
 
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "ncclient==0.6.9" "ncclient"
-  '';
+  build-system = [ setuptools ];
 
-  checkInputs = [ nose ];
+  pythonRelaxDeps = [ "ncclient" ];
 
-  propagatedBuildInputs = [
-    scp six pyserial paramiko netaddr ncclient ntc-templates lxml jinja2 pyyaml transitions yamlordereddictloader
+  dependencies = [
+    jinja2
+    lxml
+    ncclient
+    netaddr
+    ntc-templates
+    paramiko
+    pyparsing
+    pyserial
+    pyyaml
+    scp
+    six
+    transitions
+    yamlloader
   ];
 
-  checkPhase = ''
-    nosetests -v --with-coverage --cover-package=jnpr.junos --cover-inclusive -a unit
-  '';
+  nativeCheckInputs = [
+    mock
+    nose2
+    pytestCheckHook
+  ];
+
+  enabledTestPaths = [ "tests/unit" ];
+
+  disabledTests = [
+    # jnpr.junos.exception.FactLoopError: A loop was detected while gathering the...
+    "TestPersonality"
+    "TestGetSoftwareInformation"
+    "TestIfdStyle"
+    # KeyError: 'mac'
+    "test_textfsm_table_mutli_key"
+    # AssertionError: None != 'juniper.net'
+    "test_domain_fact_from_config"
+  ];
 
   pythonImportsCheck = [ "jnpr.junos" ];
 
-  meta = with lib; {
-    homepage = "http://www.github.com/Juniper/py-junos-eznc";
+  meta = {
     description = "Junos 'EZ' automation for non-programmers";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ xnaveira ];
+    homepage = "https://github.com/Juniper/py-junos-eznc";
+    changelog = "https://github.com/Juniper/py-junos-eznc/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ xnaveira ];
   };
 }

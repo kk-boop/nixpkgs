@@ -1,18 +1,33 @@
-{ lib, buildDunePackage, cohttp, ocaml_lwt, uri, ppx_sexp_conv, logs, sexplib0 }:
+{
+  lib,
+  buildDunePackage,
+  cohttp,
+  ipaddr,
+  lwt,
+  uri,
+  ppx_sexp_conv,
+  logs,
+  sexplib0,
+}:
 
 buildDunePackage {
   pname = "cohttp-lwt";
   inherit (cohttp)
     version
     src
-    useDune2
-    minimumOCamlVersion
     ;
 
   buildInputs = [ ppx_sexp_conv ];
 
   propagatedBuildInputs = [
-    cohttp ocaml_lwt logs sexplib0 uri
+    cohttp
+    lwt
+    logs
+    sexplib0
+    uri
+  ]
+  ++ lib.optionals (lib.versionAtLeast cohttp.version "6.0.0") [
+    ipaddr
   ];
 
   meta = cohttp.meta // {

@@ -1,21 +1,38 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27 }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatch-vcs,
+  hatchling,
+  unittestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyotp";
-  version = "2.6.0";
-  disabled = isPy27;
+  version = "2.10.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "d28ddfd40e0c1b6a6b9da961c7d47a10261fb58f378cb00f05ce88b26df9c432";
+  src = fetchFromGitHub {
+    owner = "pyauth";
+    repo = "pyotp";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Ol7I3bj2bffKnO0r4VBOy/NvvK4pKbIul4FFlmF+wQU=";
   };
+
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
+
+  nativeCheckInputs = [ unittestCheckHook ];
 
   pythonImportsCheck = [ "pyotp" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/pyauth/pyotp/blob/v${finalAttrs.version}/Changes.rst";
     description = "Python One Time Password Library";
     homepage = "https://github.com/pyauth/pyotp";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
-}
+})

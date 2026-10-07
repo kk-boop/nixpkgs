@@ -1,19 +1,28 @@
-{ lib, buildDunePackage, dune_2, dune-glob, dune-private-libs }:
+{
+  lib,
+  buildDunePackage,
+  dune,
+  dune-glob,
+  dune-private-libs,
+  dune-rpc,
+}:
 
-buildDunePackage rec {
+buildDunePackage {
   pname = "dune-action-plugin";
-  inherit (dune_2) src version patches;
-
-  useDune2 = true;
+  inherit (dune) src version;
 
   dontAddPrefix = true;
 
-  propagatedBuildInputs = [ dune-glob dune-private-libs ];
+  propagatedBuildInputs = [
+    dune-glob
+    dune-private-libs
+    dune-rpc
+  ];
 
-  meta = with lib; {
-    inherit (dune_2.meta) homepage;
+  meta = {
+    inherit (dune.meta) homepage;
     description = "API for writing dynamic Dune actions";
-    maintainers = [ maintainers.marsam ];
-    license = licenses.mit;
+    maintainers = [ ];
+    license = lib.licenses.mit;
   };
 }

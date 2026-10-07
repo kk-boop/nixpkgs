@@ -1,23 +1,28 @@
-{ lib, fetchurl, buildDunePackage, bigarray-compat, alcotest, ocaml }:
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  fmt,
+  alcotest,
+  crowbar,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "cstruct";
-  version = "6.0.1";
-
-  useDune2 = true;
-
-  minimumOCamlVersion = "4.03";
+  version = "6.3.0";
 
   src = fetchurl {
-    url = "https://github.com/mirage/ocaml-cstruct/releases/download/v${version}/cstruct-v${version}.tbz";
-    sha256 = "4a67bb8f042753453c59eabf0e47865631253ba694091ce6062aac05d47a9bed";
+    url = "https://github.com/mirage/ocaml-cstruct/releases/download/v${finalAttrs.version}/cstruct-${finalAttrs.version}.tbz";
+    hash = "sha256-lWsknd+1X9I1hMF2evKPZIcDPTZIiCF6FCddiY69d1Q=";
   };
 
-  propagatedBuildInputs = [ bigarray-compat ];
+  buildInputs = [ fmt ];
 
-  # alcotest isn't available for OCaml < 4.05 due to fmt
-  doCheck = lib.versionAtLeast ocaml.version "4.05";
-  checkInputs = [ alcotest ];
+  doCheck = false; # Tests depend on cstruct-sexp
+  checkInputs = [
+    alcotest
+    crowbar
+  ];
 
   meta = {
     description = "Access C-like structures directly from OCaml";
@@ -25,4 +30,4 @@ buildDunePackage rec {
     homepage = "https://github.com/mirage/ocaml-cstruct";
     maintainers = [ lib.maintainers.vbgl ];
   };
-}
+})

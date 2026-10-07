@@ -1,49 +1,135 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, ddt
-, osc-lib
-, pbr
-, python-cinderclient
-, python-keystoneclient
-, python-novaclient
-, requests-mock
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  ddt,
+  hacking,
+  installShellFiles,
+  openstackdocstheme,
+  osc-lib,
+  osc-placement,
+  pbr,
+  aodhclient,
+  python-barbicanclient,
+  python-designateclient,
+  python-heatclient,
+  python-ironicclient,
+  python-keystoneclient,
+  python-magnumclient,
+  python-manilaclient,
+  python-mistralclient,
+  python-neutronclient,
+  python-octaviaclient,
+  python-watcherclient,
+  python-zaqarclient,
+  python-zunclient,
+  requests-mock,
+  requests,
+  setuptools,
+  sphinxHook,
+  sphinxcontrib-apidoc,
+  stdenv,
+  stestrCheckHook,
+  versionCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-openstackclient";
-  version = "5.7.0";
+  version = "10.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "c65e3d51018f193cce2daf3d0fd69daa36003bdb2b85df6b07b973e4c39e2f92";
+  src = fetchFromGitHub {
+    owner = "openstack";
+    repo = "python-openstackclient";
+    tag = finalAttrs.version;
+    hash = "sha256-xOvDAwnJGYbMJDG+lO1TCLRFavlciJRVmbjYqU/E1DY=";
   };
 
-  propagatedBuildInputs = [
+  env.PBR_VERSION = finalAttrs.version;
+
+  build-system = [
+    openstackdocstheme
+    setuptools
+    sphinxHook
+    sphinxcontrib-apidoc
+  ];
+
+  sphinxBuilders = [ "man" ];
+
+  dependencies = [
     osc-lib
     pbr
-    python-cinderclient
+    python-manilaclient
     python-keystoneclient
-    python-novaclient
+    requests
+  ]
+  # to support proxy envs like ALL_PROXY in requests
+  ++ requests.optional-dependencies.socks;
+
+  nativeBuildInputs = [
+    installShellFiles
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     ddt
-    stestr
+    hacking
     requests-mock
+    stestrCheckHook
   ];
 
-  checkPhase = ''
-    stestr run
+  pythonImportsCheck = [
+    "openstackclient"
+    "openstackclient.api"
+    "openstackclient.common"
+    "openstackclient.compute"
+    "openstackclient.identity"
+    "openstackclient.image"
+    "openstackclient.network"
+    "openstackclient.object"
+    "openstackclient.volume"
+    "openstackclient.tests"
+  ];
+
+  optional-dependencies = {
+    # See https://github.com/openstack/python-openstackclient/blob/master/doc/source/contributor/plugins.rst
+    cli-plugins = [
+      aodhclient
+      # gnocchiclient not packaged
+      osc-placement
+      python-barbicanclient
+      # python-cyborgclient not packaged
+      python-designateclient
+      python-heatclient
+      python-ironicclient
+      # python-ironic-inspector-client not packaged
+      python-magnumclient
+      python-manilaclient
+      python-mistralclient
+      python-neutronclient
+      python-octaviaclient
+      # python-troveclient not packaged
+      python-watcherclient
+      python-zaqarclient
+      python-zunclient
+    ];
+  };
+
+  nativeInstallCheckInputs = [
+    versionCheckHook
+  ];
+  doInstallCheck = true;
+
+  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+    installShellCompletion --cmd openstack \
+      --bash <($out/bin/openstack complete)
   '';
 
-  pythonImportsCheck = [ "openstackclient" ];
-
-  meta = with lib; {
+  meta = {
     description = "OpenStack Command-line Client";
-    homepage = "https://github.com/openstack/python-openstackclient";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    mainProgram = "openstack";
+    homepage = "https://docs.openstack.org/python-openstackclient/latest/";
+    downloadPage = "https://github.com/openstack/python-openstackclient/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
-}
+})

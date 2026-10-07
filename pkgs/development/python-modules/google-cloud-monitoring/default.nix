@@ -1,32 +1,57 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, google-cloud-testutils
-, libcst
-, proto-plus
-, pandas
-, pytestCheckHook
-, pytest-asyncio
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-cloud-testutils,
+  mock,
+  pandas,
+  proto-plus,
+  protobuf,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-cloud-monitoring";
-  version = "2.7.0";
+  version = "2.31.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "973f33f4da9598a30769e27510fc0cd4470f9081ba694c6c589bb8c0b86a0a6d";
+    pname = "google_cloud_monitoring";
+    inherit (finalAttrs) version;
+    hash = "sha256-tMnTUoyGQ9TrS51ojLs8WRS8X2mzFP98XhtHvcBzqa4=";
   };
 
-  propagatedBuildInputs = [ libcst google-api-core proto-plus ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ google-cloud-testutils mock pandas pytestCheckHook pytest-asyncio ];
+  dependencies = [
+    google-api-core
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  pythonRelaxDeps = [ "protobuf" ];
+
+  optional-dependencies = {
+    pandas = [ pandas ];
+  };
+
+  nativeCheckInputs = [
+    google-cloud-testutils
+    mock
+    pytestCheckHook
+    pytest-asyncio
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   disabledTests = [
-    # requires credentials
+    # Test requires credentials
     "test_list_monitored_resource_descriptors"
+    # Test requires PRROJECT_ID
+    "test_list_alert_policies"
   ];
 
   pythonImportsCheck = [
@@ -34,10 +59,11 @@ buildPythonPackage rec {
     "google.cloud.monitoring_v3"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Stackdriver Monitoring API client library";
-    homepage = "https://github.com/googleapis/python-monitoring";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-monitoring";
+    changelog = "https://github.com/googleapis/google-cloud-python/tree/google-cloud-monitoring-v${finalAttrs.version}/packages/google-cloud-monitoring";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

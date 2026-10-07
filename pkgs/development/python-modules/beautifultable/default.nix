@@ -1,32 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  wcwidth,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "beautifultable";
-  version = "1.0.1";
+  version = "1.1.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "pri22296";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "12ci6jy8qmbphsvzvj98466nlhclfzs0a0pmbsv3mf5bfcdwvbh7";
+    repo = "beautifultable";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-/SReCEvSwiNjBoz/3tGJ9zUNBAag4mLsHlUXwm47zCw=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  build-system = [ setuptools ];
 
-  pytestFlagsArray = [ "test.py" ];
+  dependencies = [ wcwidth ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  enabledTestPaths = [ "test.py" ];
 
   pythonImportsCheck = [ "beautifultable" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python package for printing visually appealing tables";
-    homepage = "https://github.com/CERT-Polska/mwdblib";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/pri22296/beautifultable";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,53 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, cython
-, enum34
-, gfortran
-, isPy27
-, isPy3k
-, numpy
-, pytest
-, python
-, scipy
-, sundials
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  setuptools,
+  scipy,
+  scikits-odes-core,
+  scikits-odes-daepack,
+  scikits-odes-sundials,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
+  inherit (scikits-odes-core) version src;
   pname = "scikits.odes";
-  version = "2.6.2";
+  pyproject = true;
 
-  disabled = isPy27;
+  sourceRoot = "${src.name}/packages/scikits-odes";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "267d8bfa1e18d075d574158053d887562381e88176ebab856516b52b14860983";
-  };
-
-  nativeBuildInputs = [
-    gfortran
-    cython
+  patches = [
+    # https://github.com/bmcage/odes/pull/205
+    ./numpy24-compat.patch
   ];
 
-  propagatedBuildInputs = [
-    numpy
-    sundials
-    scipy
-  ] ++ lib.optionals (!isPy3k) [ enum34 ];
-
-  doCheck = true;
-  checkInputs = [ pytest ];
-
-  checkPhase = ''
-    cd $out/${python.sitePackages}/scikits/odes/tests
-    pytest
+  postPatch = ''
+    # scipy 1.17.x's rewritten VODE integrator have bugs such as:
+    # https://github.com/scipy/scipy/issues/24933
+    # revisit after new scipy release
+    substituteInPlace src/scikits/odes/tests/test_dae.py \
+      --replace-fail "StiffVODECompare," ""
   '';
 
-  meta = with lib; {
-    description = "A scikit offering extra ode/dae solvers, as an extension to what is available in scipy";
-    homepage = "https://github.com/bmcage/odes";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ idontgetoutmuch ];
-    platforms = [ "aarch64-linux" "x86_64-linux" "x86_64-darwin" ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    scipy
+    scikits-odes-core
+    scikits-odes-daepack
+    scikits-odes-sundials
+  ];
+
+  pythonImportsCheck = [ "scikits_odes" ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = lib.optionals stdenv.hostPlatform.isAarch64 [
+    # skip on aarch64, see https://github.com/bmcage/odes/issues/101
+    "test_lsodi"
+  ];
+
+  meta = scikits-odes-core.meta // {
+    description = "Scikit offering extra ode/dae solvers, as an extension to what is available in scipy";
+    homepage = "https://github.com/bmcage/odes/blob/master/packages/scikits-odes";
   };
 }

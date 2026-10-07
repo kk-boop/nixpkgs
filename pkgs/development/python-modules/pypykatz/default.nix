@@ -1,24 +1,31 @@
-{ lib
-, aiosmb
-, aiowinreg
-, buildPythonPackage
-, fetchPypi
-, minidump
-, minikerberos
-, msldap
-, winsspi
+{
+  lib,
+  aesedb,
+  aiosmb,
+  aiowinreg,
+  buildPythonPackage,
+  fetchPypi,
+  minidump,
+  minikerberos,
+  msldap,
+  setuptools,
+  winsspi,
 }:
 
 buildPythonPackage rec {
   pname = "pypykatz";
-  version = "0.5.2";
+  version = "0.6.13";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1lyvypi1g4l9fq1f9q05bdn6vq8y5y9ghmb6ziqdycr0lxn7lfdd";
+    hash = "sha256-+T1E/Dk4OcXa8vBhspuB/8V23TORsXXetZpylW25SJM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aesedb
     aiosmb
     aiowinreg
     minikerberos
@@ -29,12 +36,15 @@ buildPythonPackage rec {
 
   # Project doesn't have tests
   doCheck = false;
+
   pythonImportsCheck = [ "pypykatz" ];
 
-  meta = with lib; {
+  meta = {
     description = "Mimikatz implementation in Python";
     homepage = "https://github.com/skelsec/pypykatz";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/skelsec/pypykatz/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "pypykatz";
   };
 }

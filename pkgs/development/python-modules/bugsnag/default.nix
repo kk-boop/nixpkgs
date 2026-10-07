@@ -1,30 +1,65 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, six
-, webob
+{
+  lib,
+  blinker,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flask,
+  setuptools,
+  webob,
+  pytestCheckHook,
+  pytest-cov-stub,
 }:
 
 buildPythonPackage rec {
   pname = "bugsnag";
-  version = "4.1.1";
-  disabled = pythonOlder "3.5";
+  version = "4.9.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "cdbdb3e02ef0c0655bb55be8b05ec1cb830b5ec629923ccb24bfd71dede3d1c3";
+  src = fetchFromGitHub {
+    owner = "bugsnag";
+    repo = "bugsnag-python";
+    tag = "v${version}";
+    hash = "sha256-+ZYtlvkb5J6yOcEQWaB3I6WFyctqXKOFBl4W5o8PkcM=";
   };
 
-  propagatedBuildInputs = [ six webob ];
+  build-system = [ setuptools ];
 
-  # no tests
-  doCheck = false;
+  dependencies = [ webob ];
 
-  meta = with lib; {
-    description = "Automatic error monitoring for django, flask, etc.";
-    homepage = "https://www.bugsnag.com";
-    license = licenses.mit;
-    platforms = platforms.unix;
+  optional-dependencies = {
+    flask = [
+      blinker
+      flask
+    ];
+  };
+
+  pythonImportsCheck = [ "bugsnag" ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+  ];
+
+  disabledTestPaths = [
+    # Extra dependencies
+    "tests/integrations"
+    # Flaky due to timeout
+    "tests/test_client.py::ClientTest::test_flush_waits_for_outstanding_events_before_returning"
+    # Flaky due to timeout
+    "tests/test_client.py::ClientTest::test_flush_waits_for_outstanding_sessions_before_returning"
+    # Flaky failure due to AssertionError: assert 0 == 3
+    "tests/test_client.py::ClientTest::test_aws_lambda_handler_decorator_warns_of_potential_timeout"
+    # Flaky failure due to AssertionError: assert 0 == 1
+    "tests/test_client.py::ClientTest::test_exception_hook_does_not_leave_a_breadcrumb_if_errors_are_disabled"
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
+    description = "Automatic error monitoring for Python applications";
+    homepage = "https://github.com/bugsnag/bugsnag-python";
+    changelog = "https://github.com/bugsnag/bugsnag-python/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

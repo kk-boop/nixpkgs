@@ -1,57 +1,85 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, defusedxml
-, flaky
-, keyring
-, requests-mock
-, requests_oauthlib
-, requests-toolbelt
-, setuptools-scm
-, setuptools-scm-git-archive
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  defusedxml,
+  flaky,
+  ipython,
+  keyring,
+  packaging,
+  pillow,
+  pyjwt,
+  pytestCheckHook,
+  pytest-cov-stub,
+  requests,
+  requests-futures,
+  requests-mock,
+  requests-oauthlib,
+  requests-toolbelt,
+  setuptools,
+  setuptools-scm,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "jira";
-  version = "3.0.1";
+  version = "3.10.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pycontribs";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-hAUAzkHPXFDlKEom+dkzr8GQ+sqK2Ci1/k+QuSNvifE=";
+    repo = "jira";
+    tag = version;
+    hash = "sha256-Gj9RmNJwmYQviXeNLL6WWFIO91jy6zY/s29Gy18lzyA=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "--cov-report=xml --cov jira" ""
-  '';
-
-  nativeBuildInputs = [ setuptools-scm setuptools-scm-git-archive ];
-
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  propagatedBuildInputs = [
-    defusedxml
-    keyring
-    requests_oauthlib
-    requests-toolbelt
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  checkInputs = [
+  dependencies = [
+    defusedxml
+    packaging
+    requests
+    requests-oauthlib
+    requests-toolbelt
+    pillow
+    typing-extensions
+  ];
+
+  optional-dependencies = {
+    cli = [
+      ipython
+      keyring
+    ];
+    opt = [
+      # filemagic
+      pyjwt
+      # requests-jwt
+      # requests-keyberos
+    ];
+    async = [ requests-futures ];
+  };
+
+  nativeCheckInputs = [
     flaky
     pytestCheckHook
+    pytest-cov-stub
     requests-mock
   ];
+
+  pythonImportsCheck = [ "jira" ];
 
   # impure tests because of connectivity attempts to jira servers
   doCheck = false;
 
-  meta = with lib; {
-    description = "This library eases the use of the JIRA REST API from Python.";
+  meta = {
+    description = "Library to interact with the JIRA REST API";
     homepage = "https://github.com/pycontribs/jira";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ globin ];
+    changelog = "https://github.com/pycontribs/jira/releases/tag/${src.tag}";
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
+    mainProgram = "jirashell";
   };
 }

@@ -1,53 +1,75 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, cbor2
-, fetchFromGitHub
-, pycryptodomex
-, pytestCheckHook
-, pytest-vcr
-, pytest-asyncio
-, requests
-, six
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  busypie,
+  cbor2,
+  fetchFromGitHub,
+  h2,
+  httpx,
+  pycryptodomex,
+  pytest-asyncio,
+  pytest-vcr,
+  pytestCheckHook,
+  requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pubnub";
-  version = "5.5.0";
+  version = "10.7.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
+    owner = "pubnub";
     repo = "python";
-    rev = "v${version}";
-    sha256 = "133sis24jd40yq4sgp8lmg2kac5wiiccisjpkhm50rb9wdbpn6kh";
+    tag = finalAttrs.version;
+    hash = "sha256-qHLkRWq30o6F1P5z+hxUkGLOh15ReOVtto0ttKCiPqg=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "httpx" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     aiohttp
     cbor2
+    h2
+    httpx
     pycryptodomex
     requests
-    six
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    busypie
     pytest-asyncio
-    pytestCheckHook
     pytest-vcr
+    pytestCheckHook
   ];
 
-  # Some tests don't pass with recent releases of twisted
   disabledTestPaths = [
+    # Tests require network access
     "tests/integrational"
-    "tests/manual/asyncio"
+    "tests/manual"
+    "tests/functional/push"
+    # Examples
+    "tests/examples"
+  ];
+
+  disabledTests = [
+    "test_subscribe"
+    "test_handshaking"
   ];
 
   pythonImportsCheck = [ "pubnub" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python-based APIs for PubNub";
     homepage = "https://github.com/pubnub/python";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/pubnub/python/releases/tag/${finalAttrs.src.tag}";
+    # PubNub Software Development Kit License Agreement
+    # https://github.com/pubnub/python/blob/master/LICENSE
+    license = lib.licenses.unfreeRedistributable;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

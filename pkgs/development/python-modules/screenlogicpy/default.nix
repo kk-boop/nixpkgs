@@ -1,45 +1,60 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
+{
+  lib,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonAtLeast,
+  pytest-asyncio,
+  setuptools,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "screenlogicpy";
-  version = "0.5.3";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "0.10.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dieselrabbit";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1ic19l0xr2wlnc8q6nhvv747k0f4j9k94ix14zkrwpp9nl09sm8j";
+    repo = "screenlogicpy";
+    tag = "v${version}";
+    hash = "sha256-o/NcLassEaucnWqu5fnYA19wFwCPCT9nYKBeHzFZTKo=";
   };
 
-  checkInputs = [
+  nativeBuildInputs = [ setuptools ];
+
+  propagatedBuildInputs = [ async-timeout ];
+
+  nativeCheckInputs = [
+    pytest-asyncio
     pytestCheckHook
   ];
 
   disabledTests = [
     # Tests require network access
-    "test_gateway_discovery"
     "test_async_discovery"
-    "test_gateway"
     "test_async"
     "test_asyncio_gateway_discovery"
+    "test_discovery_async_discover"
+    "test_gateway_discovery"
+    "test_gateway"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.12") [
+    # Tests block on Python 3.12
+    "test_sub_unsub"
+    "test_attach_existing"
+    "test_login_async_connect_to_gateway"
+    "test_login_async_gateway_connect"
   ];
 
-  pythonImportsCheck = [
-    "screenlogicpy"
-  ];
+  pythonImportsCheck = [ "screenlogicpy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python interface for Pentair Screenlogic devices";
+    mainProgram = "screenlogicpy";
     homepage = "https://github.com/dieselrabbit/screenlogicpy";
-    license = with licenses; [ gpl3Only ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/dieselrabbit/screenlogicpy/releases/tag/${src.tag}";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

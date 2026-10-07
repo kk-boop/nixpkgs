@@ -1,57 +1,86 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, icalendar
-, lxml
-, mock
-, nose
-, pytz
-, requests
-, six
-, tzlocal
-, vobject
+{
+  lib,
+  buildPythonPackage,
+  dnspython,
+  fetchFromGitHub,
+  httpx,
+  icalendar,
+  icalendar-searcher,
+  lxml,
+  manuel,
+  pytest9_0CheckHook,
+  python,
+  radicale,
+  recurring-ical-events,
+  niquests,
+  hatchling,
+  hatch-vcs,
+  proxy-py,
+  pyfakefs,
+  pytest-asyncio,
+  python-dateutil,
+  pyyaml,
+  toPythonModule,
+  tzlocal,
+  vobject,
+  xandikos,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "caldav";
-  version = "0.8.0";
+  version = "3.3.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "python-caldav";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "11q3svns3a2ywfci739krxbh67cx691qja772wq22606blyygyjy";
+    repo = "caldav";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-G1iZ2a81DTURIODWTXji7AU6ywPDg4XqGNoQFhPIMO4=";
   };
 
-  nativeBuildInputs = lib.optionals (pythonOlder "3.5") [ mock ];
-  propagatedBuildInputs = [ six requests vobject lxml ]
-    ++ lib.optionals (pythonOlder "3.6") [ pytz tzlocal ];
-
-  checkInputs = [
-    icalendar
-    nose
-    tzlocal
+  build-system = [
+    hatchling
+    hatch-vcs
   ];
 
-  checkPhase = ''
-    nosetests tests
-  '';
+  dependencies = [
+    dnspython
+    lxml
+    niquests
+    icalendar
+    icalendar-searcher
+    recurring-ical-events
+    python-dateutil
+    pyyaml
+  ];
 
-  # xandikos and radicale is only a optional test dependency, not available for python3
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace ", 'xandikos'" "" \
-      --replace ", 'radicale'" ""
-  '';
+  nativeCheckInputs = [
+    httpx
+    manuel
+    proxy-py
+    pyfakefs
+    pytest-asyncio
+    pytest9_0CheckHook
+    (toPythonModule (radicale.override { python3 = python; }))
+    tzlocal
+    vobject
+    writableTmpDirAsHomeHook
+    (toPythonModule (xandikos.override { python3Packages = python.pkgs; }))
+  ];
+
+  __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "caldav" ];
 
-  meta = with lib; {
-    description = "This project is a CalDAV (RFC4791) client library for Python.";
+  meta = {
+    description = "CalDAV (RFC4791) client library";
     homepage = "https://github.com/python-caldav/caldav";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ marenz ];
-    #broken = true; # requires radicale which is not packaged yet
+    changelog = "https://github.com/python-caldav/caldav/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      marenz
+      dotlambda
+    ];
   };
-}
+})

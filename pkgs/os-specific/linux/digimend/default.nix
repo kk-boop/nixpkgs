@@ -1,54 +1,48 @@
-{ lib, stdenv, fetchFromGitHub, fetchpatch, kernel }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kernelModuleMakeFlags,
+}:
 
-assert lib.versionAtLeast kernel.version "3.5";
-
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "digimend";
-  version = "unstable-2019-06-18";
+  version = "13-unstable-2025-01-02";
 
   src = fetchFromGitHub {
     owner = "digimend";
     repo = "digimend-kernel-drivers";
-    rev = "8b228a755e44106c11f9baaadb30ce668eede5d4";
-    sha256 = "1l54j85540386a8aypqka7p5hy1b63cwmpsscv9rmmf10f78v8mm";
+    rev = "f3c7c7f1179fc786a8e5aad027d4db904c31b42c";
+    hash = "sha256-5kJj3SJfzrQ3n9r1YOn5xt0KO9WcEf0YpNMjiZEYMEo=";
   };
 
-  INSTALL_MOD_PATH = "\${out}";
+  patches = [
+    # `del_timer_sync` was renamed to `timer_delete_sync` in Linux 6.2.
+    # The `del_timer_sync` compatibility wrapper was removed in Linux 6.15.
+    # Upstream PR: https://github.com/DIGImend/digimend-kernel-drivers/pull/729
+    ./linux-6.15.patch
+  ];
 
   postPatch = ''
     sed 's/udevadm /true /' -i Makefile
     sed 's/depmod /true /' -i Makefile
   '';
 
-  patches = [
-    # Fix build on Linux kernel >= 5.4
-    # https://github.com/DIGImend/digimend-kernel-drivers/pull/331
-    (fetchpatch {
-      url = "https://github.com/DIGImend/digimend-kernel-drivers/commit/fb8a2eb6a9198bb35aaccb81e22dd5ebe36124d1.patch";
-      sha256 = "1j7l5hsk59gccydpf7n6xx1ki4rm6aka7k879a7ah5jn8p1ylgw9";
-    })
-  ];
-
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
-  postInstall = ''
-    # Remove module reload hack.
-    # The hid-rebind unloads and then reloads the hid-* module to ensure that
-    # the extra/ module is loaded.
-    rm -r $out/lib/udev
-  '';
-
-  makeFlags = [
+  makeFlags = kernelModuleMakeFlags ++ [
     "KVERSION=${kernel.modDirVersion}"
     "KDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
     "DESTDIR=${placeholder "out"}"
+    "INSTALL_MOD_PATH=${placeholder "out"}"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "DIGImend graphics tablet drivers for the Linux kernel";
     homepage = "https://digimend.github.io/";
-    license = licenses.gpl2;
-    maintainers = with maintainers; [ gebner ];
-    platforms = platforms.linux;
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ PuercoPop ];
+    platforms = lib.platforms.linux;
   };
 }

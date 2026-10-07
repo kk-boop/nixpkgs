@@ -1,37 +1,58 @@
-{ lib, buildPythonPackage, fetchFromGitHub, GitPython, pytestCheckHook, backoff, requests }:
+{
+  lib,
+  backoff,
+  buildPythonPackage,
+  fetchFromGitHub,
+  gitpython,
+  pip,
+  pytestCheckHook,
+  requests,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "versionfinder";
   version = "1.1.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jantman";
-    repo = pname;
+    repo = "versionfinder";
     rev = version;
-    sha256 = "16mvjwyhmw39l8by69dgr9b9jnl7yav36523lkh7w7pwd529pbb9";
+    hash = "sha256-aa2bRGn8Hn7gpEMUM7byh1qZVsqvJeMXomnwCj2Xu5o=";
   };
 
-  propagatedBuildInputs = [
-    GitPython
+  build-system = [ setuptools ];
+
+  dependencies = [
+    gitpython
     backoff
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pip
     pytestCheckHook
     requests
   ];
 
   disabledTestPaths = [
-    # acceptance tests use the network
+    # Acceptance tests use the network
     "versionfinder/tests/test_acceptance.py"
+  ];
+
+  disabledTests = [
+    # Tests are out-dated
+    "TestFindPipInfo"
+    # Looks for pkg_resources … good luck, bro
+    "test_find_pkg_info"
   ];
 
   pythonImportsCheck = [ "versionfinder" ];
 
-  meta = with lib; {
+  meta = {
     description = "Find the version of another package, whether installed via pip, setuptools or git";
     homepage = "https://github.com/jantman/versionfinder";
-    license = licenses.agpl3Plus;
-    maintainers = with maintainers; [ zakame ];
+    changelog = "https://github.com/jantman/versionfinder/blob/${version}/CHANGES.rst";
+    license = lib.licenses.agpl3Plus;
   };
 }

@@ -1,33 +1,48 @@
-{ lib, buildPythonPackage, fetchPypi, nose, numpy
-, bottle, pyyaml, redis, six
-, zlib
-, pytestCheckHook }:
+{
+  lib,
+  bottle,
+  buildPythonPackage,
+  fetchFromGitHub,
+  numpy,
+  pytestCheckHook,
+  pyyaml,
+  redis,
+  setuptools,
+}:
 
-buildPythonPackage rec {
-  pname = "Jug";
-  version = "2.1.1";
-  buildInputs = [ nose numpy ];
-  propagatedBuildInputs = [
-    bottle
+buildPythonPackage (finalAttrs: {
+  pname = "jug";
+  version = "2.6.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
+
+  src = fetchFromGitHub {
+    owner = "luispedro";
+    repo = "jug";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-B+s+GsK3/YqmS2wGDMW+ClhMWubKjXc6f5TkGtpu8Rk=";
+  };
+
+  build-system = [ setuptools ];
+
+  dependencies = [ bottle ]; # needed for webstatus sub-command
+
+  nativeCheckInputs = [
+    numpy
+    pytestCheckHook
     pyyaml
     redis
-    six
-
-    zlib
   ];
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "8ae7bb45d4495cf3d0dc5dd9df104a35bba2ca83eb4576732cadf8469e7cf1a1";
-  };
-
-  checkInputs = [ pytestCheckHook ];
   pythonImportsCheck = [ "jug" ];
 
-  meta = with lib; {
-    description = "A Task-Based Parallelization Framework";
-    license = licenses.mit;
+  meta = {
+    description = "Task-Based Parallelization Framework";
     homepage = "https://jug.readthedocs.io/";
-    maintainers = with maintainers; [ luispedro ];
+    downloadPage = "https://github.com/luispedro/jug";
+    changelog = "https://github.com/luispedro/jug/blob/v${finalAttrs.version}/ChangeLog";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ luispedro ];
   };
-}
+})

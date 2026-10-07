@@ -1,39 +1,67 @@
-{ buildPythonPackage,
+{
+  buildPythonPackage,
   fetchFromGitHub,
-  isPy27,
+  fetchpatch,
   libopus,
-  nose,
-  lib, stdenv,
-  substituteAll,
+  pytestCheckHook,
+  lib,
+  stdenv,
+  replaceVars,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "opuslib";
   version = "3.0.3";
-
-  disabled = isPy27;
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "orion-labs";
     repo = "opuslib";
     rev = "92109c528f9f6c550df5e5325ca0fcd4f86b0909";
-    sha256 = "0kd37wimwd1g6c0w5hq2hiiljgbi1zg3rk5prval086khkzq469p";
+    hash = "sha256-NxmC/4TTIEDVzrfMPN4PcT1JY4QCw8IBMy80XiM/o00=";
   };
 
   patches = [
-    (substituteAll {
-      src = ./opuslib-paths.patch;
+    # https://github.com/orion-labs/opuslib/pull/22
+    (fetchpatch {
+      name = "fix-variadic-functions-on-aarch64-darwin.patch";
+      url = "https://github.com/orion-labs/opuslib/commit/8aee916e4da4b3183d49cff5a986dc2408076d8d.patch";
+      hash = "sha256-oa1HCFHNS3ejzSf0jxv9NueUKOZgdCtpv+xTrjYW5os=";
+    })
+    # https://github.com/orion-labs/opuslib/pull/25
+    (fetchpatch {
+      name = "fix-tests-when-using-libopus-1.4.patch";
+      url = "https://github.com/orion-labs/opuslib/commit/87a214fc98c1dcae38035e99fe8e279a160c4a52.patch";
+      hash = "sha256-UoOafyTFvWLY7ErtBhkXTZSgbMZFrg5DGxjbhqEI7wo=";
+    })
+    (replaceVars ./opuslib-paths.patch {
       opusLibPath = "${libopus}/lib/libopus${stdenv.hostPlatform.extensions.sharedLibrary}";
     })
   ];
 
-  checkInputs = [ nose ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  enabledTestPaths = [
+    "tests/decoder.py"
+    "tests/encoder.py"
+    "tests/hl_decoder.py"
+    "tests/hl_encoder.py"
+  ];
+
+  disabledTests = [
+    # Likely related to libopus 1.5.2 -> 1.6.1 bump
+    # AssertionError: 1500000 not less than 700000
+    "test_bitrate"
+  ];
+
+  meta = {
     description = "Python bindings to the libopus, IETF low-delay audio codec";
     homepage = "https://github.com/orion-labs/opuslib";
-    license = licenses.bsd3;
-    platforms = platforms.all;
-    maintainers = with maintainers; [ thelegy ];
+    license = lib.licenses.bsd3;
+    platforms = lib.platforms.all;
+    maintainers = with lib.maintainers; [ thelegy ];
   };
 }

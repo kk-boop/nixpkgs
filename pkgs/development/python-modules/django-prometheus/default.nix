@@ -1,51 +1,59 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, prometheus-client
-, pytest-django
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  django,
+  prometheus-client,
+  psycopg,
+  pytest-django,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "django-prometheus";
-  version = "2.1.0";
-  format = "setuptools";
-  disabled = pythonOlder "3.6";
+  version = "2.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "korfuri";
-    repo = pname;
-    rev = version;
-    sha256 = "1y1cmycc545xrys41jk8kia36hwnkwhkw26mlpfdjgb63vq30x1d";
+    owner = "django-commons";
+    repo = "django-prometheus";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ghY8eznPbkK7/jaeTAG3v5CD4ZZbFNNWSfjBNfuHBTo=";
   };
 
-  patches = [
-    ./drop-untestable-database-backends.patch
-  ];
-
   postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools >= 67.7.2, < 72.0.0" setuptools
+
     substituteInPlace setup.py \
-      --replace '"pytest-runner"' ""
+      --replace-fail '"pytest-runner"' ""
   '';
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "django"
+  ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    django
     prometheus-client
   ];
 
-  pythonImportsCheck = [
-    "django_prometheus"
-  ];
+  pythonImportsCheck = [ "django_prometheus" ];
 
-  checkInputs = [
-    pytest-django
+  nativeCheckInputs = [
+    psycopg
     pytestCheckHook
+    pytest-django
   ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/django-commons/django-prometheus/releases/tag/${finalAttrs.src.tag}";
     description = "Django middlewares to monitor your application with Prometheus.io";
-    homepage = "https://github.com/korfuri/django-prometheus";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ hexa ];
+    homepage = "https://github.com/django-commons/django-prometheus";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ hexa ];
   };
-}
+})

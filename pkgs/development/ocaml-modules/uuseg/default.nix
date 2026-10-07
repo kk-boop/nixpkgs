@@ -1,30 +1,64 @@
-{ lib, stdenv, fetchurl, ocaml, findlib, ocamlbuild, topkg, uucp, uutf, cmdliner }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  ocaml,
+  findlib,
+  ocamlbuild,
+  topkg,
+  uucp,
+  uutf,
+  cmdliner,
+  version ? if lib.versionAtLeast ocaml.version "4.14" then "18.0.0" else "15.0.0",
+  cmdlinerSupport ? lib.versionAtLeast cmdliner.version "1.1",
+}:
 
-let
+stdenv.mkDerivation (finalAttrs: {
+  name = "ocaml${ocaml.version}-${finalAttrs.pname}-${finalAttrs.version}";
   pname = "uuseg";
-  webpage = "https://erratique.ch/software/${pname}";
-in
-
-stdenv.mkDerivation rec {
-
-  name = "ocaml${ocaml.version}-${pname}-${version}";
-  version = "14.0.0";
+  inherit version;
 
   src = fetchurl {
-    url = "${webpage}/releases/${pname}-${version}.tbz";
-    sha256 = "sha256:1g9zyzjkhqxgbb9mh3cgaawscwdazv6y8kdqvmy6yhnimmfqv25p";
+    url = "https://erratique.ch/software/uuseg/releases/uuseg-${finalAttrs.version}.tbz";
+    hash =
+      {
+        "18.0.0" = "sha256-bXzGAF6U+HH6B0TEzvPuB25fC+TlMcSu7wy4budLvRA=";
+        "15.0.0" = "sha256-q8x3bia1QaKpzrWFxUmLWIraKqby7TuPNGvbSjkY4eM=";
+      }
+      ."${finalAttrs.version}";
   };
 
-  buildInputs = [ ocaml findlib ocamlbuild cmdliner topkg uutf ];
+  nativeBuildInputs = [
+    ocaml
+    findlib
+    ocamlbuild
+    topkg
+  ];
+  buildInputs = [
+    topkg
+    uutf
+  ]
+  ++ lib.optional cmdlinerSupport cmdliner;
   propagatedBuildInputs = [ uucp ];
 
-  inherit (topkg) buildPhase installPhase;
+  strictDeps = true;
 
-  meta = with lib; {
-    description = "An OCaml library for segmenting Unicode text";
-    homepage = webpage;
+  buildPhase = ''
+    runHook preBuild
+    ${topkg.run} build \
+      --with-uutf true \
+      --with-cmdliner ${lib.boolToString cmdlinerSupport}
+    runHook postBuild
+  '';
+
+  inherit (topkg) installPhase;
+
+  meta = {
+    description = "OCaml library for segmenting Unicode text";
+    homepage = "https://erratique.ch/software/uuseg";
+    license = lib.licenses.bsd3;
+    maintainers = [ lib.maintainers.vbgl ];
+    mainProgram = "usegtrip";
     inherit (ocaml.meta) platforms;
-    license = licenses.bsd3;
-    maintainers = [ maintainers.vbgl ];
   };
-}
+})

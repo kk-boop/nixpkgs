@@ -1,36 +1,50 @@
-{ lib, buildPythonPackage, fetchPypi
-, hypothesis
-, poetry
-, pydantic
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  hypothesis,
+  poetry-core,
+  pydantic,
+  pytest,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "hypothesis-auto";
-  version = "1.1.4";
-  format = "pyproject";
+  version = "1.1.5";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "1c9jksza0gg2gva3liy0s8riv6imjavhnqw05m8l5660knq2yb2y";
+    pname = "hypothesis_auto";
+    inherit version;
+    hash = "sha256-U0vcOB9jXmUV5v2IwybVu2arY1FpPnKkP7m2kbD1kRw=";
   };
 
-  nativeBuildInputs = [
-    poetry
+  pythonRelaxDeps = [
+    "hypothesis"
+    "pydantic"
   ];
 
-  propagatedBuildInputs = [
-    pydantic
+  build-system = [ poetry-core ];
+
+  dependencies = [
     hypothesis
-    pytest
+    pydantic
   ];
+
+  optional-dependencies = {
+    pytest = [ pytest ];
+  };
 
   pythonImportsCheck = [ "hypothesis_auto" ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Enables fully automatic tests for type annotated functions";
     homepage = "https://github.com/timothycrosley/hypothesis-auto/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jonringer ];
+    changelog = "https://github.com/timothycrosley/hypothesis-auto/blob/master/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

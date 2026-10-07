@@ -1,28 +1,77 @@
-{ lib, fetchFromGitHub, buildPythonPackage, pytestCheckHook, eth-hash, eth-typing,
-  cytoolz, hypothesis }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 
-buildPythonPackage rec {
+  # build-system
+  setuptools,
+  isPyPy,
+
+  # dependencies
+  eth-hash,
+  eth-typing,
+  cytoolz,
+  toolz,
+  pydantic,
+
+  # tests
+  hypothesis,
+  mypy,
+  pytestCheckHook,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "eth-utils";
-  version = "1.10.0";
+  version = "6.0.0";
+  pyproject = true;
 
-  # Tests are missing from the PyPI source tarball so let's use GitHub
-  # https://github.com/ethereum/eth-utils/issues/130
   src = fetchFromGitHub {
     owner = "ethereum";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-sq3H4HmUFUipqVYleZxWLG1gBsQEoNwcZAXiKckacek=";
+    repo = "eth-utils";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-U1RSKaLw/gDg4lMjkTwR/Wfb5wqQctML9CDZBILMBys=";
   };
 
-  checkInputs = [ pytestCheckHook hypothesis ];
-  propagatedBuildInputs = [ eth-hash eth-typing cytoolz ];
+  postPatch = ''
+    # type inference test output expectation changed slightly (don't ask me when it started...)
+    sed -i 's/builtins\.//g' tests/core/functional-utils/test_type_inference.py
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    eth-hash
+    eth-typing
+  ]
+  ++ lib.optional (!isPyPy) cytoolz
+  ++ lib.optional isPyPy toolz;
+
+  nativeCheckInputs = [
+    hypothesis
+    mypy
+    pytestCheckHook
+    pydantic
+  ]
+  ++ eth-hash.optional-dependencies.pycryptodome;
 
   pythonImportsCheck = [ "eth_utils" ];
 
+  disabledTests = [
+    # Exception: Expected one wheel. Instead found: [] in project /build/source
+    "test_install_local_wheel"
+  ];
+
+  disabledTestPaths = [
+    # Typing tests fail like:
+    #   Revealed type is "builtins.tuple[builtins.int, ...]"
+    "tests/core/functional-utils/test_type_inference.py"
+  ];
+
   meta = {
+    changelog = "https://github.com/ethereum/eth-utils/blob/${finalAttrs.src.tag}/docs/release_notes.rst";
     description = "Common utility functions for codebases which interact with ethereum";
     homepage = "https://github.com/ethereum/eth-utils";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ jluttine ];
+    maintainers = with lib.maintainers; [ siraben ];
   };
-}
+})

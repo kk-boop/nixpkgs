@@ -1,66 +1,99 @@
-{ lib
-, glibcLocales
-, buildPythonPackage
-, fetchPypi
-, six
-, appdirs
-, scandir ? null
-, backports_os ? null
-, typing ? null
-, pytz
-, enum34
-, pyftpdlib
-, psutil
-, mock
-, pythonAtLeast
-, isPy3k
-, pytestCheckHook
-, stdenv
+{
+  lib,
+  stdenv,
+  appdirs,
+  buildPythonPackage,
+  fetchPypi,
+  glibcLocales,
+  isPyPy,
+  mock,
+  psutil,
+  pyftpdlib,
+  pytestCheckHook,
+  pytz,
+  setuptools,
+  six,
 }:
 
 buildPythonPackage rec {
   pname = "fs";
-  version = "2.4.13";
+  version = "2.4.16";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "caab4dc1561d63c92f36ee78976f6a4a01381830d8420ce34a78d4f1bb1dc95f";
+    hash = "sha256-rpfH1RIT9LcLapWCklMCiQkN46fhWEHhCPvhRPBp0xM=";
   };
 
-  buildInputs = [ glibcLocales ];
-  checkInputs = [ pyftpdlib mock psutil pytestCheckHook ];
-  propagatedBuildInputs = [ six appdirs pytz ]
-    ++ lib.optionals (!isPy3k) [ backports_os ]
-    ++ lib.optionals (!pythonAtLeast "3.6") [ typing ]
-    ++ lib.optionals (!pythonAtLeast "3.5") [ scandir ]
-    ++ lib.optionals (!pythonAtLeast "3.5") [ enum34 ];
+  patches = [
+    ./drop-pkg-resources.patch
+    ./python-3.14-pathname2url.patch
+  ];
 
-  LC_ALL="en_US.utf-8";
+  postPatch = ''
+    # https://github.com/PyFilesystem/pyfilesystem2/pull/591
+    substituteInPlace tests/test_ftpfs.py \
+      --replace ThreadedTestFTPd FtpdThreadWrapper
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    setuptools
+    six
+    appdirs
+    pytz
+  ];
+
+  nativeCheckInputs = [
+    pyftpdlib
+    mock
+    psutil
+    pytestCheckHook
+  ]
+  ++ lib.optionals isPyPy [
+    glibcLocales
+  ];
+
+  env.LC_ALL = "en_US.utf-8";
 
   preCheck = ''
     HOME=$(mktemp -d)
   '';
 
-  pytestFlagsArray = [ "--ignore=tests/test_opener.py" ];
+  disabledTestPaths = [
+    # Circular dependency with parameterized
+    "tests/test_move.py"
+    "tests/test_mirror.py"
+    "tests/test_copy.py"
+    # pyftpdlib removed tests from installation in 2.1.0, resulting in
+    #     ModuleNotFoundError: No module named 'pyftpdlib.test'
+    "tests/test_ftpfs.py"
+    "tests/test_encoding.py" # fails under zfs normalization=formD
+  ];
 
   disabledTests = [
     "user_data_repr"
-  ] ++ lib.optionals (stdenv.isDarwin) [ # remove if https://github.com/PyFilesystem/pyfilesystem2/issues/430#issue-707878112 resolved
+    # https://github.com/PyFilesystem/pyfilesystem2/issues/568
+    "test_remove"
+    # Tests require network access
+    "TestFTPFS"
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isDarwin) [
+    # remove if https://github.com/PyFilesystem/pyfilesystem2/issues/430#issue-707878112 resolved
     "test_ftpfs"
-  ] ++ lib.optionals (pythonAtLeast "3.9") [
-    # update friend version of this commit: https://github.com/PyFilesystem/pyfilesystem2/commit/3e02968ce7da7099dd19167815c5628293e00040
-    # merged into master, able to be removed after >2.4.1
-    "test_copy_sendfile"
   ];
+
+  pythonImportsCheck = [ "fs" ];
 
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
+  meta = {
     description = "Filesystem abstraction";
-    homepage    = "https://github.com/PyFilesystem/pyfilesystem2";
-    license     = licenses.bsd3;
-    maintainers = with maintainers; [ lovek323 ];
-    platforms   = platforms.unix;
+    homepage = "https://github.com/PyFilesystem/pyfilesystem2";
+    changelog = "https://github.com/PyFilesystem/pyfilesystem2/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
+    platforms = lib.platforms.unix;
   };
-
 }

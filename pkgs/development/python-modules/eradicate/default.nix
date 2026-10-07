@@ -1,19 +1,37 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "eradicate";
-  version = "2.0.0";
+  version = "3.0.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "27434596f2c5314cc9b31410c93d8f7e8885747399773cd088d3adea647a60c8";
+  src = fetchFromGitHub {
+    owner = "wemake-services";
+    repo = "eradicate";
+    tag = version;
+    hash = "sha256-D9V9PQ3HVmShmPgTInOJaVmujy1fQyQn6qYn/Pa0kMg=";
   };
 
-  meta = with lib; {
-    description = "eradicate removes commented-out code from Python files.";
-    homepage = "https://github.com/myint/eradicate";
-    license = [ licenses.mit ];
+  build-system = [ setuptools ];
 
-    maintainers = [ maintainers.mmlb ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "eradicate" ];
+
+  enabledTestPaths = [ "test_eradicate.py" ];
+
+  meta = {
+    description = "Library to remove commented-out code from Python files";
+    mainProgram = "eradicate";
+    homepage = "https://github.com/myint/eradicate";
+    changelog = "https://github.com/wemake-services/eradicate/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mmlb ];
   };
 }

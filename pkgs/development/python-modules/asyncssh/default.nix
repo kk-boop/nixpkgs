@@ -1,50 +1,63 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, cryptography
-, bcrypt
-, gssapi
-, fido2
-, libnacl
-, libsodium
-, nettle
-, python-pkcs11
-, pyopenssl
-, openssl
-, openssh
-, pytestCheckHook
+{
+  lib,
+  bcrypt,
+  buildPythonPackage,
+  cryptography,
+  fetchPypi,
+  fido2,
+  gssapi,
+  ifaddr,
+  libnacl,
+  libsodium,
+  nettle,
+  openssh,
+  openssl,
+  pyopenssl,
+  pytestCheckHook,
+  python-pkcs11,
+  setuptools,
+  stdenv,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "asyncssh";
-  version = "2.8.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "2.24.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0648eba58d72653755f28e26c9bd83147d9652c1f2f5e87fbf5a87d7f8fbf83a";
+    hash = "sha256-QGTFkOWc4ujYKi9m018xINdlgotN9ePb+we0qMJGhsk=";
   };
 
-  propagatedBuildInputs = [
-    bcrypt
+  build-system = [ setuptools ];
+
+  dependencies = [
     cryptography
-    fido2
-    gssapi
-    libnacl
-    libsodium
     nettle
-    python-pkcs11
-    pyopenssl
+    typing-extensions
   ];
 
-  checkInputs = [
+  buildInputs = [ libsodium ];
+
+  optional-dependencies = {
+    bcrypt = [ bcrypt ];
+    fido2 = [ fido2 ];
+    ifaddr = [ ifaddr ];
+    gssapi = [ gssapi ];
+    libnacl = [ libnacl ];
+    pkcs11 = [ python-pkcs11 ];
+    pyOpenSSL = [ pyopenssl ];
+  };
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
     openssh
     openssl
     pytestCheckHook
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   patches = [
     # Reverts https://github.com/ronf/asyncssh/commit/4b3dec994b3aa821dba4db507030b569c3a32730
@@ -66,16 +79,28 @@ buildPythonPackage rec {
     "TestSKAuthCTAP2"
     # Requires network access
     "test_connect_timeout_exceeded"
+    # Fails in the sandbox
+    "test_forward_remote"
+    # Seems weirdly filesystem specific
+    "test_put_name_too_long"
+    # SFTP copy ends up with an empty file on ZFS
+    "test_copy_max_requests"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # Requires network access
+    "test_canonicalize_failure"
   ];
 
-  pythonImportsCheck = [
-    "asyncssh"
-  ];
+  pythonImportsCheck = [ "asyncssh" ];
 
-  meta = with lib; {
+  meta = {
     description = "Asynchronous SSHv2 Python client and server library";
     homepage = "https://asyncssh.readthedocs.io/";
-    license = licenses.epl20;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/ronf/asyncssh/blob/v${version}/docs/changes.rst";
+    license = with lib.licenses; [
+      epl20 # or
+      gpl2Plus
+    ];
+    maintainers = [ ];
   };
 }

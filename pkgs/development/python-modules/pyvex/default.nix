@@ -1,51 +1,67 @@
-{ lib
-, stdenv
-, archinfo
-, bitstring
-, buildPythonPackage
-, cffi
-, fetchPypi
-, future
-, pycparser
+{
+  lib,
+  stdenv,
+  bitstring,
+  buildPythonPackage,
+  buildPackages,
+  cffi,
+  fetchPypi,
+  pycparser,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyvex";
-  version = "9.0.10730";
+  version = "9.2.154";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-2cXbdPqWasGlXulxy6zGKQk3ent4dRwQWRGzKj3v6Ns=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-a3ei2w66v18QKAofpPvDUoM42zHRHPrNQic+FE+rLKY=";
   };
 
-  postPatch = lib.optionalString stdenv.isDarwin ''
-    substituteInPlace vex/Makefile-gcc --replace '/usr/bin/ar' 'ar'
-  '';
+  build-system = [ setuptools ];
 
-  setupPyBuildFlags = lib.optionals stdenv.isLinux [ "--plat-name" "linux" ];
-
-  propagatedBuildInputs = [
-    archinfo
+  dependencies = [
     bitstring
     cffi
-    future
     pycparser
+  ];
+
+  depsBuildBuild = [ buildPackages.stdenv.cc ];
+
+  nativeBuildInputs = [ cffi ];
+
+  postPatch = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    substituteInPlace vex/Makefile-gcc \
+      --replace-fail '/usr/bin/ar' 'ar'
+  '';
+
+  setupPyBuildFlags = lib.optionals stdenv.hostPlatform.isLinux [
+    "--plat-name"
+    "linux"
   ];
 
   preBuild = ''
     export CC=${stdenv.cc.targetPrefix}cc
-    substituteInPlace pyvex_c/Makefile --replace 'AR=ar' 'AR=${stdenv.cc.targetPrefix}ar'
+    substituteInPlace pyvex_c/Makefile \
+      --replace-fail 'AR=ar' 'AR=${stdenv.cc.targetPrefix}ar'
   '';
 
   # No tests are available on PyPI, GitHub release has tests
   # Switch to GitHub release after all angr parts are present
   doCheck = false;
+
   pythonImportsCheck = [ "pyvex" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python interface to libVEX and VEX IR";
     homepage = "https://github.com/angr/pyvex";
-    license = with licenses; [ bsd2 gpl3Plus lgpl3Plus ];
-    maintainers = with maintainers; [ fab ];
+    license = with lib.licenses; [
+      bsd2
+      gpl3Plus
+      lgpl3Plus
+    ];
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

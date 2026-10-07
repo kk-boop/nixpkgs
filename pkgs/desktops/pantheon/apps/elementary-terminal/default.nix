@@ -1,84 +1,65 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, pkg-config
-, meson
-, ninja
-, python3
-, vala
-, desktop-file-utils
-, gtk3
-, libxml2
-, granite
-, libhandy
-, libnotify
-, vte
-, libgee
-, elementary-icon-theme
-, appstream
-, pcre2
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  pkg-config,
+  meson,
+  ninja,
+  vala,
+  desktop-file-utils,
+  gtk4,
+  granite7,
+  libadwaita,
+  vte-gtk4,
+  libgee,
+  pcre2,
+  wrapGAppsHook4,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-terminal";
-  version = "6.0.1";
+  version = "8.1.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
     repo = "terminal";
-    rev = version;
-    sha256 = "sha256-4q7YQ4LxuiM/TRae1cc3ncmw7QwE1soC2Sh+GZ+Gpq0=";
+    tag = version;
+    hash = "sha256-npPuanin2WKuIAVbvGwBf5fGHYp7LKGac+s+28apaLU=";
   };
 
   nativeBuildInputs = [
-    appstream
     desktop-file-utils
-    libxml2
     meson
     ninja
     pkg-config
-    python3
     vala
-    wrapGAppsHook
+    wrapGAppsHook4
   ];
 
   buildInputs = [
-    elementary-icon-theme
-    granite
-    gtk3
+    granite7
+    gtk4
+    libadwaita
     libgee
-    libhandy
-    libnotify
     pcre2
-    vte
+    vte-gtk4
   ];
 
-  # See https://github.com/elementary/terminal/commit/914d4b0e2d0a137f12276d748ae07072b95eff80
-  mesonFlags = [ "-Dubuntu-bionic-patched-vte=false" ];
-
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
-
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Terminal emulator designed for elementary OS";
     longDescription = ''
       A super lightweight, beautiful, and simple terminal. Comes with sane defaults, browser-class tabs, sudo paste protection,
       smart copy/paste, and little to no configuration.
     '';
     homepage = "https://github.com/elementary/terminal";
-    license = licenses.lgpl3;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.lgpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
     mainProgram = "io.elementary.terminal";
   };
 }

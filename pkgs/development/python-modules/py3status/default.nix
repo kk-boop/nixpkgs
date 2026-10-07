@@ -1,40 +1,61 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, requests
-, pytz
-, tzlocal
-, i3ipc
-, pydbus
-, pygobject3
-, pyserial
-, setuptools
-, dbus-python
-
-, file
-, acpi
-, coreutils
-, alsa-utils
-, i3
-, procps
-, lm_sensors
-, libnotify
-, xorg
+{
+  lib,
+  buildPythonPackage,
+  acpi,
+  alsa-utils,
+  coreutils,
+  dbus-python,
+  fetchPypi,
+  file,
+  hatchling,
+  i3,
+  i3ipc,
+  libnotify,
+  lm_sensors,
+  procps,
+  pygobject3,
+  pyserial,
+  pytz,
+  requests,
+  setuptools,
+  tzlocal,
+  wrapGAppsHook3,
+  xset,
+  setxkbmap,
+  glib,
+  gobject-introspection,
 }:
 
 buildPythonPackage rec {
   pname = "py3status";
-  version = "3.40";
+  version = "3.64";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "9eb6f721f94f28a17a8599ca2743a2bedd58c16cfe74e9817ffa948c13dbb79c";
+    hash = "sha256-7hafyW7jq/8Xk4POAohX6sNViJ+Azuqs5/0i1JqCqr0=";
   };
 
-  doCheck = false;
-  propagatedBuildInputs = [
-    pytz requests tzlocal i3ipc pydbus pygobject3 pyserial setuptools dbus-python file
+  nativeBuildInputs = [
+    hatchling
+    wrapGAppsHook3
+    gobject-introspection
   ];
+
+  buildInputs = [ glib ];
+
+  propagatedBuildInputs = [
+    pytz
+    requests
+    tzlocal
+    i3ipc
+    pygobject3
+    pyserial
+    setuptools
+    dbus-python
+    file
+  ];
+
   prePatch = ''
     sed -i -e "s|'file|'${file}/bin/file|" py3status/parse_config.py
     sed -i -e "s|\[\"acpi\"|\[\"${acpi}/bin/acpi\"|" py3status/modules/battery_level.py
@@ -44,14 +65,23 @@ buildPythonPackage rec {
     sed -i -e "s|'i3-nagbar|'${i3}/bin/i3-nagbar|" py3status/modules/pomodoro.py
     sed -i -e "s|'free|'${procps}/bin/free|" py3status/modules/sysdata.py
     sed -i -e "s|'sensors|'${lm_sensors}/bin/sensors|" py3status/modules/sysdata.py
-    sed -i -e "s|'setxkbmap|'${xorg.setxkbmap}/bin/setxkbmap|" py3status/modules/keyboard_layout.py
-    sed -i -e "s|'xset|'${xorg.xset}/bin/xset|" py3status/modules/keyboard_layout.py
+    sed -i -e "s|'setxkbmap|'${setxkbmap}/bin/setxkbmap|" py3status/modules/keyboard_layout.py
+    sed -i -e "s|'xset|'${xset}/bin/xset|" py3status/modules/keyboard_layout.py
   '';
 
-  meta = with lib; {
+  dontWrapGApps = true;
+
+  preFixup = ''
+    makeWrapperArgs+=("''${gappsWrapperArgs[@]}")
+  '';
+
+  doCheck = false;
+
+  meta = {
     description = "Extensible i3status wrapper";
-    license = licenses.bsd3;
     homepage = "https://github.com/ultrabug/py3status";
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/ultrabug/py3status/blob/${version}/CHANGELOG";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

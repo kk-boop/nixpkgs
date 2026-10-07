@@ -1,51 +1,69 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, git
-, mock
-, pep440
-, pytestCheckHook
-, pythonOlder
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  git,
+  mock,
+  pep440,
+  pip,
+  pytestCheckHook,
+  setuptools,
+  six,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "setupmeta";
-  version = "3.3.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "3.9.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "codrsquad";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "21hABRiY8CTKkpFjePgBAtjs4/G5eFS3aPNMCBC41CY=";
+    repo = "setupmeta";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ONl+hFvMkUmPbzbeduCrqidGrKZvbWE0wTvaZMhs64w=";
   };
 
-  checkInputs = [
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail 'args["versioning"] = "dev"' 'args["version"] = "${finalAttrs.version}"'
+  '';
+
+  preBuild = ''
+    export PYGRADLE_PROJECT_VERSION=${finalAttrs.version};
+  '';
+
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [
     git
     mock
     pep440
+    pip
     pytestCheckHook
-    setuptools-scm
+    six
   ];
+
+  preCheck = ''
+    unset PYGRADLE_PROJECT_VERSION
+  '';
 
   disabledTests = [
     # Tests want to scan site-packages
     "test_check_dependencies"
+    "test_clean"
     "test_scenario"
     "test_git_versioning"
+    # setuptools.installer and fetch_build_eggs are deprecated.
+    # Requirements should be satisfied by a PEP 517 installer.
+    "test_brand_new_project"
   ];
 
-  pythonImportsCheck = [
-    "setupmeta"
-  ];
+  pythonImportsCheck = [ "setupmeta" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to simplify setup.py files";
     homepage = "https://github.com/codrsquad/setupmeta";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,39 +1,40 @@
-{ lib
-, pkgs
-, python3
+{
+  lib,
+  fetchFromGitHub,
+  python3,
 }:
 
 let
   setoptconf-tmp = python3.pkgs.callPackage ./setoptconf.nix { };
 in
 
-with python3.pkgs;
-
-buildPythonApplication rec {
+python3.pkgs.buildPythonApplication rec {
   pname = "prospector";
-  version = "1.5.1";
-  format = "pyproject";
-  disabled = pythonOlder "3.6.1";
+  version = "1.9.0";
+  pyproject = true;
 
-  src = pkgs.fetchFromGitHub {
-    owner = "PyCQA";
-    repo = pname;
-    rev = version;
-    sha256 = "17f822cxrvcvnrzdx1a9fyi9afljq80b6g6z1k2bqa1vs21gwv7l";
+  src = fetchFromGitHub {
+    owner = "prospector-dev";
+    repo = "prospector";
+    tag = "v${version}";
+    hash = "sha256-94JGKX91d2kul+KMYohga9KCOj6RN/YKpD8e4nWSOOM=";
   };
 
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'pep8-naming = ">=0.3.3,<=0.10.0"' 'pep8-naming = "*"'
-  '';
+  pythonRelaxDeps = [
+    "pyflakes"
+    "pep8-naming"
+    "flake8"
+  ];
 
-  nativeBuildInputs = [
+  nativeBuildInputs = with python3.pkgs; [
     poetry-core
   ];
 
-  propagatedBuildInputs = [
+  propagatedBuildInputs = with python3.pkgs; [
     bandit
     dodgy
+    flake8
+    gitpython
     mccabe
     mypy
     pep8-naming
@@ -54,16 +55,24 @@ buildPythonApplication rec {
     vulture
   ];
 
-  checkInputs = [
+  nativeCheckInputs = with python3.pkgs; [
     pytestCheckHook
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [
+    "prospector"
+  ];
+
+  disabledTestPaths = [
+    # distutils.errors.DistutilsArgError: no commands supplied
+    "tests/tools/pyroma/test_pyroma_tool.py"
+  ];
+
+  meta = {
     description = "Tool to analyse Python code and output information about errors, potential problems, convention violations and complexity";
-    homepage = "https://github.com/PyCQA/prospector";
-    license = licenses.gpl2;
-    maintainers = with maintainers; [
-      kamadorueda
-    ];
+    homepage = "https://github.com/prospector-dev/prospector";
+    changelog = "https://github.com/prospector-dev/prospector/blob/v${version}/CHANGELOG.rst";
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ kamadorueda ];
   };
 }

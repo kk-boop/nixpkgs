@@ -1,69 +1,75 @@
-{ lib
-, arrow
-, buildPythonPackage
-, fetchPypi
-, importlib-metadata
-, isPy27
-, logfury
-, pytestCheckHook
-, pytest-lazy-fixture
-, pytest-mock
-, pythonOlder
-, requests
-, setuptools-scm
-, tqdm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  logfury,
+  annotated-types,
+  hatchling,
+  hatch-vcs,
+  pytest-lazy-fixtures,
+  pytest-mock,
+  pytest-timeout,
+  pytestCheckHook,
+  pythonAtLeast,
+  pythonOlder,
+  requests,
+  responses,
+  tenacity,
+  tqdm,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "b2sdk";
-  version = "1.13.0";
-  disabled = isPy27;
+  version = "2.12.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-Q9B85c+WhazDeXsMR2S0aId32xLY8BAuYRj4QD21x1k=";
+  src = fetchFromGitHub {
+    owner = "Backblaze";
+    repo = "b2-sdk-python";
+    tag = "v${version}";
+    hash = "sha256-JzJ83+W9k5ys8dj0Q3X4MY+GH4m8/crvKmeQKOttspM=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
+  build-system = [
+    hatchling
+    hatch-vcs
   ];
 
-  propagatedBuildInputs = [
-    arrow
+  dependencies = [
+    annotated-types
     logfury
     requests
-    tqdm
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
-  ];
+  ]
+  ++ lib.optionals (pythonOlder "3.12") [ typing-extensions ];
 
-  checkInputs = [
-    pytestCheckHook
-    pytest-lazy-fixture
+  nativeCheckInputs = [
+    pytest-lazy-fixtures
     pytest-mock
+    pytest-timeout
+    pytestCheckHook
+    responses
+    tenacity
+    tqdm
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace 'setuptools_scm<6.0' 'setuptools_scm'
-    substituteInPlace requirements.txt \
-      --replace 'arrow>=0.8.0,<1.0.0' 'arrow'
-  '';
-
-  disabledTests = [
-    # Test requires an API key
-    "test_raw_api"
-    "test_files_headers"
-    "test_large_file"
+  enabledTestPaths = [
+    "test/unit"
   ];
 
-  pythonImportsCheck = [
-    "b2sdk"
+  disabledTests = lib.optionals (pythonAtLeast "3.14") [
+    # -     'could not be accessed (no permissions to read?)',
+    # +     'could not be accessed (broken symlink?)',
+    "test_dir_without_exec_permission"
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "b2sdk" ];
+
+  meta = {
     description = "Client library and utilities for access to B2 Cloud Storage (backblaze)";
     homepage = "https://github.com/Backblaze/b2-sdk-python";
-    license = licenses.mit;
+    changelog = "https://github.com/Backblaze/b2-sdk-python/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ pmw ];
   };
 }

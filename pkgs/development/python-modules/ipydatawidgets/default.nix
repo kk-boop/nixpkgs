@@ -1,26 +1,31 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, pytest
-, pytest-cov
-, nbval
-, ipywidgets
-, numpy
-, six
-, traittypes
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  nbval,
+  jupyter-packaging,
+  ipywidgets,
+  numpy,
+  six,
+  traittypes,
 }:
 
 buildPythonPackage rec {
-  pname = "ipydatawidgets";
-  version = "4.2.0";
+  __structuredAttrs = true;
 
-  disabled = isPy27;
+  pname = "ipydatawidgets";
+  version = "4.3.5";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d0e4b58b59b508165e8562b8f5d1dbfcd739855847ec0477bd9185a5e9b7c5bc";
+    hash = "sha256-OU8kiVdlh8/XVTd6CaBn9GytIggZZQkgIf0avL54Uqg=";
   };
+
+  nativeBuildInputs = [ jupyter-packaging ];
+
+  setupPyBuildFlags = [ "--skip-npm" ];
 
   propagatedBuildInputs = [
     ipywidgets
@@ -29,9 +34,21 @@ buildPythonPackage rec {
     traittypes
   ];
 
-  checkInputs = [ pytest pytest-cov nbval ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    nbval
+  ];
 
-  checkPhase = "pytest ipydatawidgets/tests";
+  # Tests bind ports
+  __darwinAllowLocalNetworking = true;
+
+  disabledTestPaths = [
+    # https://github.com/vidartf/ipydatawidgets/issues/62
+    "ipydatawidgets/tests/test_ndarray_trait.py::test_dtype_coerce"
+
+    # https://github.com/vidartf/ipydatawidgets/issues/63
+    "examples/test.ipynb::Cell 3"
+  ];
 
   meta = {
     description = "Widgets to help facilitate reuse of large datasets across different widgets";

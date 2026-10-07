@@ -1,74 +1,81 @@
-{ lib
-, buildPythonPackage
-, cmake
-, fetchPypi
-, isPy27
-, nbval
-, numpy
-, protobuf
-, pytestCheckHook
-, six
-, tabulate
-, typing-extensions
+{
+  buildPythonPackage,
+  onnx, # pkgs.onnx
+
+  # dependencies
+  ml-dtypes,
+  numpy,
+  protobuf,
+  typing-extensions,
+
+  # tests
+  parameterized,
+  pillow,
+  pytestCheckHook,
+  writableTmpDirAsHomeHook,
 }:
+buildPythonPackage {
+  inherit (onnx)
+    pname
+    src # Needed for testing.
+    version
+    ;
 
-buildPythonPackage rec {
-  pname = "onnx";
-  version = "1.10.2";
-  format = "setuptools";
+  format = "wheel";
 
-  disabled = isPy27;
+  dontUseWheelUnpack = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-JNc8p9/X5sczmUT4lVS0AQcZiZM3kk/KFEfY8bXbUNY=";
-  };
+  postUnpack = ''
+    cp -rv "${onnx.dist}" "$sourceRoot/dist"
+    chmod +w "$sourceRoot/dist"
+  '';
 
-  nativeBuildInputs = [
-    cmake
+  buildInputs = [
+    # onnx must be included to avoid shrinking during fixupPhase removing the RUNPATH entry on
+    # onnx_cpp2py_export.cpython-*.so.
+    onnx
   ];
 
-  propagatedBuildInputs = [
-    protobuf
+  dependencies = [
+    ml-dtypes
     numpy
-    six
+    protobuf
     typing-extensions
   ];
 
-  checkInputs = [
-    nbval
+  nativeCheckInputs = [
+    parameterized
+    pillow
     pytestCheckHook
-    tabulate
+    writableTmpDirAsHomeHook
   ];
-
-  postPatch = ''
-    chmod +x tools/protoc-gen-mypy.sh.in
-    patchShebangs tools/protoc-gen-mypy.sh.in tools/protoc-gen-mypy.py
-
-    substituteInPlace setup.py \
-      --replace "setup_requires.append('pytest-runner')" ""
-  '';
-
-  preBuild = ''
-    export MAX_JOBS=$NIX_BUILD_CORES
-  '';
 
   # The executables are just utility scripts that aren't too important
   postInstall = ''
-    rm -r $out/bin
+    rm -rv $out/bin
   '';
 
-  # The setup.py does all the configuration
-  dontUseCmakeConfigure = true;
+  # detecting source dir as a python package confuses pytest
+  preCheck = ''
+    rm onnx/__init__.py
+  '';
 
-  pythonImportsCheck = [
-    "onnx"
+  enabledTestPaths = [
+    "onnx/test"
   ];
 
-  meta = with lib; {
-    description = "Open Neural Network Exchange";
-    homepage = "http://onnx.ai";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ acairncross ];
+  __darwinAllowLocalNetworking = true;
+
+  pythonImportsCheck = [ "onnx" ];
+
+  meta = {
+    # Explicitly inherit from ONNX's meta to avoid pulling in attributes added by stdenv.mkDerivation.
+    inherit (onnx.meta)
+      changelog
+      description
+      homepage
+      license
+      maintainers
+      ;
   };
 }

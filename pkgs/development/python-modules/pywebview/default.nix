@@ -1,61 +1,65 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, importlib-resources
-, pyqtwebengine
-, pytest
-, pythonOlder
-, qt5
-, xvfb-run
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools-scm,
+  bottle,
+  proxy-tools,
+  pyside6,
+  qtpy,
+  six,
+  typing-extensions,
+  stdenv,
+  pyobjc-core,
+  pyobjc-framework-Cocoa,
+  pyobjc-framework-Quartz,
+  pyobjc-framework-Security,
+  pyobjc-framework-WebKit,
 }:
 
 buildPythonPackage rec {
   pname = "pywebview";
-  version = "3.4";
-  disabled = pythonOlder "3.5";
+  version = "6.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "r0x0r";
     repo = "pywebview";
-    rev = version;
-    sha256 = "sha256-3JHwtw8oReolEl4k8cdt7GCVGNkfWWJN6EnZYHxzDO8=";
+    tag = version;
+    hash = "sha256-vqdJRxZbHNu2Sq318RnJjzDjYRRCSiO72WM+flKwW7g=";
   };
 
-  nativeBuildInputs = [
-    qt5.wrapQtAppsHook
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
+    bottle
+    pyside6
+    proxy-tools
+    qtpy
+    six
+    typing-extensions
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    pyobjc-core
+    pyobjc-framework-Cocoa
+    pyobjc-framework-Quartz
+    pyobjc-framework-Security
+    pyobjc-framework-WebKit
   ];
 
-  propagatedBuildInputs = [
-    pyqtwebengine
-  ] ++ lib.optionals (pythonOlder "3.7") [ importlib-resources ];
+  pythonImportsCheck = [ "webview" ];
 
-  checkInputs = [
-    pytest
-    xvfb-run
-  ];
-
-  checkPhase = ''
-    # Cannot create directory /homeless-shelter/.... Error: FILE_ERROR_ACCESS_DENIED
-    export HOME=$TMPDIR
-    # QStandardPaths: XDG_RUNTIME_DIR not set
-    export XDG_RUNTIME_DIR=$HOME/xdg-runtime-dir
-
-    pushd tests
-    substituteInPlace run.sh \
-      --replace "PYTHONPATH=.." "PYTHONPATH=$PYTHONPATH" \
-      --replace "pywebviewtest test_js_api.py::test_concurrent ''${PYTEST_OPTIONS}" "# skip flaky test_js_api.py::test_concurrent"
-
-    patchShebangs run.sh
-    wrapQtApp run.sh
-
-    xvfb-run -s '-screen 0 800x600x24' ./run.sh
-    popd
-  '';
-
-  meta = with lib; {
-    homepage = "https://github.com/r0x0r/pywebview";
+  meta = {
     description = "Lightweight cross-platform wrapper around a webview";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ jojosch ];
+    homepage = "https://github.com/r0x0r/pywebview";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ jojosch ];
+    # contains committed jar and dll files
+    sourceProvenance = with lib.sourceTypes; [
+      binaryBytecode
+      binaryNativeCode
+    ];
+    # last successful hydra build on darwin was in 2025
+    broken = stdenv.hostPlatform.isDarwin;
   };
 }

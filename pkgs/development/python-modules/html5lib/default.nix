@@ -1,34 +1,49 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, flake8
-, pytest_4
-, pytest-expect
-, mock
-, six
-, webencodings
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools_80,
+  six,
+  webencodings,
+  pytest-expect,
+  pytestCheckHook,
+  unstableGitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "html5lib";
-  version = "1.1";
+  version = "1.1-unstable-2024-02-21";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "b2e5b40261e20f354d198eae92afc10d750afb487ed5e50f9c4eaf07c184146f";
+  src = fetchFromGitHub {
+    owner = "html5lib";
+    repo = "html5lib-python";
+    rev = "fd4f032bc090d44fb11a84b352dad7cbee0a4745";
+    hash = "sha256-Hyte1MEqlrD2enfunK1qtm3FJlUDqmhSyrCjo7VaBgA=";
   };
 
-  checkInputs = [ flake8 pytest_4 pytest-expect mock ];
-  propagatedBuildInputs = [
-    six webencodings
+  patches = [
+    # https://github.com/html5lib/html5lib-python/pull/583
+    ./python314-compat.patch
+    # https://github.com/html5lib/html5lib-python/pull/590
+    ./pytest9-compat.patch
   ];
 
-  checkPhase = ''
-    # remove test causing error
-    # https://github.com/html5lib/html5lib-python/issues/411
-    rm html5lib/tests/test_stream.py
-    py.test
-  '';
+  build-system = [ setuptools_80 ];
+
+  dependencies = [
+    six
+    webencodings
+  ];
+
+  nativeCheckInputs = [
+    pytest-expect
+    pytestCheckHook
+  ];
+
+  passthru.updateScript = unstableGitUpdater {
+    branch = "master";
+  };
 
   meta = {
     homepage = "https://github.com/html5lib/html5lib-python";
@@ -40,6 +55,8 @@ buildPythonPackage rec {
       major web browsers.
     '';
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ domenkozar prikhi ];
+    maintainers = with lib.maintainers; [
+      prikhi
+    ];
   };
 }

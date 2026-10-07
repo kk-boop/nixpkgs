@@ -1,24 +1,35 @@
-{ lib, buildPythonPackage, fetchPypi, appdirs, requests }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  appdirs,
+  httpx,
+  setuptools,
+}:
+
 buildPythonPackage rec {
   pname = "pyradios";
-  version = "0.0.22";
+  version = "2.1.1";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1bgfb8vz7jybswss16pdzns0qpqfrwa9f2g8qrh1r4mig4xh2dmi";
+    hash = "sha256-FRAd1M8JZIsogLa/W78IQddMxG0Z8tAP+IiVtHU9fp4=";
   };
 
   propagatedBuildInputs = [
     appdirs
-    requests
+    httpx
+    setuptools
   ];
 
+  # Tests and pythonImportsCheck require network access
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Python client for the https://api.radio-browser.info";
     homepage = "https://github.com/andreztz/pyradios";
-    license = licenses.mit;
-    maintainers = with maintainers; [ infinisil ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

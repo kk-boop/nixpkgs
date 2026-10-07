@@ -1,28 +1,29 @@
-{ lib
-, buildPythonPackage
-, cryptography
-, fetchFromGitHub
-, getmac
-, pythonOlder
-, requests
-, zeroconf
+{
+  lib,
+  buildPythonPackage,
+  cryptography,
+  fetchFromGitHub,
+  getmac,
+  requests,
+  setuptools,
+  zeroconf,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "boschshcpy";
-  version = "0.2.24";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "0.6.15";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "tschamm";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-hvanimPWTKzOHRwJhynzO/4Z1jGlLopk4ogU3KHTEyc=";
+    repo = "boschshcpy";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-qZPscRRZl+Grnp0ss1suQ892Fmv0+AYMAzSmhY5eaIc=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     cryptography
     getmac
     requests
@@ -32,14 +33,13 @@ buildPythonPackage rec {
   # Project has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "boschshcpy"
-  ];
+  pythonImportsCheck = [ "boschshcpy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to work with the Bosch Smart Home Controller API";
     homepage = "https://github.com/tschamm/boschshcpy";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/tschamm/boschshcpy/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

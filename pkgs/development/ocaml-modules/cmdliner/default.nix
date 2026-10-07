@@ -1,41 +1,43 @@
-{ lib, stdenv, fetchurl, ocaml, findlib, ocamlbuild, topkg, result }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  ocaml,
+  version ? "2.1.1",
+}:
 
-let
+stdenv.mkDerivation {
   pname = "cmdliner";
-in
-
-assert lib.versionAtLeast ocaml.version "4.01.0";
-
-let param =
-  if lib.versionAtLeast ocaml.version "4.03" then {
-    version = "1.0.4";
-    sha256 = "1h04q0zkasd0mw64ggh4y58lgzkhg6yhzy60lab8k8zq9ba96ajw";
-  } else {
-    version = "1.0.2";
-    sha256 = "18jqphjiifljlh9jg8zpl6310p3iwyaqphdkmf89acyaix0s4kj1";
-  }
-; in
-
-stdenv.mkDerivation rec {
-  name = "ocaml${ocaml.version}-${pname}-${version}";
-  inherit (param) version;
+  inherit version;
 
   src = fetchurl {
-    url = "https://erratique.ch/software/${pname}/releases/${pname}-${version}.tbz";
-    inherit (param) sha256;
+    url = "https://erratique.ch/software/cmdliner/releases/cmdliner-${version}.tbz";
+    hash =
+      {
+        "1.0.4" = "sha256-XCqT1Er4o4mWosD4D715cP5HUfEEvkcMr6BpNT/ABMA=";
+        "1.3.0" = "sha256-joGA9XO0QPanqMII2rLK5KgjhP7HMtInhNG7bmQWjLs=";
+        "2.1.1" = "sha256-Bbk40d709UxHgXjxmCgig0UQQx7ZjyrGfLTZCqEg1rY=";
+      }
+      ."${version}";
   };
 
-  nativeBuildInputs = [ ocaml ocamlbuild findlib ];
-  buildInputs = [ topkg ];
-  propagatedBuildInputs = [ result ];
+  nativeBuildInputs = [ ocaml ];
 
-  inherit (topkg) buildPhase installPhase;
+  makeFlags = [ "PREFIX=$(out)" ];
+  installTargets = "install install-doc";
+  installFlags = [
+    "LIBDIR=$(out)/lib/ocaml/${ocaml.version}/site-lib/cmdliner"
+    "DOCDIR=$(out)/share/doc/cmdliner"
+  ];
+  postInstall = ''
+    mv $out/lib/ocaml/${ocaml.version}/site-lib/cmdliner/{opam,cmdliner.opam}
+  '';
 
-  meta = with lib; {
+  meta = {
     homepage = "https://erratique.ch/software/cmdliner";
-    description = "An OCaml module for the declarative definition of command line interfaces";
-    license = licenses.bsd3;
-    platforms = ocaml.meta.platforms or [];
-    maintainers = [ maintainers.vbgl ];
+    description = "OCaml module for the declarative definition of command line interfaces";
+    license = lib.licenses.isc;
+    inherit (ocaml.meta) platforms;
+    maintainers = [ lib.maintainers.vbgl ];
   };
 }

@@ -1,19 +1,21 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, karton-core
-, mwdblib
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  karton-core,
+  mwdblib,
 }:
 
 buildPythonPackage rec {
   pname = "karton-mwdb-reporter";
-  version = "1.0.1";
+  version = "1.3.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "CERT-Polska";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0jrn5c83nhcjny4bc879wrsgcr7mbazm51jzdkxmxyqf543cc841";
+    repo = "karton-mwdb-reporter";
+    tag = "v${version}";
+    hash = "sha256-KJh9uJzVGYEEk1ed56ynKA/+dK9ouDB7L06xERjfjdc=";
   };
 
   propagatedBuildInputs = [
@@ -21,19 +23,17 @@ buildPythonPackage rec {
     mwdblib
   ];
 
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "mwdblib==3.4.0" "mwdblib"
-  '';
-
   # Project has no tests
   doCheck = false;
+
   pythonImportsCheck = [ "karton.mwdb_reporter" ];
 
-  meta = with lib; {
+  meta = {
     description = "Karton service that uploads analyzed artifacts and metadata to MWDB Core";
+    mainProgram = "karton-mwdb-reporter";
     homepage = "https://github.com/CERT-Polska/karton-mwdb-reporter";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/CERT-Polska/karton-mwdb-reporter/releases/tag/v${version}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

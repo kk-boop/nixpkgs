@@ -1,52 +1,61 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, flask
-, pytestCheckHook
-, python-http-client
-, pyyaml
-, starkbank-ecdsa
-, werkzeug
+{
+  lib,
+  buildPythonPackage,
+  cryptography,
+  ecdsa,
+  fetchFromGitHub,
+  flask,
+  pytestCheckHook,
+  python-http-client,
+  pyyaml,
+  setuptools,
+  starkbank-ecdsa,
+  werkzeug,
 }:
 
 buildPythonPackage rec {
   pname = "sendgrid";
-  version = "6.9.2";
-  format = "setuptools";
+  version = "6.12.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = pname;
     repo = "sendgrid-python";
-    rev = version;
-    sha256 = "sha256-eqmYuVW912E8hiVReLAoclmNDc2+gOIcUo9lRUx9AwM=";
+    tag = version;
+    hash = "sha256-7r1FHcGmHRQK9mfpV3qcuZlIe7G6CIyarnpWLjduw4E=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "cryptography" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    cryptography
+    ecdsa
     python-http-client
     starkbank-ecdsa
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     flask
     pytestCheckHook
     pyyaml
     werkzeug
   ];
 
-  # Exclude tests that require network access
-  pytestFlagsArray = [
-    "--ignore test/test_sendgrid.py"
-    "--ignore live_test.py"
+  disabledTestPaths = [
+    # Exclude tests that require network access
+    "test/integ/test_sendgrid.py"
+    "live_test.py"
   ];
 
-  pythonImportsCheck = [
-    "sendgrid"
-  ];
+  pythonImportsCheck = [ "sendgrid" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python client for SendGrid";
     homepage = "https://github.com/sendgrid/sendgrid-python";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/sendgrid/sendgrid-python/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

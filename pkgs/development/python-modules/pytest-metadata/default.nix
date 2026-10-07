@@ -1,22 +1,37 @@
-{ lib, buildPythonPackage, fetchPypi
-, pytest, setuptools-scm }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  hatch-vcs,
+  hatchling,
+  pytest,
+  pytestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pytest-metadata";
-  version = "1.11.0";
+  version = "3.1.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "71b506d49d34e539cc3cfdb7ce2c5f072bea5c953320002c95968e0238f8ecf1";
+    pname = "pytest_metadata";
+    inherit (finalAttrs) version;
+    hash = "sha256-0qKbA1X7wD8WiqltQf+IsaO0SjsCrL5JGAHJigSAF8g=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
+  nativeBuildInputs = [
+    hatchling
+    hatch-vcs
+  ];
+
   buildInputs = [ pytest ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Plugin for accessing test session metadata";
     homepage = "https://github.com/pytest-dev/pytest-metadata";
-    license = licenses.mpl20;
-    maintainers = with maintainers; [ mpoquet ];
+    license = lib.licenses.mpl20;
+    maintainers = with lib.maintainers; [ mpoquet ];
   };
-}
+})

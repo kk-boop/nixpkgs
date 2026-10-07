@@ -1,32 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, mock
-, psutil
-, pyopenssl
-, pysendfile
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  mock,
+  psutil,
+  pyasyncore,
+  pyasynchat,
+  pyopenssl,
+  pysendfile,
+  setuptools,
 }:
 
 buildPythonPackage rec {
-  version = "1.5.6";
   pname = "pyftpdlib";
+  version = "2.2.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0pnv2byzmzg84q5nmmhn1xafvfil85qa5y52bj455br93zc5b9px";
+    hash = "sha256-S6BkIHh5LfY907LpyPg48qPs9CjHUY1ZIcBTDVNRKs8=";
   };
 
-  checkInputs = [ mock psutil ];
-  propagatedBuildInputs = [ pyopenssl pysendfile ];
+  build-system = [ setuptools ];
 
-  # impure filesystem-related tests cause timeouts
+  dependencies = [
+    pyasyncore
+    pyasynchat
+    pysendfile
+  ];
+
+  optional-dependencies = {
+    ssl = [ pyopenssl ];
+  };
+
+  nativeCheckInputs = [
+    mock
+    psutil
+  ];
+
+  # Impure filesystem-related tests cause timeouts
   # on Hydra: https://hydra.nixos.org/build/84374861
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pyftpdlib" ];
+
+  meta = {
+    description = "Asynchronous FTP server library";
     homepage = "https://github.com/giampaolo/pyftpdlib/";
-    description = "Very fast asynchronous FTP server library";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/giampaolo/pyftpdlib/blob/release-${version}/HISTORY.rst";
+    license = lib.licenses.mit;
+    maintainers = [ ];
+    mainProgram = "ftpbench";
   };
 }

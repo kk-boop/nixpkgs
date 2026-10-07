@@ -1,28 +1,63 @@
-{ lib, buildPythonPackage, fetchPypi, installShellFiles
-, Babel, requests, requests_oauthlib, six, click, markdown, pyyaml, cryptography
-, pytest-runner, coverage, flake8, mock, pytestCheckHook, pytest-cov, tox, gntp, sleekxmpp
+{
+  lib,
+  apprise,
+  babel,
+  buildPythonPackage,
+  click,
+  cryptography,
+  fetchPypi,
+  gntp,
+  installShellFiles,
+  markdown,
+  paho-mqtt,
+  pytest-mock,
+  pytestCheckHook,
+  pyyaml,
+  requests,
+  requests-oauthlib,
+  setuptools,
+  stdenv,
+  terminal-notifier,
+  testers,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "apprise";
-  version = "0.9.6";
+  version = "1.13.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-Fe0GIIGXydKP2DzWnnJ7SCgIeaTGEa/Wta6l0N7zl/g=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-mlaWS/PKAEs+DbmKuKjYf60FHY7bN3vBZtxL6CZmbIE=";
   };
 
-  nativeBuildInputs = [ Babel installShellFiles ];
+  postPatch = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    substituteInPlace apprise/plugins/macosx.py \
+    --replace-fail "/opt/homebrew/bin/terminal-notifier" "${lib.getExe' terminal-notifier "terminal-notifier"}"
+  '';
 
-  propagatedBuildInputs = [
-    cryptography requests requests_oauthlib six click markdown pyyaml
+  nativeBuildInputs = [ installShellFiles ];
+
+  build-system = [
+    babel
+    setuptools
   ];
 
-  checkInputs = [
-    pytest-runner coverage flake8 mock pytestCheckHook pytest-cov tox gntp sleekxmpp
+  dependencies = [
+    click
+    cryptography
+    markdown
+    pyyaml
+    requests
+    requests-oauthlib
   ];
 
-  disabledTests = [ "test_apprise_cli_nux_env"  ];
+  nativeCheckInputs = [
+    gntp
+    paho-mqtt
+    pytest-mock
+    pytestCheckHook
+  ];
 
   postInstall = ''
     installManPage packaging/man/apprise.1
@@ -30,10 +65,19 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "apprise" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/caronc/apprise";
-    description = "Push Notifications that work with just about every platform!";
-    license = licenses.mit;
-    maintainers = [ maintainers.marsam ];
+  passthru = {
+    tests.version = testers.testVersion {
+      package = apprise;
+      version = "v${finalAttrs.version}";
+    };
   };
-}
+
+  meta = {
+    description = "Push Notifications that work with just about every platform";
+    homepage = "https://appriseit.com/";
+    changelog = "https://github.com/caronc/apprise/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ getchoo ];
+    mainProgram = "apprise";
+  };
+})

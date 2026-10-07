@@ -1,37 +1,52 @@
-{ buildPythonPackage, pythonAtLeast, pytest, requests, requests_oauthlib, six
-, fetchFromGitHub, responses, lib
+{
+  lib,
+  buildPythonPackage,
+  certifi,
+  fetchFromGitHub,
+  pytestCheckHook,
+  python-dateutil,
+  python-dotenv,
+  setuptools,
+  six,
+  urllib3,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "asana";
-  version = "0.10.3";
-
-  # upstream reportedly doesn't support 3.7 yet, blocked on
-  # https://bugs.python.org/issue34226
-  disabled = pythonAtLeast "3.7";
+  version = "5.2.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "asana";
     repo = "python-asana";
-    rev = "v${version}";
-    sha256 = "11nsfygcfpc2qb2gy4npi9w00cqfh88g7k3rsfq7xambz1zjdz1n";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Bfq3FKJoZE8edAAFVNYYrLJ8vp44QYboEVsCGsI5WMY=";
   };
 
-  checkInputs = [ pytest responses ];
-  propagatedBuildInputs = [ requests requests_oauthlib six ];
+  build-system = [ setuptools ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "requests_oauthlib >= 0.8.0, == 0.8.*" "requests_oauthlib>=0.8.0<2.0"
-  '';
+  dependencies = [
+    certifi
+    six
+    python-dateutil
+    python-dotenv
+    urllib3
+  ];
 
-  checkPhase = ''
-    py.test tests
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "asana" ];
+
+  disabledTestPaths = [
+    # Tests require network access
+    "build_tests/"
+  ];
+
+  meta = {
     description = "Python client library for Asana";
     homepage = "https://github.com/asana/python-asana";
-    license = licenses.mit;
+    changelog = "https://github.com/Asana/python-asana/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

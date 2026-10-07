@@ -1,19 +1,50 @@
-{ mkDerivation
-, fetchFromGitLab
-, extra-cmake-modules
+{
+  lib,
+  stdenv,
+  fetchFromGitLab,
+  cmake,
+  kdePackages,
+  qtbase,
+  qtdeclarative,
+  opencv,
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation rec {
   pname = "kquickimageeditor";
-  version = "0.1.3";
+  version = "0.6.1";
 
   src = fetchFromGitLab {
     domain = "invent.kde.org";
     owner = "libraries";
-    repo = pname;
+    repo = "kquickimageeditor";
     rev = "v${version}";
-    sha256 = "sha256-p2uOssS5MQSkmppNKOjTxp866Qx1rIB6ZPhcmVvfBxs=";
+    sha256 = "sha256-MluY8nkMtg1uLAStDZFDxyJoeDrcp3smZ4U5IG5sXMk=";
   };
 
-  nativeBuildInputs = [ extra-cmake-modules ];
+  nativeBuildInputs = [
+    cmake
+    kdePackages.extra-cmake-modules
+  ];
+  buildInputs = [
+    kdePackages.kirigami
+    qtbase
+    qtdeclarative
+    (opencv.override {
+      enableCuda = false; # fails to compile, disabled in case someone sets config.cudaSupport
+      enabledModules = [
+        "core"
+        "imgproc"
+      ];
+      runAccuracyTests = false; # tests will fail because of missing plugins but that's okay
+    })
+  ];
+  dontWrapQtApps = true;
+
+  meta = {
+    description = "Set of QtQuick components providing basic image editing capabilities";
+    homepage = "https://invent.kde.org/libraries/kquickimageeditor";
+    license = lib.licenses.lgpl21Plus;
+    platforms = lib.platforms.unix;
+    badPlatforms = lib.platforms.darwin;
+  };
 }

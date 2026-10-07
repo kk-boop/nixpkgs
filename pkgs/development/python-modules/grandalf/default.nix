@@ -1,41 +1,38 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pyparsing
-, future
-, pytest
-, pytest-runner
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pyparsing,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "grandalf";
-  version = "0.6";
+  version = "0.8";
+  pyproject = true;
 
-  # fetch from github to acquire tests
   src = fetchFromGitHub {
     owner = "bdcht";
     repo = "grandalf";
-    rev = "v${version}";
-    sha256 = "1f1l288sqna0bca7dwwvyw7wzg9b2613g6vc0g0vfngm7k75b2jg";
+    tag = "v${version}";
+    hash = "sha256-oKuzk/vsEkoiEPgt/fsaaurKfz5CElXPEJe88aFBLqU=";
   };
-
-  propagatedBuildInputs = [
-    pyparsing
-    future
-  ];
-
-  checkInputs = [ pytest pytest-runner ];
 
   patches = [ ./no-setup-requires-pytestrunner.patch ];
 
-  checkPhase = ''
-    pytest tests
-  '';
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "A python package made for experimentations with graphs and drawing algorithms";
+  dependencies = [ pyparsing ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "grandalf" ];
+
+  meta = {
+    description = "Module for experimentations with graphs and drawing algorithms";
     homepage = "https://github.com/bdcht/grandalf";
-    license = licenses.gpl2;
-    maintainers = with maintainers; [ cmcdragonkai ];
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ cmcdragonkai ];
   };
 }

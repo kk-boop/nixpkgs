@@ -1,52 +1,53 @@
-{ lib
-, anyio
-, buildPythonPackage
-, fetchFromGitHub
-, setuptools-scm
-, pytestCheckHook
-, pythonOlder
-, trio
+{
+  lib,
+  anyio,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flit-core,
+  pytestCheckHook,
+  trio,
 }:
 
 buildPythonPackage rec {
   pname = "asyncclick";
-  version = "8.0.1.3";
-
-  disabled = pythonOlder "3.6";
+  version = "8.3.0.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "python-trio";
-    repo = pname;
-    rev = version;
-    sha256 = "03b8zz8i3aqzxr3ffzb4sxnrcm3gsk9r4hmr0fkml1ahi754bx2r";
+    repo = "asyncclick";
+    tag = "${version}+async";
+    hash = "sha256-gKtxwI/vDB2pDrhiA+e1TClwW5nXvBRCMF3oCNoLaDo=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
+  build-system = [ flit-core ];
 
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
+  dependencies = [ anyio ];
 
-  propagatedBuildInputs = [
-    anyio
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     trio
   ];
 
+  pytestFlags = [
+    "-Wignore::trio.TrioDeprecationWarning"
+    "-Wignore::pytest.PytestRemovedIn10Warning"
+  ];
+
   disabledTests = [
-    # RuntimeWarning: coroutine 'Context.invoke' was never awaited
-    "test_context_invoke_type"
+    # AttributeError: 'Context' object has no attribute '_ctx_mgr'
+    "test_context_pushing"
+    # https://github.com/python-trio/asyncclick/issues/47
+    "test_echo_via_pager"
   ];
 
   pythonImportsCheck = [ "asyncclick" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python composable command line utility";
     homepage = "https://github.com/python-trio/asyncclick";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/python-trio/asyncclick/blob/${src.tag}/CHANGES.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

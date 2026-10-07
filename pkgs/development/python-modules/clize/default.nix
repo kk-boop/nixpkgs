@@ -1,49 +1,73 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, python-dateutil
-, sigtools
-, six
-, attrs
-, od
-, docutils
-, repeated_test
-, pygments
-, unittest2
-, pytestCheckHook
+{
+  lib,
+  attrs,
+  buildPythonPackage,
+  docutils,
+  fetchPypi,
+  od,
+  pygments,
+  pythonAtLeast,
+  python-dateutil,
+  repeated-test,
+  setuptools-scm,
+  sigtools,
+  unittestCheckHook,
 }:
-
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "clize";
-  version = "4.2.1";
+  version = "5.0.2";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "3177a028e4169d8865c79af82bdd441b24311d4bd9c0ae8803641882d340a51d";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-BH9aRHNgJxirG4VnKn4VMDOHF41agcJ13EKd+sHstRA=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-    python-dateutil
-    pygments
-    repeated_test
-    unittest2
-  ];
+  build-system = [ setuptools-scm ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     attrs
     docutils
     od
     sigtools
-    six
   ];
+
+  optional-dependencies = {
+    datetime = [ python-dateutil ];
+  };
+
+  nativeCheckInputs = [
+    pygments
+    unittestCheckHook
+    python-dateutil
+    repeated-test
+  ];
+
+  unittestFlags =
+    let
+      disabledTests = [
+        "test_help.ElementsFromAutodetectedDocstringTests.test_sphinx_has_sphinx_error_in_param_desc"
+        "test_help.ElementsFromAutodetectedDocstringTests.test_sphinx_has_sphinx_error_in_free_text"
+        "test_help.ElementsFromAutodetectedDocstringTests.test_clize_sphinx_error"
+        "test_help.ElementsFromAutodetectedDocstringTests.test_clize_has_sphinx_error"
+      ]
+      ++ lib.optionals (pythonAtLeast "3.14") [
+        "test_help.ClizeWholeHelpTests.test_custom_param_help"
+      ];
+      matchingPattern = builtins.concatStringsSep "|" disabledTests;
+    in
+    [
+      "-s clize/tests"
+      "-k [!(${matchingPattern})]"
+    ];
 
   pythonImportsCheck = [ "clize" ];
 
-  meta = with lib; {
+  meta = {
     description = "Command-line argument parsing for Python";
     homepage = "https://github.com/epsy/clize";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/epsy/clize/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

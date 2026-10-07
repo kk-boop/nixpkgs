@@ -1,27 +1,44 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools-scm,
+  setuptools,
+  wcwidth,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
-  version = "0.8.9";
+buildPythonPackage (finalAttrs: {
+  version = "0.10.0";
   pname = "tabulate";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "eb1d13f25760052e8931f2ef80aaf6045a6cceb47514db8beab24cded16f13a7";
+  src = fetchFromGitHub {
+    owner = "astanin";
+    repo = "python-tabulate";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-JnwkABtIgPqANuv3lo8e8zr8m6a/qnxz4w1QvTVZFxg=";
   };
 
-  checkInputs = [ nose ];
+  nativeBuildInputs = [
+    setuptools
+    setuptools-scm
+  ];
 
-  # Tests: cannot import common (relative import).
-  doCheck = false;
+  optional-dependencies = {
+    widechars = [ wcwidth ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.finalPackage.optional-dependencies;
 
   meta = {
     description = "Pretty-print tabular data";
-    homepage = "https://bitbucket.org/astanin/python-tabulate";
+    mainProgram = "tabulate";
+    homepage = "https://github.com/astanin/python-tabulate";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ fridh ];
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
-}
+})

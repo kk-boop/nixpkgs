@@ -1,29 +1,48 @@
-{ buildPythonPackage
-, fetchPypi
-, pytest
-, lib
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
+  cython,
+  borgbackup,
 }:
 
 buildPythonPackage rec {
   pname = "msgpack";
-  version = "1.0.2";
+  version = "1.2.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1109s2yynrahwi64ikax68hx0mbclz8p35afmpphw5dwynb49q7s";
+  src = fetchFromGitHub {
+    owner = "msgpack";
+    repo = "msgpack-python";
+    tag = "v${version}";
+    hash = "sha256-L8nU+n0M3NJvQzjRlWESXvzP6CxR5CTSu7UkeGfHHUs=";
   };
 
-  checkPhase = ''
-    py.test
+  build-system = [ setuptools ];
+
+  nativeBuildInputs = [ cython ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "msgpack" ];
+
+  passthru.tests = {
+    # borgbackup is sensible to msgpack versions: https://github.com/borgbackup/borg/issues/3753
+    # please be mindful before bumping versions.
+    inherit borgbackup;
+  };
+
+  preBuild = ''
+    make cython
   '';
 
-  checkInputs = [ pytest ];
-
   meta = {
+    description = "MessagePack serializer implementation";
     homepage = "https://github.com/msgpack/msgpack-python";
-    description = "MessagePack serializer implementation for Python";
-    changelog = "https://github.com/msgpack/msgpack-python/blob/master/ChangeLog.rst";
+    changelog = "https://github.com/msgpack/msgpack-python/blob/${src.tag}/ChangeLog.rst";
     license = lib.licenses.asl20;
-    # maintainers =  ?? ;
+    maintainers = with lib.maintainers; [ nickcao ];
   };
 }

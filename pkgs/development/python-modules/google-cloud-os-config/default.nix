@@ -1,29 +1,58 @@
-{ lib, buildPythonPackage, fetchPypi, google-api-core, libcst, mock, proto-plus, pytestCheckHook, pytest-asyncio }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  protobuf,
+  proto-plus,
+  pytestCheckHook,
+  pytest-asyncio,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "google-cloud-os-config";
-  version = "1.9.0";
+  version = "1.25.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "872774c4791b15d59d866fd965c780beac2772f335ded4a0047e2d844d988f30";
+    pname = "google_cloud_os_config";
+    inherit version;
+    hash = "sha256-LgJxfWoNq+j26/e5s36yi19w4zWL18rwzdvPhDswPaE=";
   };
 
-  propagatedBuildInputs = [ google-api-core libcst proto-plus ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook pytest-asyncio ];
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
+
+  dependencies = [
+    google-api-core
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "google.cloud.osconfig" ];
 
   disabledTests = [
+    # Test requires a project ID
     "test_patch_deployment"
     "test_patch_job"
+    "test_list_patch_jobs"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud OS Config API client library";
-    homepage = "https://github.com/googleapis/python-os-config";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-os-config";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-os-config-v${version}/packages/google-cloud-os-config/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

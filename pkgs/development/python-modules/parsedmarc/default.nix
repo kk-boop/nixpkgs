@@ -1,26 +1,40 @@
-{ buildPythonPackage
-, fetchPypi
-, fetchurl
-, pythonOlder
-, lib
-, nixosTests
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchurl,
 
-# pythonPackages
-, tqdm
-, dnspython
-, expiringdict
-, urllib3
-, requests
-, publicsuffix2
-, xmltodict
-, geoip2
-, imapclient
-, dateparser
-, elasticsearch-dsl
-, kafka-python
-, mailsuite
-, lxml
-, boto3
+  # build-system
+  hatchling,
+
+  # dependencies
+  azure-identity,
+  azure-monitor-ingestion,
+  boto3,
+  dateparser,
+  dnspython,
+  elasticsearch-dsl,
+  elasticsearch,
+  expiringdict,
+  kafka-python,
+  lxml,
+  mailsuite,
+  maxminddb,
+  nixosTests,
+  opensearch-py,
+  publicsuffixlist,
+  pygelf,
+  pyyaml,
+  requests,
+  tqdm,
+  urllib3,
+  xmltodict,
+
+  # test
+  iana-etc,
+  libredirect,
+  pytestCheckHook,
 }:
 
 let
@@ -29,33 +43,72 @@ let
     sha256 = "0wbihyqbb4ndjg79qs8088zgrcg88km8khjhv2474y7nzjzkf43i";
   };
 in
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "parsedmarc";
-  version = "7.0.1";
+  version = "11.0.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1mi4hx410y7ikpfy1582lm252si0c3yryj0idqgqbx417fm21jjc";
+  src = fetchFromGitHub {
+    owner = "domainaware";
+    repo = "parsedmarc";
+    tag = finalAttrs.version;
+    hash = "sha256-e7AU09oMV5G56mQXKSYlMVrZ7is5zsa2hmj/770sWig=";
   };
 
-  propagatedBuildInputs = [
-    tqdm
-    dnspython
-    expiringdict
-    urllib3
-    requests
-    publicsuffix2
-    xmltodict
-    geoip2
-    imapclient
-    dateparser
-    elasticsearch-dsl
-    kafka-python
-    mailsuite
-    lxml
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'requires_python = ">=3.10,<3.15"' ""
+  '';
+
+  build-system = [
+    hatchling
+  ];
+
+  pythonRelaxDeps = [
+    "elasticsearch"
+    "elasticsearch-dsl"
+  ];
+
+  dependencies = [
+    azure-identity
+    azure-monitor-ingestion
     boto3
+    dateparser
+    dnspython
+    elasticsearch
+    elasticsearch-dsl
+    expiringdict
+    kafka-python
+    lxml
+    mailsuite
+    maxminddb
+    opensearch-py
+    publicsuffixlist
+    pygelf
+    pyyaml
+    requests
+    tqdm
+    urllib3
+    xmltodict
+  ]
+  ++ mailsuite.optional-dependencies.gmail
+  ++ mailsuite.optional-dependencies.msgraph;
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
+  preCheck = lib.optionalString stdenv.hostPlatform.isLinux ''
+    echo "nameserver 127.0.0.1" > resolv.conf
+    export NIX_REDIRECTS=/etc/protocols=${iana-etc}/etc/protocols:/etc/resolv.conf=$(realpath resolv.conf) \
+      LD_PRELOAD=${libredirect}/lib/libredirect.so
+  '';
+
+  disabledTests = [
+    # contacts DNS servers at 1.1.1.1 and 8.8.8.8
+    "test_general_dns_settings_with_defaults"
+    # AssertionError
+    "testWithoutAssumeUtcNaiveIsLocal"
   ];
 
   pythonImportsCheck = [ "parsedmarc" ];
@@ -68,7 +121,9 @@ buildPythonPackage rec {
   meta = {
     description = "Python module and CLI utility for parsing DMARC reports";
     homepage = "https://domainaware.github.io/parsedmarc/";
-    maintainers = with lib.maintainers; [ talyz ];
+    changelog = "https://github.com/domainaware/parsedmarc/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ talyz ];
+    mainProgram = "parsedmarc";
   };
-}
+})

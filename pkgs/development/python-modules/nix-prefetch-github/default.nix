@@ -1,43 +1,58 @@
-{ fetchFromGitHub
-, lib
-, buildPythonPackage
-, attrs
-, click
-, effect
-, git
-, pytestCheckHook
-, pytest-cov
-, pythonOlder
+{
+  fetchFromGitHub,
+  lib,
+  buildPythonPackage,
+  git,
+  which,
+  unittestCheckHook,
+  sphinxHook,
+  sphinx-argparse,
+  parameterized,
+  setuptools,
+  nix,
 }:
 
 buildPythonPackage rec {
   pname = "nix-prefetch-github";
-  version = "4.0.4";
+  version = "7.1.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
+  outputs = [
+    "out"
+    "man"
+  ];
 
   src = fetchFromGitHub {
     owner = "seppeljordan";
     repo = "nix-prefetch-github";
     rev = "v${version}";
-    sha256 = "g5G818Gq5EGyRIyg/ZW7guxMS0IyJ4nYaRjG/CtGhuc=";
+    hash = "sha256-eQd/MNlnuzXzgFzvwUMchvHoIvkIrbpGKV7iknO14Cc=";
   };
 
-  propagatedBuildInputs = [
-    attrs
-    click
-    effect
+  dependencies = [ nix ];
+
+  nativeBuildInputs = [
+    sphinxHook
+    sphinx-argparse
+    setuptools
+  ];
+  nativeCheckInputs = [
+    unittestCheckHook
+    git
+    which
+    parameterized
   ];
 
-  checkInputs = [ pytestCheckHook pytest-cov git ];
+  sphinxBuilders = [ "man" ];
+  sphinxRoot = "docs";
 
   # ignore tests which are impure
-  disabledTests = [ "network" "requires_nix_build" ];
+  env.DISABLED_TESTS = "network requires_nix_build";
 
-  meta = with lib; {
+  meta = {
     description = "Prefetch sources from github";
     homepage = "https://github.com/seppeljordan/nix-prefetch-github";
-    license = licenses.gpl3;
-    maintainers = with maintainers; [ seppeljordan ];
+    license = lib.licenses.gpl3;
+    maintainers = with lib.maintainers; [ seppeljordan ];
   };
 }

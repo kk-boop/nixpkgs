@@ -1,23 +1,56 @@
-{ lib, fetchFromGitHub, buildPythonPackage, docutils }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  setuptools-scm,
+  pytestCheckHook,
+  rstcheck-core,
+  sphinx,
+  typer,
+}:
 
 buildPythonPackage rec {
   pname = "rstcheck";
-  version = "v3.3.1";
+  version = "6.3.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "myint";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-4AhENuT+LtUMCi+aaI/rKa2gHti8sKGLdVGjdRithXI=";
+    owner = "rstcheck";
+    repo = "rstcheck";
+    tag = "v${version}";
+    hash = "sha256-EjTJ4QukFGfiWCzwv3p8xOi6mib7+8gQCpVb4GGEqh4=";
   };
 
-  pythonImportsCheck = [ "rstcheck" ];
-  propagatedBuildInputs = [ docutils ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  meta = with lib; {
+  dependencies = [
+    rstcheck-core
+    typer
+  ];
+
+  optional-dependencies = {
+    sphinx = [ sphinx ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "rstcheck" ];
+
+  preCheck = ''
+    # The tests need to find and call the rstcheck executable
+    export PATH="$PATH:$out/bin";
+  '';
+
+  meta = {
     description = "Checks syntax of reStructuredText and code blocks nested within it";
     homepage = "https://github.com/myint/rstcheck";
-    license = licenses.mit;
-    maintainers = with maintainers; [ staccato ];
+    changelog = "https://github.com/rstcheck/rstcheck/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ staccato ];
+    mainProgram = "rstcheck";
   };
 }

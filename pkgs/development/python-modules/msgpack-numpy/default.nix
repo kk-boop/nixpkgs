@@ -1,38 +1,38 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, cython
-, msgpack
-, numpy
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  cython,
+  msgpack,
+  numpy,
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "msgpack-numpy";
-  version = "0.4.7.1";
+  version = "0.4.8";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "7eaf51acf82d7c467d21aa71df94e1c051b2055e54b755442051b474fa7cf5e1";
+    hash = "sha256-xmfTGAUTQi+cdUW+XuxdKW3Ls1fgb3LtOcxoN5dVbmk=";
   };
 
-  buildInputs = [
-    cython
-  ];
+  buildInputs = [ cython ];
 
   propagatedBuildInputs = [
-   msgpack
-   numpy
+    msgpack
+    numpy
   ];
 
   checkPhase = ''
     ${python.interpreter} msgpack_numpy.py
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Numpy data type serialization using msgpack";
     homepage = "https://github.com/lebedov/msgpack-numpy";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ aborsu ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

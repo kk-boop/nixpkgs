@@ -1,44 +1,61 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytools
-, pytest
-, six
-, sympy
-, pexpect
-, symengine
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  constantdict,
+  pytools,
+  typing-extensions,
+
+  # optional-dependencies
+  matchpy,
+  numpy,
+
+  # tests
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pymbolic";
-  version = "2021.1";
+  version = "2025.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "67d08ef95568408901e59f79591ba41fd3f2caaecb42b7497c38fc82fd60358c";
+  src = fetchFromGitHub {
+    owner = "inducer";
+    repo = "pymbolic";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-cn2EdhMn5qjK854AF5AY4Hv4M5Ib6gPRJk+kQvsFWRk=";
   };
 
-  postConfigure = ''
-    substituteInPlace setup.py \
-      --replace "\"pytest>=2.3\"," ""
-  '';
+  build-system = [ hatchling ];
 
-  checkInputs = [ sympy pexpect symengine pytest ];
-  propagatedBuildInputs = [
+  dependencies = [
+    constantdict
     pytools
-    six
+    typing-extensions
   ];
 
-  # too many tests fail
-  doCheck = false;
-  checkPhase = ''
-    pytest test
-  '';
-
-  meta = with lib; {
-    description = "A package for symbolic computation";
-    homepage = "https://mathema.tician.de/software/pymbolic";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+  optional-dependencies = {
+    matchpy = [ matchpy ];
+    numpy = [ numpy ];
   };
-}
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  pythonImportsCheck = [ "pymbolic" ];
+
+  meta = {
+    description = "Package for symbolic computation";
+    homepage = "https://documen.tician.de/pymbolic/";
+    changelog = "https://github.com/inducer/pymbolic/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ qbisi ];
+  };
+})

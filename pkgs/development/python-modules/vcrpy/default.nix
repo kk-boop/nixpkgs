@@ -1,51 +1,62 @@
-{ buildPythonPackage
-, lib
-, isPy27
-, six
-, fetchPypi
-, pyyaml
-, mock
-, contextlib2
-, wrapt
-, pytest
-, pytest-httpbin
-, yarl
-, pythonOlder
-, pythonAtLeast
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytest-asyncio,
+  pytest-httpbin,
+  pytestCheckHook,
+  pyyaml,
+  six,
+  urllib3,
+  yarl,
+  wrapt,
 }:
 
 buildPythonPackage rec {
   pname = "vcrpy";
-  version = "4.1.1";
+  version = "8.3.0";
+  pyproject = true;
 
-  disabled = isPy27;
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "57095bf22fc0a2d99ee9674cdafebed0f3ba763018582450706f7d3a74fff599";
+  src = fetchFromGitHub {
+    owner = "kevin1024";
+    repo = "vcrpy";
+    tag = "v${version}";
+    hash = "sha256-WQLWUr1EgOibdAVVASxMzeFi1YikYAjjye/NtCEJ6Kk=";
   };
 
-  checkInputs = [
-    pytest
-    pytest-httpbin
+  build-system = [ setuptools ];
+
+  dependencies = [
+    pyyaml
+    six
+    urllib3
+    wrapt
+    yarl
   ];
 
-  propagatedBuildInputs = [
-    pyyaml
-    wrapt
-    six
-  ]
-  ++ lib.optionals (pythonOlder "3.3") [ contextlib2 mock ]
-  ++ lib.optionals (pythonAtLeast "3.4") [ yarl ];
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-httpbin
+    pytestCheckHook
+  ];
 
-  checkPhase = ''
-    py.test --ignore=tests/integration -k "not TestVCRConnection"
-  '';
+  disabledTestPaths = [ "tests/integration" ];
 
-  meta = with lib; {
+  disabledTests = [
+    "TestVCRConnection"
+    # https://github.com/kevin1024/vcrpy/issues/645
+    "test_get_vcr_with_matcher"
+    "test_testcase_playback"
+  ];
+
+  pythonImportsCheck = [ "vcr" ];
+
+  meta = {
     description = "Automatically mock your HTTP interactions to simplify and speed up testing";
     homepage = "https://github.com/kevin1024/vcrpy";
-    license = licenses.mit;
+    changelog = "https://github.com/kevin1024/vcrpy/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }
-

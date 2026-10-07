@@ -1,32 +1,56 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, setuptools-scm
-, setuptools
-, pytestCheckHook
-, freezegun
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  freezegun,
+  gettext,
+  pytestCheckHook,
+  python,
+  hatch-vcs,
+  hatchling,
 }:
 
 buildPythonPackage rec {
-  version = "3.12.0";
   pname = "humanize";
-  disabled = isPy27; # setup.py no longer compatible
+  version = "4.15.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "5ec1a66e230a3e31fb3f184aab9436ea13d4e37c168e0ffc345ae5bb57e58be6";
+  src = fetchFromGitHub {
+    owner = "python-humanize";
+    repo = "humanize";
+    tag = version;
+    hash = "sha256-EG0QrW4b5NK9+78B0Cs4eAuicIsN/V/77+JxyYrTReA=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-  propagatedBuildInputs = [ setuptools ];
-  checkInputs = [ pytestCheckHook freezegun ];
+  nativeBuildInputs = [
+    hatch-vcs
+    hatchling
+    gettext
+  ];
 
-  meta = with lib; {
+  postBuild = ''
+    scripts/generate-translation-binaries.sh
+  '';
+
+  postInstall = ''
+    cp -r 'src/humanize/locale' "$out/${python.sitePackages}/humanize/"
+  '';
+
+  nativeCheckInputs = [
+    freezegun
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "humanize" ];
+
+  meta = {
     description = "Python humanize utilities";
-    homepage = "https://github.com/jmoiron/humanize";
-    license = licenses.mit;
-    maintainers = with maintainers; [ rmcgibbo ];
+    homepage = "https://github.com/python-humanize/humanize";
+    changelog = "https://github.com/python-humanize/humanize/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      rmcgibbo
+      Luflosi
+    ];
   };
-
 }

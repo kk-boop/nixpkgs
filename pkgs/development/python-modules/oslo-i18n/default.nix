@@ -1,20 +1,23 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, oslotest
-, pbr
-, testscenarios
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  oslotest,
+  pbr,
+  setuptools,
+  testscenarios,
+  stestr,
 }:
 
 buildPythonPackage rec {
   pname = "oslo-i18n";
-  version = "5.1.0";
+  version = "6.9.0";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "oslo.i18n";
+    pname = "oslo_i18n";
     inherit version;
-    sha256 = "6bf111a6357d5449640852de4640eae4159b5562bbba4c90febb0034abc095d0";
+    hash = "sha256-V0vPIYc7GFBovOyVHeHsCTFY/9/wWoBV/Rjdy2n2nmU=";
   };
 
   postPatch = ''
@@ -23,24 +26,31 @@ buildPythonPackage rec {
     rm test-requirements.txt
   '';
 
-  nativeBuildInputs = [ pbr ];
+  build-system = [
+    pbr
+    setuptools
+  ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     oslotest
     stestr
     testscenarios
   ];
 
   checkPhase = ''
+    runHook preCheck
+
     stestr run
+
+    runHook postCheck
   '';
 
   pythonImportsCheck = [ "oslo_i18n" ];
 
-  meta = with lib; {
+  meta = {
     description = "Oslo i18n library";
     homepage = "https://github.com/openstack/oslo.i18n";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
 }

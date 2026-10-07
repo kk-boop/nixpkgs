@@ -1,50 +1,66 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, aiohttp
-, colorlog
-, cryptography
-, traitlets
-, go
-, isPy27
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  colorlog,
+  cryptography,
+  fetchFromGitHub,
+  go,
+  pykerberos,
+  hatchling,
+  skein,
+  sqlalchemy,
+  traitlets,
 }:
 
 buildPythonPackage rec {
   pname = "dask-gateway-server";
-  # update dask-gateway-server lock step with dask-gateway
-  version = "0.9.0";
-  disabled = isPy27;
+  version = "2025.4.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "82bca8a98fc1dbda9f67c8eceac59cb92abe07db6227c120a1eb1d040ea40fda";
+  src = fetchFromGitHub {
+    owner = "dask";
+    repo = "dask-gateway";
+    tag = version;
+    hash = "sha256-Ezt5QkA21SDfuCMm+XY8d+xso8SDb4lmK/yd89Guu0Y=";
   };
 
-  nativeBuildInputs = [
-    go
-  ];
+  sourceRoot = "${src.name}/${pname}";
 
-  propagatedBuildInputs = [
+  nativeBuildInputs = [ go ];
+
+  build-system = [ hatchling ];
+
+  dependencies = [
     aiohttp
     colorlog
     cryptography
     traitlets
   ];
 
+  optional-dependencies = {
+    kerberos = [ pykerberos ];
+    jobqueue = [ sqlalchemy ];
+    local = [ sqlalchemy ];
+    yarn = [
+      skein
+      sqlalchemy
+    ];
+  };
+
   preBuild = ''
     export HOME=$(mktemp -d)
-    export GO111MODULE=off
   '';
 
-  # tests requires cluster for testing
+  # Tests requires cluster for testing
   doCheck = false;
 
   pythonImportsCheck = [ "dask_gateway_server" ];
 
-  meta = with lib; {
-    description = "A multi-tenant server for securely deploying and managing multiple Dask clusters";
+  meta = {
+    description = "Multi-tenant server for securely deploying and managing multiple Dask clusters";
     homepage = "https://gateway.dask.org/";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

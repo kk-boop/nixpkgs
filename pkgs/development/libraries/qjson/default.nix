@@ -1,4 +1,10 @@
-{ lib, stdenv, fetchFromGitHub, cmake, qt4 }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  qtbase,
+}:
 
 stdenv.mkDerivation rec {
   version = "0.9.0";
@@ -11,13 +17,26 @@ stdenv.mkDerivation rec {
     sha256 = "1f4wnxzx0qdmxzc7hqk28m0sva7z9p9xmxm6aifvjlp0ha6pmfxs";
   };
 
-  nativeBuildInputs = [ cmake ];
-  buildInputs = [ qt4 ];
+  # CMake 2.8.8 is deprecated and no longer supported by CMake > 4
+  # https://github.com/NixOS/nixpkgs/issues/445447
+  postPatch = ''
+    substituteInPlace CMakeLists.txt --replace-fail \
+      "CMAKE_MINIMUM_REQUIRED(VERSION 2.8.8)" \
+      "CMAKE_MINIMUM_REQUIRED(VERSION 3.10)"
+    substituteInPlace CMakeLists.txt --replace-fail \
+      "cmake_policy(SET CMP0020 OLD)" \
+      ""
+  '';
 
-  meta = with lib; {
+  env.NIX_CFLAGS_COMPILE = lib.optionalString stdenv.hostPlatform.isDarwin "-Wno-register";
+
+  nativeBuildInputs = [ cmake ];
+  buildInputs = [ qtbase ];
+  dontWrapQtApps = true;
+
+  meta = {
     description = "Lightweight data-interchange format";
-    homepage = "http://qjson.sourceforge.net/";
-    license = licenses.lgpl21;
-    inherit (qt4.meta) platforms;
+    homepage = "https://qjson.sourceforge.net/";
+    license = lib.licenses.lgpl21;
   };
 }

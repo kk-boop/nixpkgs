@@ -1,34 +1,27 @@
-{ lib
-, fetchPypi
-, fetchpatch
-, buildPythonPackage
-, flake8
-, flake8-polyfill
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  flake8,
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "pep8-naming";
-  version = "0.12.1";
+  version = "0.15.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-uyRVlHdX0WKqTK1V26TOApAFzRaS8omaIdUdhjDKeEE=";
+  src = fetchFromGitHub {
+    owner = "PyCQA";
+    repo = "pep8-naming";
+    tag = version;
+    hash = "sha256-swSaMOrgd6R4i92LodJVsquls9wp5ZFyzK0LNqwODoc=";
   };
 
-  propagatedBuildInputs = [
-    flake8
-    flake8-polyfill
-  ];
+  build-system = [ setuptools ];
 
-  patches = [
-    # Add missing option to get passing tests, https://github.com/PyCQA/pep8-naming/pull/181
-    (fetchpatch {
-      name = "add-missing-option.patch";
-      url = "https://github.com/PyCQA/pep8-naming/commit/03b8f36f6a8bb8bc79dfa5a71ad9be2a0bf8bbf5.patch";
-      sha256 = "1YTh84Yoj0MqFZoifM362563r1GuzaF+mMmdT/ckC7I=";
-    })
-  ];
+  dependencies = [ flake8 ];
 
   checkPhase = ''
     runHook preCheck
@@ -36,14 +29,13 @@ buildPythonPackage rec {
     runHook postCheck
   '';
 
-  pythonImportsCheck = [
-    "pep8ext_naming"
-  ];
+  pythonImportsCheck = [ "pep8ext_naming" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/PyCQA/pep8-naming";
+  meta = {
     description = "Check PEP-8 naming conventions, plugin for flake8";
-    license = licenses.mit;
-    maintainers = with maintainers; [ eadwu ];
+    homepage = "https://github.com/PyCQA/pep8-naming";
+    changelog = "https://github.com/PyCQA/pep8-naming/blob/${src.tag}/CHANGELOG.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ eadwu ];
   };
 }

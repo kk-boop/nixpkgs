@@ -1,44 +1,31 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, six
-, nose
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  pytestCheckHook,
+  setuptools,
 }:
-buildPythonPackage rec {
+
+buildPythonPackage (finalAttrs: {
   pname = "intbitset";
-  version = "2.4.1";
+  version = "4.1.2";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "44bca80b8cc702d5a56f0686f2bb5e028ab4d0c2c1761941589d46b7fa2c701c";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-+C+v4Ly0/noBDZQgmbWoTXIdN8iXU47WMveIliwUEfg=";
   };
 
-  patches = [
-    # fixes compilation on aarch64 and determinism (uses -march=core2 and
-    # -mtune=native)
-    ./remove-impure-tuning.patch
-  ];
+  build-system = [ setuptools ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  propagatedBuildInputs = [
-    six
-  ];
+  pythonImportsCheck = [ "intbitset" ];
 
-  checkInputs = [
-    nose
-  ];
-
-  checkPhase = ''
-    nosetests
-  '';
-
-  pythonImportsCheck = [
-    "intbitset"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "C-based extension implementing fast integer bit sets";
     homepage = "https://github.com/inveniosoftware/intbitset";
-    license = licenses.lgpl3Only;
-    maintainers = teams.determinatesystems.members;
+    changelog = "https://github.com/inveniosoftware-contrib/intbitset/blob/v${finalAttrs.version}/CHANGELOG.rst";
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ sigmanificient ];
   };
-}
+})

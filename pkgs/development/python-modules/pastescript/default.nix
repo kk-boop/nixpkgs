@@ -1,21 +1,25 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
-, six
-, paste
-, pastedeploy
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  six,
+  paste,
+  setuptools,
+  pastedeploy,
 }:
 
 buildPythonPackage rec {
   pname = "pastescript";
-  version = "3.2.1";
+  version = "3.7.0";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "PasteScript";
-    inherit version;
-    sha256 = "f3ef819785e1b284e6fc108a131bce7e740b18255d96cd2e99ee3f00fd452468";
+    inherit pname version;
+    hash = "sha256-U28CjftuUynGezIpnhyTA/kSZOSXk8xpFusKc+tKJSE=";
   };
+
+  build-system = [ setuptools ];
 
   propagatedBuildInputs = [
     paste
@@ -23,14 +27,24 @@ buildPythonPackage rec {
     six
   ];
 
-  checkInputs = [ nose ];
+  # test suite seems to unset PYTHONPATH
+  doCheck = false;
 
-  pythonNamespaces = [ "paste" ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    description = "A pluggable command-line frontend, including commands to setup package file layouts";
+  disabledTestPaths = [ "appsetup/testfiles" ];
+
+  pythonImportsCheck = [
+    "paste.script"
+    "paste.deploy"
+    "paste.util"
+  ];
+
+  meta = {
+    description = "Pluggable command-line frontend, including commands to setup package file layouts";
+    mainProgram = "paster";
     homepage = "https://github.com/cdent/pastescript/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

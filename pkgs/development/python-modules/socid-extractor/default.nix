@@ -1,27 +1,30 @@
-{ lib
-, beautifulsoup4
-, buildPythonPackage
-, fetchFromGitHub
-, python-dateutil
-, pythonOlder
-, requests
+{
+  lib,
+  beautifulsoup4,
+  buildPythonPackage,
+  fetchFromGitHub,
+  python-dateutil,
+  setuptools,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "socid-extractor";
-  version = "0.0.22";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "0.1.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "soxoj";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "kHF9CBlUKrD/DRVwJveenpFMr7pIrxEBNkFHHLa46KQ=";
+    repo = "socid-extractor";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Ct2i4ORFsQqYWvaBjEPlar8DDsGaUssPcI1kOaprq/c=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "beautifulsoup4" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     beautifulsoup4
     python-dateutil
     requests
@@ -30,14 +33,14 @@ buildPythonPackage rec {
   # Test require network access
   doCheck = false;
 
-  pythonImportsCheck = [
-    "socid_extractor"
-  ];
+  pythonImportsCheck = [ "socid_extractor" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to extract details from personal pages";
     homepage = "https://github.com/soxoj/socid-extractor";
-    license = with licenses; [ gpl3Only ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/soxoj/socid-extractor/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "socid_extractor";
   };
-}
+})

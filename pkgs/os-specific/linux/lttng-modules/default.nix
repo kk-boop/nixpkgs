@@ -1,34 +1,47 @@
-{ lib, stdenv, fetchurl, kernel }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  kernel,
+  kernelModuleMakeFlags,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "lttng-modules-${kernel.version}";
-  version = "2.13.0";
+  version = "2.14.3";
 
-  src = fetchurl {
-    url = "https://lttng.org/files/lttng-modules/lttng-modules-${version}.tar.bz2";
-    sha256 = "0mikc3fdjd0w6rrcyksjzmv0czvgba6yk8dfmz4a3cr8s4y2pgsy";
+  src = fetchFromGitHub {
+    owner = "lttng";
+    repo = "lttng-modules";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-W9mfCMboVkImqBtUlTxoBkn3IHjjfbZiSaeoeFX5IcM=";
   };
 
-  buildInputs = kernel.moduleBuildDependencies;
+  nativeBuildInputs = kernel.moduleBuildDependencies;
 
   hardeningDisable = [ "pic" ];
 
-  NIX_CFLAGS_COMPILE = "-Wno-error=implicit-function-declaration";
-
-  preConfigure = ''
-    export KERNELDIR="${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
-    export INSTALL_MOD_PATH="$out"
-  '';
+  makeFlags = kernelModuleMakeFlags ++ [
+    "KERNELDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+    "INSTALL_MOD_PATH=${placeholder "out"}"
+  ];
 
   installTargets = [ "modules_install" ];
 
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  meta = {
     description = "Linux kernel modules for LTTng tracing";
     homepage = "https://lttng.org/";
-    license = with licenses; [ lgpl21Only gpl2Only mit ];
-    platforms = platforms.linux;
-    maintainers = [ maintainers.bjornfor ];
+    license = with lib.licenses; [
+      lgpl21Only
+      gpl2Only
+      mit
+    ];
+    platforms = lib.platforms.linux;
+    maintainers = [ lib.maintainers.bjornfor ];
+    broken =
+      (lib.versions.majorMinor kernel.modDirVersion) == "5.10"
+      || (lib.versions.majorMinor kernel.modDirVersion) == "5.4";
   };
-}
+})

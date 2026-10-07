@@ -1,23 +1,31 @@
-{ lib, stdenv, fetchFromGitHub, ocaml, findlib, camlpdf, ncurses }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  ocaml,
+  findlib,
+  camlpdf,
+  nix-update-script,
+}:
 
-if !lib.versionAtLeast ocaml.version "4.10"
-then throw "cpdf is not available for OCaml ${ocaml.version}"
-else
-
-let version = "2.4"; in
-
-stdenv.mkDerivation {
-  name = "ocaml${ocaml.version}-cpdf-${version}";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "ocaml${ocaml.version}-cpdf";
+  version = "2.9.2";
 
   src = fetchFromGitHub {
     owner = "johnwhitington";
     repo = "cpdf-source";
-    rev = "v${version}";
-    sha256 = "1a8lmfc76dr8x6pxgm4aypbys02pfma9yh4z3l1qxp2q1909na5l";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-uhgriPA/y5nElQjbNtzx8CJ8O6ZORKCJAzXYrIOWd60=";
   };
 
-  buildInputs = [ ocaml findlib ncurses ];
+  nativeBuildInputs = [
+    ocaml
+    findlib
+  ];
   propagatedBuildInputs = [ camlpdf ];
+
+  strictDeps = true;
 
   preInstall = ''
     mkdir -p $OCAMLFIND_DESTDIR
@@ -28,11 +36,17 @@ stdenv.mkDerivation {
     cp cpdfmanual.pdf $out/share/doc/cpdf/
   '';
 
-  meta = with lib; {
-    homepage = "https://www.coherentpdf.com/";
-    platforms = ocaml.meta.platforms or [];
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "PDF Command Line Tools";
-    license = licenses.unfree;
-    maintainers = [ maintainers.vbgl ];
+    homepage = "https://www.coherentpdf.com/";
+    changelog = "https://github.com/johnwhitington/cpdf-source/blob/${finalAttrs.src.rev}/Changes.txt";
+    license = lib.licenses.agpl3Only;
+    maintainers = with lib.maintainers; [ vbgl ];
+    teams = with lib.teams; [ ngi ];
+    mainProgram = "cpdf";
+    inherit (ocaml.meta) platforms;
+    broken = lib.versionOlder ocaml.version "4.10";
   };
-}
+})

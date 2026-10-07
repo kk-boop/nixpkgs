@@ -1,82 +1,84 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, Babel
-, colorama
-, cssselect
-, python-dateutil
-, feedparser
-, gdata
-, gnupg
-, google-api-python-client
-, html2text
-, libyaml
-, lxml
-, mechanize
-, nose
-, pdfminer
-, pillow
-, prettytable
-, pyqt5
-, pyyaml
-, requests
-, simplejson
-, termcolor
-, unidecode
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitLab,
+  babel,
+  html2text,
+  lxml,
+  packaging,
+  pillow,
+  prettytable,
+  pycountry,
+  pytestCheckHook,
+  python-dateutil,
+  python-jose,
+  pyyaml,
+  requests,
+  rich,
+  setuptools,
+  unidecode,
+  termcolor,
+  responses,
+  versionCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "woob";
-  version = "3.0";
-  disabled = isPy27;
+  version = "3.7";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "09hpxy5zhn2b8li0xjf3zd7s46lawb0315p5mdcsci3bj3s4v1j7";
+  src = fetchFromGitLab {
+    owner = "woob";
+    repo = "woob";
+    tag = finalAttrs.version;
+    hash = "sha256-EZHzw+/BIIvmDXG4fF367wsdUTVTHWYb0d0U56ZXwOs=";
   };
 
-  patches = [
-    # Disable doctests that require networking:
-    ./no-test-requiring-network.patch
+  build-system = [ setuptools ];
+
+  pythonRelaxDeps = [
+    "packaging"
+    "rich"
+    "requests"
   ];
 
-  checkInputs = [ nose ];
-
-  nativeBuildInputs = [ pyqt5 ];
-
-  propagatedBuildInputs = [
-    Babel
-    colorama
-    cssselect
+  dependencies = [
+    babel
     python-dateutil
-    feedparser
-    gdata
-    gnupg
-    google-api-python-client
+    python-jose
     html2text
-    libyaml
     lxml
-    mechanize
-    pdfminer
+    packaging
     pillow
     prettytable
-    pyqt5
+    pycountry
     pyyaml
     requests
-    simplejson
-    termcolor
+    rich
     unidecode
+    termcolor
   ];
 
-  checkPhase = ''
-    nosetests
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    responses
+    versionCheckHook
+  ];
 
-  meta = with lib; {
+  disabledTests = [
+    # require networking
+    "test_ciphers"
+    "test_verify"
+  ];
+
+  pythonImportsCheck = [ "woob" ];
+
+  meta = {
+    changelog = "https://gitlab.com/woob/woob/-/blob/${finalAttrs.src.rev}/ChangeLog";
+    description = "Collection of applications and APIs to interact with websites";
+    mainProgram = "woob";
     homepage = "https://woob.tech";
-    description = "Collection of applications and APIs to interact with websites without requiring the user to open a browser";
-    license = licenses.lgpl3Plus;
-    maintainers = [ maintainers.DamienCassou ];
- };
-}
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ DamienCassou ];
+  };
+})

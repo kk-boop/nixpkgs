@@ -1,17 +1,45 @@
 {
   mkDerivation,
-  extra-cmake-modules, kdoctools,
-  kconfig, kconfigwidgets, kcoreaddons , kdbusaddons, ki18n,
-  kiconthemes, knotifications, kservice, kwidgetsaddons, kwindowsystem,
-  libgcrypt, qgpgme, qtbase,
+  cmake,
+  extra-cmake-modules,
+  kdoctools,
+  kconfig,
+  kconfigwidgets,
+  kcoreaddons,
+  kdbusaddons,
+  ki18n,
+  kiconthemes,
+  knotifications,
+  kservice,
+  kwidgetsaddons,
+  kwindowsystem,
+  libgcrypt,
+  qgpgme,
+  qtbase,
+  qca-qt5,
 }:
 
 mkDerivation {
-  name = "kwallet";
-  nativeBuildInputs = [ extra-cmake-modules kdoctools ];
+  pname = "kwallet";
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+    kdoctools
+  ];
   buildInputs = [
-    kconfig kconfigwidgets kcoreaddons kdbusaddons ki18n kiconthemes
-    knotifications kservice kwidgetsaddons kwindowsystem libgcrypt qgpgme
+    kconfig
+    kconfigwidgets
+    kcoreaddons
+    kdbusaddons
+    ki18n
+    kiconthemes
+    knotifications
+    kservice
+    kwidgetsaddons
+    kwindowsystem
+    libgcrypt
+    qgpgme
+    qca-qt5
   ];
   propagatedBuildInputs = [ qtbase ];
 }

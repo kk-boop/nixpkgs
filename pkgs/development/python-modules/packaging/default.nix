@@ -1,41 +1,60 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pyparsing
-, six
-, pytestCheckHook
-, pretend
-, setuptools
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # build-system
+  flit-core,
+
+  # tests
+  packaging,
+  pretend,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "packaging";
-  version = "20.9";
-  format = "pyproject";
+  version = "26.2";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-WzJ6wTINyGPcpy9FFOzAhvMRhnRLhKIwN0zB/Xdv6uU=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-/0Uv9aPoKM4RAZD+/xF4ux8uoigfogdarbmHwvsiFmE=";
   };
 
-  nativeBuildInputs = [
-    setuptools
-  ];
+  nativeBuildInputs = [ flit-core ];
 
-  propagatedBuildInputs = [ pyparsing six ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pretend
   ];
 
-  # Prevent circular dependency
+  pythonImportsCheck = [
+    "packaging"
+    "packaging.metadata"
+    "packaging.requirements"
+    "packaging.specifiers"
+    "packaging.tags"
+    "packaging.version"
+  ];
+
+  # Prevent circular dependency with pytest
   doCheck = false;
 
-  meta = with lib; {
+  passthru.tests = packaging.overridePythonAttrs (_: {
+    doCheck = true;
+  });
+
+  meta = {
+    changelog = "https://github.com/pypa/packaging/blob/${finalAttrs.version}/CHANGELOG.rst";
     description = "Core utilities for Python packages";
-    homepage = "https://github.com/pypa/packaging";
-    license = [ licenses.bsd2 licenses.asl20 ];
-    maintainers = with maintainers; [ bennofs ];
+    downloadPage = "https://github.com/pypa/packaging";
+    homepage = "https://packaging.pypa.io/";
+    license = with lib.licenses; [
+      bsd2
+      asl20
+    ];
+    maintainers = with lib.maintainers; [ bennofs ];
+    teams = [ lib.teams.python ];
   };
-}
+})

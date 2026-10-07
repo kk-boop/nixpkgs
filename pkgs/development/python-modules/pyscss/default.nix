@@ -1,42 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytest
-, six
-, enum34
-, pathlib
-, ordereddict
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
+  six,
 }:
 
-buildPythonPackage rec {
-  pname = "pyScss";
-  version = "1.3.7";
+buildPythonPackage (finalAttrs: {
+  pname = "pyscss";
+  version = "1.4.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     repo = "pyScss";
     owner = "Kronuz";
-    rev = version;
-    sha256 = "0701hziiiw67blafgpmjhzspmrss8mfvif7fw0rs8fikddwwc9g6";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-z0y4z+/JE6rZWHAvps/taDZvutyVhxxs2gMujV5rNu4=";
   };
 
-  checkInputs = [ pytest ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ six ]
-    ++ (lib.optionals (pythonOlder "3.4") [ enum34 pathlib ])
-    ++ (lib.optionals (pythonOlder "2.7") [ ordereddict ]);
+  dependencies = [ six ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   # Test suite is broken.
   # See https://github.com/Kronuz/pyScss/issues/415
   doCheck = false;
-  checkPhase = ''
-    py.test
-  '';
 
-  meta = with lib; {
-    description = "A Scss compiler for Python";
+  meta = {
+    description = "Scss compiler for Python";
     homepage = "https://pyscss.readthedocs.org/en/latest/";
-    license = licenses.mit;
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-
-}
+})

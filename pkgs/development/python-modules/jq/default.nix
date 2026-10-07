@@ -1,28 +1,52 @@
-{ buildPythonPackage, fetchPypi, lib, jq }:
+{
+  lib,
+  buildPythonPackage,
+  cython,
+  fetchFromGitHub,
+  jq,
+  oniguruma,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "jq";
-  version = "1.2.1";
+  version = "1.12.0";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "73ce588025495e6ebcda20bb9e64b6d9f3f1657c22895143ae243899ac710cbc";
+  src = fetchFromGitHub {
+    owner = "mwilliamson";
+    repo = "jq.py";
+    tag = version;
+    hash = "sha256-glWEqoS+QaoIiBJu9DXd+VvhPnWOgRT4VaYfMpjbR5g=";
   };
 
-  patches = [
-    # Removes vendoring
-    ./jq-py-setup.patch
+  env.JQPY_USE_SYSTEM_LIBS = 1;
+
+  nativeBuildInputs = [ cython ];
+
+  buildInputs = [
+    jq
+    oniguruma
   ];
 
-  buildInputs = [ jq ];
+  preBuild = ''
+    cython jq.pyx
+  '';
 
-  # no tests executed
-  doCheck = false;
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = [
+    # tries to match exact error text, fails with jq 1.8
+    "test_value_error_is_raised_if_program_is_invalid"
+    "test_value_error_is_raised_if_input_cannot_be_processed_by_program"
+  ];
+
   pythonImportsCheck = [ "jq" ];
 
   meta = {
     description = "Python bindings for jq, the flexible JSON processor";
     homepage = "https://github.com/mwilliamson/jq.py";
+    changelog = "https://github.com/mwilliamson/jq.py/blob/${version}/CHANGELOG.rst";
     license = lib.licenses.bsd2;
     maintainers = with lib.maintainers; [ benley ];
   };

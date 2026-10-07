@@ -1,25 +1,39 @@
-{ lib, buildPythonPackage, fetchPypi, requests }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  requests,
+  flit-core,
+  typing-extensions,
+}:
 
 buildPythonPackage rec {
   pname = "stripe";
-  version = "2.62.0";
+  version = "15.5.1";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1fb51d67a961ea889c5be324f020535ed511c6f483bd13a07f48f6e369fa8df0";
+    hash = "sha256-7oe2lkGfTWWgY3wxWDk96KIgHegbWJYyQYUXcT5OyO0=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  build-system = [ flit-core ];
+
+  dependencies = [
+    requests
+    typing-extensions
+  ];
 
   # Tests require network connectivity and there's no easy way to disable them
   doCheck = false;
 
   pythonImportsCheck = [ "stripe" ];
 
-  meta = with lib; {
+  meta = {
     description = "Stripe Python bindings";
     homepage = "https://github.com/stripe/stripe-python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/stripe/stripe-python/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

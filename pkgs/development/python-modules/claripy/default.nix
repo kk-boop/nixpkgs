@@ -1,52 +1,52 @@
-{ lib
-, buildPythonPackage
-, cachetools
-, decorator
-, fetchFromGitHub
-, future
-, nose
-, pysmt
-, pythonOlder
-, pytestCheckHook
-, z3
+{
+  lib,
+  buildPythonPackage,
+  cachetools,
+  decorator,
+  fetchFromGitHub,
+  pysmt,
+  pytestCheckHook,
+  setuptools,
+  typing-extensions,
+  z3-solver,
 }:
 
 buildPythonPackage rec {
   pname = "claripy";
-  version = "9.0.10730";
-  disabled = pythonOlder "3.6";
+  version = "9.2.193";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "angr";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-ATc6PiYxkBx48O55sh5lHVkJVdqlx2wLPUZRgGKb20U=";
+    repo = "claripy";
+    tag = "v${version}";
+    hash = "sha256-nZ7ORbhi0R79pcHpkx/lRVdfUsoutCqU+zHX8AICTUE=";
   };
 
-  # Use upstream z3 implementation
-  postPatch = ''
-    substituteInPlace setup.py --replace "z3-solver>=4.8.5.0" ""
-  '';
+  # z3 does not provide a dist-info, so python-runtime-deps-check will fail
+  pythonRemoveDeps = [ "z3-solver" ];
 
-  propagatedBuildInputs = [
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
     cachetools
     decorator
-    future
     pysmt
-    z3
-  ];
+    typing-extensions
+    z3-solver
+  ]
+  ++ z3-solver.requiredPythonModules;
 
-  checkInputs = [
-    nose
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "claripy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python abstraction layer for constraint solvers";
     homepage = "https://github.com/angr/claripy";
-    license = with licenses; [ bsd2 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

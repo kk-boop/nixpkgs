@@ -1,11 +1,21 @@
-{ runCommand, purescript, nodejs }:
+{
+  lib,
+  runCommand,
+  purescript,
+  nodejs,
+}:
 
-runCommand "purescript-test-minimal-module" {} ''
-  ${purescript}/bin/purs compile -o ./output ${./.}/Main.purs
+runCommand "purescript-test-minimal-module" { } ''
+  ${purescript}/bin/purs compile -o ./output ${
+    lib.sources.sourceByGlobs ./. [
+      "*.purs"
+      "*.js"
+    ]
+  }/Main.purs
 
-  echo 'require("./output/Main/index.js").main()' > node.js
+  echo 'import {main} from "./output/Main/index.js"; main()' > node.mjs
 
-  ${nodejs}/bin/node node.js | grep "hello world" || echo "did not output hello world"
+  ${nodejs}/bin/node node.mjs | grep "hello world" || (echo "did not output hello world"; exit 1)
 
   touch $out
 ''

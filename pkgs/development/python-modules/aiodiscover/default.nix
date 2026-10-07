@@ -1,54 +1,62 @@
-{ lib
-, buildPythonPackage
-, dnspython
-, fetchFromGitHub
-, ifaddr
-, pyroute2
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiodns,
+  buildPythonPackage,
+  cached-ipaddress,
+  fetchFromGitHub,
+  ifaddr,
+  libredirect,
+  netifaces,
+  poetry-core,
+  pyroute2,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiodiscover";
-  version = "1.4.5";
-  disabled = pythonOlder "3.7";
+  version = "3.3.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "bdraco";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-QfeAEFB5WikuriBTcfFIgnJw5H4vEcGIVX47fyDb1Dk=";
+    repo = "aiodiscover";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-yrXy665O9VZ3aWn23QQCJm5USBV0P5aTSsQU5QGIcP8=";
   };
 
-  propagatedBuildInputs = [
-    dnspython
-    pyroute2
+  build-system = [ poetry-core ];
+
+  dependencies = [
+    aiodns
+    cached-ipaddress
     ifaddr
+    netifaces
+    pyroute2
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace '"pytest-runner>=5.2",' "" \
-      --replace "pyroute2>=0.5.18,!=0.6.1" "pyroute2"
-  '';
+  pythonRelaxDeps = [ "aiodns" ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    libredirect.hook
     pytest-asyncio
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  disabledTests = [
-    # Tests require access to /etc/resolv.conf
-    "test_async_discover_hosts"
-  ];
+  preCheck = ''
+    echo "nameserver 127.0.0.1" > resolv.conf
+    export NIX_REDIRECTS=/etc/resolv.conf=$(realpath resolv.conf)
+  '';
 
-  pythonImportsCheck = ["aiodiscover"];
+  pythonImportsCheck = [ "aiodiscover" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to discover hosts via ARP and PTR lookup";
     homepage = "https://github.com/bdraco/aiodiscover";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/bdraco/aiodiscover/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

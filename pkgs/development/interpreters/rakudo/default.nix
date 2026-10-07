@@ -1,33 +1,53 @@
-{ stdenv, fetchurl, perl, icu, zlib, gmp, lib, nqp, removeReferencesTo }:
+{
+  fetchFromGitHub,
+  lib,
+  nqp,
+  perl,
+  stdenv,
+  versionCheckHook,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "rakudo";
-  version = "2021.10";
+  version = "2026.07";
 
-  src = fetchurl {
-    url    = "https://rakudo.org/dl/rakudo/rakudo-${version}.tar.gz";
-    sha256 = "sha256-sXTHU3Mo77Xj90JF55+nFZtwExuExZeRbPWmXCrKJKE=";
+  # nixpkgs-update: no auto update
+  src = fetchFromGitHub {
+    owner = "rakudo";
+    repo = "rakudo";
+    tag = finalAttrs.version;
+    fetchSubmodules = true;
+    hash = "sha256-kdMxxUvQOmIjoJzaPVcipzIQAHsdL3J6k623FzcLJgY=";
   };
 
-  nativeBuildInputs = [ removeReferencesTo ];
-
-  buildInputs = [ icu zlib gmp perl ];
-  configureScript = "perl ./Configure.pl";
-  configureFlags = [
-    "--backends=moar"
-    "--with-nqp=${nqp}/bin/nqp"
-  ];
-
-  disallowedReferences = [ stdenv.cc.cc ];
-  postFixup = ''
-    remove-references-to -t ${stdenv.cc.cc} "$(readlink -f $out/share/perl6/runtime/dynext/libperl6_ops_moar${stdenv.hostPlatform.extensions.sharedLibrary})"
+  postPatch = ''
+    substituteInPlace src/core.c/CompUnit/Repository/Installation.rakumod \
+      --subst-var out
   '';
 
-  meta = with lib; {
+  patches = [
+    ./rakudo-plain-wrapper.patch
+  ];
+
+  configureScript = "${lib.getExe perl} ./Configure.pl";
+  configureFlags = [
+    "--backends=moar"
+    "--with-nqp=${lib.getExe nqp}"
+  ];
+
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
+
+  meta = {
     description = "Raku implementation on top of Moar virtual machine";
-    homepage    = "https://rakudo.org";
-    license     = licenses.artistic2;
-    platforms   = platforms.unix;
-    maintainers = with maintainers; [ thoughtpolice vrthra sgo ];
+    homepage = "https://rakudo.org";
+    license = lib.licenses.artistic2;
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [
+      thoughtpolice
+      sgo
+      prince213
+    ];
+    mainProgram = "rakudo";
   };
-}
+})

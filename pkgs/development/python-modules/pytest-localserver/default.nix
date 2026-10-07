@@ -1,29 +1,41 @@
-{ buildPythonPackage
-, lib
-, fetchPypi
-, werkzeug
+{
+  lib,
+  aiosmtpd,
+  buildPythonPackage,
+  fetchPypi,
+  werkzeug,
+  setuptools-scm,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pytest-localserver";
-  version = "0.5.0";
+  version = "0.10.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "3a5427909d1dfda10772c1bae4b9803679c0a8f04adb66c338ac607773bfefc2";
+    pname = "pytest_localserver";
+    inherit (finalAttrs) version;
+    hash = "sha256-JgcZfzkJEqslUl0SmsQ8PIdQSSVzaLP+CbXNA9zFJq8=";
   };
 
-  propagatedBuildInputs = [ werkzeug ];
+  build-system = [ setuptools-scm ];
 
-  # all tests access network: does not work in sandbox
+  dependencies = [ werkzeug ];
+
+  optional-dependencies = {
+    smtp = [ aiosmtpd ];
+  };
+
+  # All tests access network: does not work in sandbox
   doCheck = false;
+
   pythonImportsCheck = [ "pytest_localserver" ];
 
-  meta = with lib; {
+  meta = {
     description = "Plugin for the pytest testing framework to test server connections locally";
-    homepage = "https://pypi.python.org/pypi/pytest-localserver";
-    license = licenses.mit;
-    maintainers = with maintainers; [ siriobalmelli ];
+    homepage = "https://github.com/pytest-dev/pytest-localserver";
+    changelog = "https://github.com/pytest-dev/pytest-localserver/blob/v${finalAttrs.version}/CHANGES";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ siriobalmelli ];
   };
-}
-
+})

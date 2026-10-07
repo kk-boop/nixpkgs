@@ -1,28 +1,34 @@
-{ lib, buildPythonPackage, fetchPypi, contextlib2, pytest, mock }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  mock,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
-
   pname = "schema";
-  version = "0.7.5";
+  version = "0.7.8";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "f06717112c61895cabc4707752b88716e8420a8819d71404501e114f91043197";
+    hash = "sha256-6GzAjt1v5uJSJkj05H46MZIKdugszok3U1Qi4xCGKrU=";
   };
 
-  preConfigure = ''
-    substituteInPlace requirements.txt --replace '==' '>='
-  '';
+  pythonRemoveDeps = [ "contextlib2" ];
 
-  propagatedBuildInputs = [ contextlib2 ];
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ];
 
-  checkInputs = [ pytest mock ];
-  checkPhase = "pytest ./test_schema.py";
+  pythonImportsCheck = [ "schema" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library for validating Python data structures";
     homepage = "https://github.com/keleshev/schema";
-    license = licenses.mit;
-    maintainers = [ maintainers.tobim ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ tobim ];
   };
 }

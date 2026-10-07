@@ -1,29 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, cffi
-, hypothesis
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  isPyPy,
+  cffi,
+  setuptools,
+  hypothesis,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "zstandard";
-  version = "0.16.0";
+  version = "0.25.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "eaae2d3e8fdf8bfe269628385087e4b648beef85bb0c187644e7df4fb0fe9046";
+    hash = "sha256-dxPhF50WLPXHkG2oduwsy5w6ncvf/vDMf3DDZnogXws=";
   };
 
-  propagatedNativeBuildInputs = [ cffi ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "cffi~=" "cffi>="
+  '';
 
-  propagatedBuildInputs = [ cffi ];
+  build-system = [
+    cffi
+    setuptools
+  ];
 
-  checkInputs = [ hypothesis ];
+  dependencies = lib.optionals isPyPy [ cffi ];
 
-  meta = with lib; {
-    description = "zstandard bindings for Python";
+  # python-zstandard depends on unstable zstd C APIs and may break with version mismatches,
+  # so we don't provide system zstd for this package
+  # https://github.com/indygreg/python-zstandard/blob/9eb56949b1764a166845e065542690942a3203d3/c-ext/backend_c.c#L137-L150
+
+  nativeCheckInputs = [
+    hypothesis
+    pytestCheckHook
+  ];
+
+  preCheck = ''
+    rm -r zstandard
+  '';
+
+  pythonImportsCheck = [ "zstandard" ];
+
+  meta = {
+    description = "Zstandard bindings for Python";
     homepage = "https://github.com/indygreg/python-zstandard";
-    license = licenses.bsdOriginal;
-    maintainers = [ maintainers.arnoldfarkas ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

@@ -1,35 +1,43 @@
-{ buildPythonPackage
-, isPy27
-, fetchPypi
-, pytest-runner
-, setuptools-scm
-, singledispatch ? null
-, pytest
-, lib
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
+  setuptools-scm,
+  six,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "variants";
   version = "0.2.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version ;
-    sha256 = "511f75b4cf7483c27e4d86d9accf2b5317267900c166d17636beeed118929b90";
+    pname = "variants";
+    inherit (finalAttrs) version;
+    hash = "sha256-UR91tM90g8J+TYbZrM8rUxcmeQDBZtF2Nr7u0RiSm5A=";
   };
 
-  nativeBuildInputs = [
-    pytest-runner
+  build-system = [
+    setuptools
     setuptools-scm
   ];
 
-  checkInputs = [
-    pytest
-  ] ++ lib.optionals isPy27 [ singledispatch ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    six
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "variants" ];
+
+  meta = {
     description = "Library providing syntactic sugar for creating variant forms of a canonical function";
     homepage = "https://github.com/python-variants/variants";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ rakesh4g ];
+    changelog = "https://github.com/python-variants/variants/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ rakesh4g ];
   };
-}
+})

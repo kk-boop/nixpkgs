@@ -1,40 +1,46 @@
-{ lib, stdenv, buildPythonPackage, fetchPypi, liberasurecode, six }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  liberasurecode,
+  pytestCheckHook,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "pyeclib";
-  version = "1.6.0";
+  version = "1.8.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-gBHjHuia5/uZymkWZgyH4BCEZqmWK9SXowAQIJdOO7E=";
+  src = fetchFromGitHub {
+    owner = "openstack";
+    repo = "pyeclib";
+    tag = version;
+    hash = "sha256-v7pkV5s10AxU+vgp+gcQF8lJmm6yzDwkqunWuT0zU4c=";
   };
 
-  postPatch = ''
-    # patch dlopen call
-    substituteInPlace src/c/pyeclib_c/pyeclib_c.c \
-      --replace "liberasurecode.so" "${liberasurecode}/lib/liberasurecode.so"
-    # python's platform.platform() doesn't return "Darwin" (anymore?)
-    substituteInPlace setup.py \
-      --replace '"Darwin"' '"macOS"'
-  '';
-
-  preBuild = let
-    ldLibraryPathEnvName = if stdenv.isDarwin then "DYLD_LIBRARY_PATH" else "LD_LIBRARY_PATH";
-  in ''
-    # required for the custom _find_library function in setup.py
-    export ${ldLibraryPathEnvName}="${lib.makeLibraryPath [ liberasurecode ]}"
-  '';
+  build-system = [
+    setuptools
+  ];
 
   buildInputs = [ liberasurecode ];
 
-  checkInputs = [ six ];
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # The memory usage goes *down* on Darwin, which the test confuses for an increase and fails
+    "test_get_metadata_memory_usage"
+  ];
 
   pythonImportsCheck = [ "pyeclib" ];
 
-  meta = with lib; {
-    description = "This library provides a simple Python interface for implementing erasure codes.";
+  meta = {
+    description = "This library provides a simple Python interface for implementing erasure codes";
     homepage = "https://github.com/openstack/pyeclib";
-    license = licenses.bsd2;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.bsd2;
+    mainProgram = "pyeclib-backend";
+    teams = [ lib.teams.openstack ];
   };
 }

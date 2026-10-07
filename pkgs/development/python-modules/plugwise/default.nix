@@ -1,49 +1,50 @@
-{ lib
-, aiohttp
-, async-timeout
-, buildPythonPackage
-, crcmod
-, defusedxml
-, fetchFromGitHub
-, jsonpickle
-, munch
-, mypy
-, pyserial
-, pytest-aiohttp
-, pytest-asyncio
-, pytestCheckHook
-, python-dateutil
-, pytz
-, semver
+{
+  lib,
+  aiofiles,
+  aiohttp,
+  buildPythonPackage,
+  defusedxml,
+  fetchFromGitHub,
+  freezegun,
+  jsonpickle,
+  munch,
+  pytest-aiohttp,
+  pytest-asyncio,
+  pytestCheckHook,
+  python-dateutil,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "plugwise";
-  version = "0.15.2";
-  format = "setuptools";
+  version = "1.14.7";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
+    owner = "plugwise";
     repo = "python-plugwise";
-    rev = "v${version}";
-    sha256 = "sha256-VmLQ3L9FTHgdRPYmMg7ZoUApLEGKd5NANrSofhP1OQY=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-SkV64GrVHp9WqWXaZ1IbpfhabBUTEiMBP2QIFWTFSJ0=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    # setuptools and wheel
+    sed -i -e "s/~=[0-9.]*//g" pyproject.toml
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiofiles
     aiohttp
-    async-timeout
-    crcmod
     defusedxml
     munch
-    pyserial
     python-dateutil
-    pytz
-    semver
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    freezegun
     jsonpickle
-    mypy
     pytest-aiohttp
     pytest-asyncio
     pytestCheckHook
@@ -53,14 +54,11 @@ buildPythonPackage rec {
 
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
+  meta = {
     description = "Python module for Plugwise Smiles, Stretch and USB stick";
-    longDescription = ''
-      XKNX is an asynchronous Python library for reading and writing KNX/IP
-      packets. It provides support for KNX/IP routing and tunneling devices.
-    '';
     homepage = "https://github.com/plugwise/python-plugwise";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/plugwise/python-plugwise/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

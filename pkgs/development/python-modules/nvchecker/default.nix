@@ -1,40 +1,83 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, setuptools
-, packaging
-, toml
-, structlog
-, appdirs
-, pytest-asyncio
-, flaky
-, tornado
-, pycurl
-, aiohttp
-, pytest-httpbin
-, docutils
-, installShellFiles
+{
+  lib,
+  awesomeversion,
+  buildPythonPackage,
+  cacert,
+  docutils,
+  dulwich,
+  fetchFromGitHub,
+  flaky,
+  installShellFiles,
+  jq,
+  lxml,
+  nix-update-script,
+  packaging,
+  platformdirs,
+  pycurl,
+  pygit2,
+  pytest-asyncio,
+  pytestCheckHook,
+  pytest-httpbin,
+  pytest-rerunfailures,
+  pythonOlder,
+  setuptools,
+  structlog,
+  tornado,
+  zstandard,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "nvchecker";
-  version = "2.5";
+  version = "2.22";
+  pyproject = true;
 
-  # Tests not included in PyPI tarball
   src = fetchFromGitHub {
     owner = "lilydjwg";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0jzmpra87dlj88d20ihnva9fj81wqbbd9qbzsjwwvzdx062136mg";
+    repo = "nvchecker";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QNcL1zlcFkQgJwrBnk9ubDPUyNYvAsaZ0kZHl71AqEU=";
   };
 
-  nativeBuildInputs = [ installShellFiles docutils ];
-  propagatedBuildInputs = [ setuptools packaging toml structlog appdirs tornado pycurl aiohttp ];
-  checkInputs = [ pytestCheckHook pytest-asyncio flaky pytest-httpbin ];
+  __darwinAllowLocalNetworking = true;
 
-  disabled = pythonOlder "3.7";
+  build-system = [ setuptools ];
+
+  nativeBuildInputs = [
+    docutils
+    installShellFiles
+  ];
+
+  dependencies = [
+    structlog
+    platformdirs
+    tornado
+    pycurl
+  ];
+
+  optional-dependencies = {
+    # vercmp = [ pyalpm ];
+    awesomeversion = [ awesomeversion ];
+    # portage = [ portage ];
+    pypi = [ packaging ];
+    htmlparser = [ lxml ];
+    rpmrepo = [ lxml ] ++ lib.optionals (pythonOlder "3.14") [ zstandard ];
+    jq = [ jq ];
+    git_pygit2 = [ pygit2 ];
+    git_dulwich = [ dulwich ];
+  };
+
+  env = lib.optionalAttrs finalAttrs.doInstallCheck {
+    SSL_CERT_FILE = "${cacert}/etc/ssl/certs/ca-bundle.crt";
+  };
+
+  nativeCheckInputs = [
+    flaky
+    pytest-asyncio
+    pytest-httpbin
+    pytest-rerunfailures
+    pytestCheckHook
+  ]
+  ++ builtins.concatLists (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   postBuild = ''
     patchShebangs docs/myrst2man.py
@@ -45,12 +88,17 @@ buildPythonPackage rec {
     installManPage docs/_build/man/nvchecker.1
   '';
 
-  pytestFlagsArray = [ "-m 'not needs_net'" ];
+  pythonImportsCheck = [ "nvchecker" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/lilydjwg/nvchecker";
+  disabledTestMarks = [ "needs_net" ];
+
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "New version checker for software";
-    license = licenses.mit;
-    maintainers = with maintainers; [ marsam ];
+    homepage = "https://github.com/lilydjwg/nvchecker";
+    changelog = "https://github.com/lilydjwg/nvchecker/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mdaniels5757 ];
   };
-}
+})

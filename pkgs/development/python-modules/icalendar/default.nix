@@ -1,28 +1,67 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, setuptools
-, python-dateutil
-, pytz
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  hatch-vcs,
+  hatchling,
+  python-dateutil,
+  typing-extensions,
+  tzdata,
+  hypothesis,
+  pyprojectVersionPatchHook,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
-  version = "4.0.9";
+buildPythonPackage (finalAttrs: {
+  version = "7.2.2";
   pname = "icalendar";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "cc73fa9c848744843046228cb66ea86cd8c18d73a51b140f7c003f760b84a997";
+  src = fetchFromGitHub {
+    owner = "collective";
+    repo = "icalendar";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QDxyMotlG50khBP9luRwoXa9YyZ5qOA/vbdHMwFXv3g=";
   };
 
-  buildInputs = [ setuptools ];
-  propagatedBuildInputs = [ python-dateutil pytz ];
+  nativeBuildInputs = [
+    pyprojectVersionPatchHook
+  ];
 
-  meta = with lib; {
-    description = "A parser/generator of iCalendar files";
-    homepage = "https://icalendar.readthedocs.org/";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ olcai ];
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
+
+  dependencies = [
+    python-dateutil
+    tzdata
+  ]
+  ++ lib.optionals (pythonOlder "3.13") [
+    # typing.TypeIs arrived in Python 3.13.
+    typing-extensions
+  ];
+
+  nativeCheckInputs = [
+    hypothesis
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # AssertionError: assert {'Atlantic/Jan_Mayen'} == {'Arctic/Longyearbyen'}
+    "test_dateutil_timezone_is_matched_with_tzname"
+    "test_docstring_of_python_file"
+  ];
+
+  enabledTestPaths = [ "src/icalendar" ];
+
+  meta = {
+    changelog = "https://github.com/collective/icalendar/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    description = "Parser/generator of iCalendar files";
+    mainProgram = "icalendar";
+    homepage = "https://github.com/collective/icalendar";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ olcai ];
   };
-
-}
+})

@@ -1,68 +1,60 @@
-{ lib
-, attrs
-, botocore
-, buildPythonPackage
-, click
-, fetchFromGitHub
-, hypothesis
-, inquirer
-, jmespath
-, mock
-, mypy-extensions
-, pip
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, requests
-, setuptools
-, six
-, typing
-, watchdog
-, websocket-client
-, wheel
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  botocore,
+  click,
+  inquirer,
+  jmespath,
+  pip,
+  pyyaml,
+  six,
+
+  # tests
+  hypothesis,
+  pytestCheckHook,
+  requests,
+  websocket-client,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "chalice";
-  version = "1.24.2";
+  version = "1.33.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "aws";
-    repo = pname;
-    rev = version;
-    sha256 = "0xpzc3rizdkjxclgxngswz0a22kdv1pw235gsw517ma7i06d0lw6";
+    repo = "chalice";
+    tag = finalAttrs.version;
+    hash = "sha256-c5xzgrxRFRlvgMnf/L8rhG7rYJLtuMvDZHYsPaHkdRs=";
   };
 
-  propagatedBuildInputs = [
-    attrs
+  build-system = [ setuptools ];
+
+  dependencies = [
     botocore
     click
     inquirer
     jmespath
-    mypy-extensions
     pip
     pyyaml
-    setuptools
+    # setuptools
     six
-    wheel
-    watchdog
-  ] ++ lib.optionals (pythonOlder "3.7") [
-    typing
   ];
 
-  checkInputs = [
+  pythonRelaxDeps = [ "pip" ];
+
+  nativeCheckInputs = [
     hypothesis
-    mock
     pytestCheckHook
     requests
     websocket-client
   ];
-
-  postPatch = ''
-    sed -i setup.py -e "/pip>=/c\'pip',"
-    substituteInPlace setup.py \
-      --replace 'typing==3.6.4' 'typing'
-  '';
 
   disabledTestPaths = [
     # Don't check the templates and the sample app
@@ -83,16 +75,23 @@ buildPythonPackage rec {
     "test_can_import_env_vars"
     "test_stack_trace_printed_on_error"
     # Don't build
-    "test_can_generate_pipeline_for_all"
     "test_build_wheel"
+    # Tests require dist
+    "test_setup_tar_gz_hyphens_in_name"
+    "test_both_tar_gz"
+    "test_both_tar_bz2"
+    # AssertionError
+    "test_no_error_message_printed_on_empty_reqs_file"
   ];
 
   pythonImportsCheck = [ "chalice" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python Serverless Microframework for AWS";
+    mainProgram = "chalice";
     homepage = "https://github.com/aws/chalice";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ costrouc ];
+    changelog = "https://github.com/aws/chalice/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

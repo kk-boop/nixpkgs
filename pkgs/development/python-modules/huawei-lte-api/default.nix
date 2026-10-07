@@ -1,51 +1,46 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, pycryptodomex
-, pytestCheckHook
-, requests
-, xmltodict
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pycryptodomex,
+  pytestCheckHook,
+  requests,
+  setuptools,
+  xmltodict,
 }:
 
 buildPythonPackage rec {
   pname = "huawei-lte-api";
-  version = "1.5.2";
-
-  disabled = pythonOlder "3.4";
+  version = "2.0.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Salamek";
     repo = "huawei-lte-api";
-    rev = version;
-    sha256 = "sha256-xG0QTvjYW0/C/7NNhl/d024TSAe0TzgMknOXvNxrPOY=";
+    tag = version;
+    hash = "sha256-5BXVzTt6M8sEJtsoz/CYezJWNQTcLEw8rLJd4mAPQks=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "pytest-runner" ""
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     pycryptodomex
     requests
     xmltodict
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [
-    "huawei_lte_api.AuthorizedConnection"
     "huawei_lte_api.Client"
     "huawei_lte_api.Connection"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "API For huawei LAN/WAN LTE Modems";
     homepage = "https://github.com/Salamek/huawei-lte-api";
-    license = licenses.lgpl3Only;
-    maintainers = with maintainers; [ dotlambda ];
+    changelog = "https://github.com/Salamek/huawei-lte-api/releases/tag/${src.tag}";
+    license = lib.licenses.lgpl3Only;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

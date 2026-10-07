@@ -1,26 +1,41 @@
-{ lib, buildPythonPackage, fetchFromGitHub, cython, pexpect, python }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  cython,
+  pexpect,
+  python,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "cpyparsing";
-  version = "2.4.7.1.1.0";
+  version = "2.4.7.2.4.3";
+  pyproject = true;
 
-  src = fetchFromGitHub {
-    owner = "evhub";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1rqj89mb4dz0xk8djh506nrlqfqqdva9qgb5llrvvwjqv3vqnrj4";
+  src = fetchPypi {
+    inherit pname version;
+    hash = "sha256-5pSZ+fhMiUIe1kLAvlyyfmcKWxtO2m0h9kQY2LrxOjg=";
   };
 
-  nativeBuildInputs = [ cython ];
+  nativeBuildInputs = [
+    cython
+    setuptools
+  ];
 
-  checkInputs = [ pexpect ];
+  nativeCheckInputs = [ pexpect ];
 
-  checkPhase = "${python.interpreter} tests/cPyparsing_test.py";
+  checkPhase = ''
+    ${python.interpreter} tests/cPyparsing_test.py
+  '';
 
-  meta = with lib; {
-    homepage = "https://github.com/evhub/cpyparsing";
+  pythonImportsCheck = [ "cPyparsing" ];
+
+  meta = {
     description = "Cython PyParsing implementation";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fabianhjr ];
+    homepage = "https://github.com/evhub/cpyparsing";
+    changelog = "https://github.com/evhub/cpyparsing/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fabianhjr ];
   };
 }

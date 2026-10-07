@@ -1,30 +1,45 @@
-{ lib, buildPythonPackage, fetchPypi
-, google-auth, google-auth-httplib2, google-api-core
-, httplib2, six, uritemplate, oauth2client, setuptools }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  google-auth,
+  google-auth-httplib2,
+  google-api-core,
+  httplib2,
+  uritemplate,
+  setuptools,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-api-python-client";
-  version = "2.25.0";
+  version = "2.192.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-dNgF7xC4sfWL04U53T0D+vEYj2TuPKQorAQtU59fVcc=";
+  src = fetchFromGitHub {
+    owner = "googleapis";
+    repo = "google-api-python-client";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-v6b4WkbXBIqdZFCWVBz7dsMxtHkIsylDGWp5QyNQ9O0=";
+    # Remove mixed-case files that cause hash differences between platforms
+    postFetch = ''
+      rm -rf $out/docs/
+    '';
   };
 
-  # No tests included in archive
-  doCheck = false;
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
-    google-auth google-auth-httplib2 google-api-core
-    httplib2 six uritemplate oauth2client setuptools
+  dependencies = [
+    google-auth
+    google-auth-httplib2
+    google-api-core
+    httplib2
+    uritemplate
   ];
 
-  pythonImportsCheck = [
-    "googleapiclient"
-  ];
+  pythonImportsCheck = [ "googleapiclient" ];
 
-  meta = with lib; {
-    description = "The official Python client library for Google's discovery based APIs";
+  meta = {
+    description = "Official Python client library for Google's discovery based APIs";
     longDescription = ''
       These client libraries are officially supported by Google. However, the
       libraries are considered complete and are in maintenance mode. This means
@@ -32,8 +47,8 @@ buildPythonPackage rec {
       any new features.
     '';
     homepage = "https://github.com/google/google-api-python-client";
-    changelog = "https://github.com/googleapis/google-api-python-client/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/googleapis/google-api-python-client/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = [ lib.maintainers.sarahec ];
   };
-}
+})

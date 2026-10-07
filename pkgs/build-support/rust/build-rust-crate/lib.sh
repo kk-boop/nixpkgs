@@ -10,12 +10,15 @@ build_lib() {
   lib_src=$1
   echo_build_heading $lib_src ${libName}
 
-  noisily rustc \
+  noisily env "${CARGO_BIN_EXE_ENV[@]}" "${RUSTC_DRIVER:-rustc}" \
     --crate-name $CRATE_NAME \
     $lib_src \
     --out-dir target/lib \
     -L dependency=target/deps \
-    --cap-lints allow \
+    --cap-lints $CAP_LINTS \
+    $LINK \
+    $EXTRA_LINK_ARGS \
+    $EXTRA_LINK_ARGS_LIB \
     $LIB_RUSTC_OPTS \
     $BUILD_OUT_DIR \
     $EXTRA_BUILD \
@@ -33,29 +36,36 @@ build_bin() {
   local crate_name=$1
   local crate_name_=$(echo $crate_name | tr '-' '_')
   local main_file=""
+  local out_dir="${3:-target/bin}"
 
   if [[ ! -z $2 ]]; then
     main_file=$2
   fi
-  echo_build_heading $@
-  noisily rustc \
+  echo_build_heading $crate_name $main_file
+  noisily env "${CARGO_BIN_EXE_ENV[@]}" "${RUSTC_DRIVER:-rustc}" \
     --crate-name $crate_name_ \
     $main_file \
     --crate-type bin \
     $BIN_RUSTC_OPTS \
-    --out-dir target/bin \
+    --out-dir "$out_dir" \
     -L dependency=target/deps \
     $LINK \
+    $EXTRA_LINK_ARGS \
+    $EXTRA_LINK_ARGS_BINS \
     $EXTRA_LIB \
-    --cap-lints allow \
+    --cap-lints $CAP_LINTS \
     $BUILD_OUT_DIR \
     $EXTRA_BUILD \
     $EXTRA_FEATURES \
     $EXTRA_RUSTC_FLAGS \
-    --color ${colors} \
+    --color ${colors} || return 1
 
   if [ "$crate_name_" != "$crate_name" ]; then
-    mv target/bin/$crate_name_ target/bin/$crate_name
+    if [ -f "$out_dir/$crate_name_.wasm" ]; then
+      mv "$out_dir/$crate_name_.wasm" "$out_dir/$crate_name.wasm"
+    else
+      mv "$out_dir/$crate_name_" "$out_dir/$crate_name"
+    fi
   fi
 }
 
@@ -73,7 +83,17 @@ build_bin_test() {
 build_bin_test_file() {
     local file="$1"
     local derived_crate_name="${file//\//_}"
+    # Make sure to strip the top level `tests` directory: see #204051. Note that
+    # a forward slash has now become an underscore due to the substitution
+    # above.
+    derived_crate_name=${derived_crate_name#"tests_"}
     derived_crate_name="${derived_crate_name%.rs}"
+    # Cargo names tests/<dir>/main.rs as <dir>, not <dir>_main — strip the
+    # trailing _main that the `/`→`_` substitution produced. Guarded so
+    # a flat-style tests/<name>_main.rs keeps its _main suffix.
+    if [[ "$file" == */main.rs ]]; then
+        derived_crate_name="${derived_crate_name%_main}"
+    fi
     build_bin_test "$derived_crate_name" "$file"
 }
 
@@ -93,11 +113,10 @@ setup_link_paths() {
        done
      fi
   done
-  echo "$EXTRA_LINK" | while read i; do
+  echo "$EXTRA_LINK_LIBS" | while read i; do
      if [[ ! -z "$i" ]]; then
        for library in $i; do
          echo "-l $library" >> target/link
-         echo "-l $library" >> target/link.final
        done
      fi
   done
@@ -105,6 +124,12 @@ setup_link_paths() {
   if [[ -e target/link ]]; then
      tr '\n' ' ' < target/link > target/link_
      LINK=$(cat target/link_)
+  fi
+
+  # Add "rustc-cdylib-link-arg" as linker arguments
+  # https://doc.rust-lang.org/cargo/reference/build-scripts.html#rustc-cdylib-link-arg
+  if [[ -n "$CRATE_TYPE_IS_CDYLIB" ]]; then
+    EXTRA_BUILD+=" $EXTRA_CDYLIB_LINK_ARGS"
   fi
 }
 

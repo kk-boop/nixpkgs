@@ -1,28 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, mock
-, nose
-, pep8
-, pylint
-, mccabe
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
-  version = "3.0.1";
+buildPythonPackage (finalAttrs: {
+  version = "4.0.1";
   pname = "pamqp";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0a9b49bde3f554ec49b47ebdb789133979985f24d5f4698935ed589a2d4392a4";
+  pyproject = true;
+
+  src = fetchFromGitHub {
+    owner = "gmr";
+    repo = "pamqp";
+    tag = finalAttrs.version;
+    hash = "sha256-WKkiwisCfGRkNbw8WtXqNe4OqUiRgVfVL7o0oMdeFJw=";
   };
 
-  buildInputs = [ mock nose pep8 pylint mccabe ];
+  build-system = [ hatchling ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [
+    "pamqp.base"
+    "pamqp.body"
+    "pamqp.commands"
+    "pamqp.common"
+    "pamqp.decode"
+    "pamqp.encode"
+    "pamqp.exceptions"
+    "pamqp.frame"
+    "pamqp.header"
+    "pamqp.heartbeat"
+  ];
+
+  meta = {
+    changelog = "https://github.com/gmr/pamqp/blob/${finalAttrs.src.tag}/docs/changelog.md";
     description = "RabbitMQ Focused AMQP low-level library";
-    homepage = "https://pypi.python.org/pypi/pamqp";
-    license = licenses.bsd3;
+    homepage = "https://github.com/gmr/pamqp";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
-
-}
+})

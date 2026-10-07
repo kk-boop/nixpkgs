@@ -1,30 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  hypothesis,
+  poetry-core,
+  pytestCheckHook,
+  pytz,
 }:
 
 buildPythonPackage rec {
   pname = "iso8601";
-  version = "0.1.16";
+  version = "2.1.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-NlMvd8yABZTo8WZB7a5/G695MvBdjlCFRblfxTxtyFs=";
+    hash = "sha256-ax04Ke6JIcQwGZjJCfeCn6ntPL2sDTsWry10Ou0bqN8=";
   };
 
-  checkInputs = [
+  nativeBuildInputs = [ poetry-core ];
+
+  nativeCheckInputs = [
+    hypothesis
     pytestCheckHook
+    pytz
   ];
 
-  pytestFlagsArray = [ "iso8601" ];
+  enabledTestPaths = [ "iso8601" ];
 
   pythonImportsCheck = [ "iso8601" ];
 
-  meta = with lib; {
+  meta = {
     description = "Simple module to parse ISO 8601 dates";
     homepage = "https://pyiso8601.readthedocs.io/";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/micktwomey/pyiso8601/blob/${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

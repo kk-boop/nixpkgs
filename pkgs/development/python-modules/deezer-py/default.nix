@@ -1,30 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, requests
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "deezer-py";
-  version = "1.2.7";
-  disabled = pythonOlder "3.6";
+  version = "1.3.7";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "20a99337fc22b7406f5bb9b4687535b91a61dc31998c0369c4efc76dffeb9a2c";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-saMy+IeAy6H9SgS8XHnZ9klFerGyr+vQqhuCtimgbEo=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  build-system = [ setuptools ];
+
+  dependencies = [ requests ];
 
   # Project has no tests
   doCheck = false;
   pythonImportsCheck = [ "requests" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://gitlab.com/RemixDev/deezer-py";
-    description = "A wrapper for all Deezer's APIs";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ natto1784 ];
+    description = "Wrapper for all Deezer's APIs";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ natto1784 ];
   };
-}
+})

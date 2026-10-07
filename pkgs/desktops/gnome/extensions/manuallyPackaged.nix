@@ -1,24 +1,17 @@
 { callPackage }:
 {
   "arcmenu@arcmenu.com" = callPackage ./arcmenu { };
-  "clock-override@gnomeshell.kryogenix.org" = callPackage ./clock-override { };
-  "dash-to-panel@jderose9.github.com" = callPackage ./dash-to-panel { };
-  "drop-down-terminal@gs-extensions.zzrough.org" = callPackage ./drop-down-terminal { };
+  "argos@pew.worldwidemann.com" = callPackage ./argos { };
   "EasyScreenCast@iacopodeenosee.gmail.com" = callPackage ./EasyScreenCast { };
-  "emoji-selector@maestroschan.fr" = callPackage ./emoji-selector { };
-  "freon@UshakovVasilii_Github.yahoo.com" = callPackage ./freon { };
+  "forge@jmmaranan.com" = callPackage ./forge { };
   "gsconnect@andyholmes.github.io" = callPackage ./gsconnect { };
-  "icon-hider@kalnitsky.org" = callPackage ./icon-hider { };
+  "guillotine@fopdoodle.net" = callPackage ./guillotine { };
   "impatience@gfxmonk.net" = callPackage ./impatience { };
-  "nightthemeswitcher@romainvigier.fr" = callPackage ./night-theme-switcher { };
-  "no-title-bar@jonaspoehler.de" = callPackage ./no-title-bar { };
-  "paperwm@hedning:matrix.org" = callPackage ./paperwm { };
-  "pidgin@muffinmad" = callPackage ./pidgin-im-integration { };
   "pop-shell@system76.com" = callPackage ./pop-shell { };
-  "sound-output-device-chooser@kgshank.net" = callPackage ./sound-output-device-chooser { };
-  "system-monitor@paradoxxx.zero.gmail.com" = callPackage ./system-monitor { };
-  "taskwhisperer-extension@infinicode.de" = callPackage ./taskwhisperer { };
-  "tilingnome@rliang.github.com" = callPackage ./tilingnome { };
-  "TopIcons@phocean.net" = callPackage ./topicons-plus { };
-  "window-corner-preview@fabiomereu.it" = callPackage ./window-corner-preview { };
+  # hardpixel extensions won't receive updates on extensions.gnome.org:
+  # - https://github.com/hardpixel/systemd-manager/issues/19
+  # - https://github.com/hardpixel/unite-shell/issues/353
+  "systemd-manager@hardpixel.eu" = callPackage ./systemd-manager { };
+  "unite@hardpixel.eu" = callPackage ./unite { };
+  "valent@andyholmes.ca" = callPackage ./valent { };
 }

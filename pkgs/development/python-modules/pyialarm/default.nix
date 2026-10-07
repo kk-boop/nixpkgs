@@ -1,25 +1,30 @@
-{ lib
-, buildPythonPackage
-, dicttoxml
-, fetchFromGitHub
-, pythonOlder
-, xmltodict
+{
+  lib,
+  buildPythonPackage,
+  dicttoxml2,
+  fetchFromGitHub,
+  xmltodict,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyialarm";
-  version = "1.9.0";
-  disabled = pythonOlder "3.7";
+  version = "2.2.0";
+
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "RyuzakiKK";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-mvi8cd9uVFvG1Jc3OeuEwuLjbuMjPRrNRHFUVe3g/NM=";
+    repo = "pyialarm";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-rOdeYewjoFVbHdNPHN6ZC2g6X5yr84/JFE6tGSDIoRU=";
   };
 
-  propagatedBuildInputs = [
-    dicttoxml
+  build-system = [ setuptools ];
+
+  dependencies = [
+    dicttoxml2
     xmltodict
   ];
 
@@ -28,10 +33,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "pyialarm" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to interface with Antifurto365 iAlarm systems";
     homepage = "https://github.com/RyuzakiKK/pyialarm";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

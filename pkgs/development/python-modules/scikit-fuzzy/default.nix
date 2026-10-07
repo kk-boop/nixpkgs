@@ -1,37 +1,49 @@
-{ lib
-, buildPythonPackage
-, isPy27
-, fetchFromGitHub
-, matplotlib
-, networkx
-, nose
-, numpy
-, scipy
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  matplotlib,
+  networkx,
+  numpy,
+  scipy,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "scikit-fuzzy";
-  version = "unstable-2021-03-31";
-  disabled = isPy27;
+  version = "0.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = "92ad3c382ac19707086204ac6cdf6e81353345a7";
-    sha256 = "0q89p385nsg3lymlsqm3mw6y45vgrk6w9p30igbm59b7r9mkgdj8";
+    owner = "scikit-fuzzy";
+    repo = "scikit-fuzzy";
+    tag = "v${version}";
+    hash = "sha256-02aIYBdbQXQD9S1R/gZZeKTn5LxloE0GGGRttxJnR/o=";
   };
 
-  propagatedBuildInputs = [ networkx numpy scipy ];
-  checkInputs = [ matplotlib nose pytestCheckHook ];
+  build-system = [ setuptools ];
 
-  # test error: "ValueError: could not convert string to float: '2.6.2'"
-  disabledTestPaths = [ "skfuzzy/control/tests/test_controlsystem.py" ];
+  dependencies = [
+    networkx
+    numpy
+    scipy
+  ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    matplotlib
+    pytestCheckHook
+  ];
+
+  preCheck = "rm -rf build";
+
+  pythonImportsCheck = [ "skfuzzy" ];
+
+  meta = {
     homepage = "https://github.com/scikit-fuzzy/scikit-fuzzy";
     description = "Fuzzy logic toolkit for scientific Python";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.bcdarwin ];
+    changelog = "https://github.com/scikit-fuzzy/scikit-fuzzy/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = [ lib.maintainers.bcdarwin ];
   };
 }

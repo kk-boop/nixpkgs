@@ -1,39 +1,38 @@
-{ lib
-, brotli
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, requests
+{
+  lib,
+  brotli,
+  buildPythonPackage,
+  django,
+  fetchFromGitHub,
+  pytestCheckHook,
+  requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "whitenoise";
-  version = "5.3.0";
-  disabled = pythonOlder "3.5";
+  version = "6.12.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "evansd";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "17j1rml1hb43c7fs7kf4ygkpmnjppzgsbnyw3plq9w3yh9w5hkhg";
+    repo = "whitenoise";
+    tag = finalAttrs.version;
+    hash = "sha256-qNya/3oI9413VUGaLPq4vtuLvq9mIGhaYBt+4OhrkOw=";
   };
 
-  propagatedBuildInputs = [
-    brotli
-  ];
+  __darwinAllowLocalNetworking = true;
 
-  checkInputs = [
+  build-system = [ setuptools ];
+
+  optional-dependencies.brotli = [ brotli ];
+
+  nativeCheckInputs = [
+    django
     pytestCheckHook
     requests
-  ];
-
-  disabledTestPaths = [
-    # Don't run Django tests
-    "tests/test_django_whitenoise.py"
-    "tests/test_runserver_nostatic.py"
-    "tests/test_storage.py"
-  ];
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.brotli;
 
   disabledTests = [
     # Test fails with AssertionError
@@ -42,10 +41,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "whitenoise" ];
 
-  meta = with lib; {
-    description = "Radically simplified static file serving for WSGI applications";
-    homepage = "http://whitenoise.evans.io/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+  meta = {
+    description = "Library to serve static file for WSGI applications";
+    homepage = "https://whitenoise.readthedocs.io/";
+    changelog = "https://github.com/evansd/whitenoise/blob/${finalAttrs.src.tag}/docs/changelog.rst";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

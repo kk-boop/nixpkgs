@@ -1,55 +1,157 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, numpy
-, scipy
-, cython
-, matplotlib
-, scikit-learn
-, cupy
-, pymanopt
-, autograd
-, pytestCheckHook
-, enableDimensionalityReduction ? false
-, enableGPU ? false
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  numpy,
+  setuptools,
+
+  # dependencies
+  scipy,
+
+  # optional-dependencies
+  # backend-jax
+  jax,
+  jaxlib,
+  # backend-tf
+  tensorflow,
+  # backend-torch
+  torch,
+  # cvxopt
+  cvxopt,
+  # dr
+  scikit-learn,
+  pymanopt,
+  autograd,
+  # plot
+  matplotlib,
+
+  # tests
+  pytestCheckHook,
+  pytest-cov-stub,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pot";
-  version = "0.7.0";
+  version = "0.9.6.post1";
+  pyproject = true;
 
-  src = fetchPypi {
-    pname = "POT";
-    inherit version;
-    sha256 = "01mdsiv8rlgqzvm3bds9aj49khnn33i523c2cqqrl10zg742pb6l";
+  src = fetchFromGitHub {
+    owner = "PythonOT";
+    repo = "POT";
+    tag = finalAttrs.version;
+    hash = "sha256-db4fKXqvg9DEmbI/RTQWcOdw+3ccPk74ME0VDsXZlsQ=";
   };
 
   postPatch = ''
     substituteInPlace setup.cfg \
-      --replace "--cov-report= --cov=ot" ""
+      --replace-fail " --durations=20" "" \
+      --replace-fail " --junit-xml=junit-results.xml" ""
+
+    # we don't need setup.py to find the macos sdk for us
+    sed -i '/sdk_path/d' setup.py
   '';
 
-  nativeBuildInputs = [ numpy cython ];
-  propagatedBuildInputs = [ numpy scipy ]
-    ++ lib.optionals enableGPU [ cupy ]
-    ++ lib.optionals enableDimensionalityReduction [ pymanopt autograd ];
-  checkInputs = [ matplotlib scikit-learn pytestCheckHook ];
+  build-system = [
+    cython
+    numpy
+    setuptools
+  ];
 
-  # To prevent importing of an incomplete package from the build directory
-  # instead of nix store (`ot` is the top-level package name).
+  dependencies = [
+    numpy
+    scipy
+  ];
+
+  optional-dependencies = {
+    backend-numpy = [ ];
+    backend-jax = [
+      jax
+      jaxlib
+    ];
+    backend-cupy = [ ];
+    backend-tf = [ tensorflow ];
+    backend-torch = [ torch ];
+    cvxopt = [ cvxopt ];
+    dr = [
+      scikit-learn
+      pymanopt
+      autograd
+    ];
+    gnn = [
+      torch
+      # torch-geometric
+    ];
+    plot = [ matplotlib ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+  ];
+
+  # need to run the tests with the built package next to the test directory
   preCheck = ''
-    rm -r ot
+    pushd build/lib.*
+    ln -s -t . "$OLDPWD/test"
   '';
 
-  # GPU tests are always skipped because of sandboxing
-  disabledTests = [ "warnings" ];
+  postCheck = ''
+    popd
+    rm -rf ot
+  '';
 
-  pythonImportsCheck = [ "ot" "ot.lp" ];
+  disabledTests = [
+    # GPU tests are always skipped because of sandboxing
+    "warnings"
+    # Fixture is not available
+    "test_conditional_gradient"
+    "test_convert_between_backends"
+    "test_emd_backends"
+    "test_emd_emd2_types_devices"
+    "test_emd1d_type_devices"
+    "test_emd2_backends"
+    "test_factored_ot_backends"
+    "test_free_support_barycenter_backends"
+    "test_func_backends"
+    "test_generalized_conditional_gradient"
+    "test_line_search_armijo"
+    "test_loss_dual"
+    "test_max_sliced_backend"
+    "test_plan_dual"
+    "test_random_backends"
+    "test_sliced_backend"
+    "test_to_numpy"
+    "test_wasserstein_1d_type_devices"
+    "test_wasserstein"
+    "test_weak_ot_bakends"
+
+    # TypeError: Only integers, slices...
+    "test_emd1d_device_tf"
+
+    # ValueError: setting an array element with a sequence
+    "test_fully_relaxed_path"
+    "test_pointwise_gromov"
+    "test_semi_relaxed_path"
+
+    # ValueError: Unknown Distance Metric: sokalmichener
+    "test_dist"
+    "test_dist_vs_cdist"
+  ];
+
+  pythonImportsCheck = [
+    "ot"
+    "ot.lp"
+  ];
 
   meta = {
     description = "Python Optimal Transport Library";
     homepage = "https://pythonot.github.io/";
+    downloadPage = "https://github.com/PythonOT/POT";
+    changelog = "https://github.com/PythonOT/POT/blob/${finalAttrs.src.tag}/RELEASES.md";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ yl3dy ];
   };
-}
+})

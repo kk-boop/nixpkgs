@@ -1,38 +1,46 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, setuptools-scm
-, pytestCheckHook
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+
+  # build-system
+  setuptools_80,
+  setuptools-scm,
+
+  # tests
+  pytest8_3CheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "makefun";
-  version = "1.12.1";
+  version = "1.16.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "4d0e90ca3fdbdeb6a4a0891e2da7d4b8e80386e19e6db91ce29b8aa5c876ecfe";
+    hash = "sha256-4UYBgxVwv/H21+aIKLzTDS9YVvJLrV3gzLIpIc7ryUc=";
   };
 
   postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "pytest-runner" ""
+    substituteInPlace pyproject.toml \
+      --replace-fail '"setuptools>=39.2,<72"' '"setuptools"'
   '';
 
-  nativeBuildInputs = [
+  build-system = [
+    setuptools_80
     setuptools-scm
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  nativeCheckInputs = [
+    pytest8_3CheckHook
   ];
 
   pythonImportsCheck = [ "makefun" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/smarie/python-makefun";
     description = "Small library to dynamically create python functions";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ veehaitch ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ veehaitch ];
   };
 }

@@ -1,24 +1,57 @@
-{ lib, buildPythonPackage, fetchFromGitHub, flake8, pytest, pytest-cov, pexpect }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 
-buildPythonPackage rec {
+  # build-system
+  setuptools,
+
+  # tests
+  pytest-cov-stub,
+  pytestCheckHook,
+  pexpect,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "readchar";
-  version = "2.0.0";
+  version = "4.2.1";
+  pyproject = true;
 
   # Don't use wheels on PyPI
   src = fetchFromGitHub {
     owner = "magmax";
-    repo = "python-${pname}";
-    rev = version;
-    sha256 = "0j1vj4f2j8x5f40rs6h8qplklcxcdbvkkvjpkpmr1xagw05i12bm";
+    repo = "python-${finalAttrs.pname}";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-r+dKGv0a7AU+Ef94AGCCJLQolLqTTxaNmqRQYkxk15s=";
   };
 
-  nativeBuildInputs = [ flake8 ];
-  checkInputs = [ pytest pytest-cov pexpect ];
+  # https://github.com/magmax/python-readchar/pull/129
+  patches = [ ./pytest9-compat.patch ];
 
-  meta = with lib; {
-    homepage = "https://github.com/magmax/python-readchar";
+  postPatch = ''
+    # Tags on GitHub still have a postfix (-dev0)
+    sed -i 's/\(version = "\)[^"]*\(".*\)/\1${finalAttrs.version}\2/' pyproject.toml
+    # run Linux tests on Darwin as well
+    # see https://github.com/magmax/python-readchar/pull/99 for why this is not upstreamed
+    substituteInPlace tests/linux/conftest.py \
+      --replace 'sys.platform.startswith("linux")' 'sys.platform.startswith(("darwin", "linux"))'
+  '';
+
+  build-system = [ setuptools ];
+
+  pythonImportsCheck = [ "readchar" ];
+
+  nativeCheckInputs = [
+    pytest-cov-stub
+    pytestCheckHook
+    pexpect
+  ];
+
+  meta = {
     description = "Python library to read characters and key strokes";
-    license = licenses.mit;
-    maintainers = [ maintainers.mmahut ];
+    homepage = "https://github.com/magmax/python-readchar";
+    changelog = "https://github.com/magmax/python-readchar/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mmahut ];
   };
-}
+})

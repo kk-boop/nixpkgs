@@ -1,63 +1,160 @@
-{ lib, buildPythonPackage, fetchPypi
-, enum34
-, glibcLocales
-, matplotlib
-, monty
-, networkx
-, numpy
-, palettable
-, pandas
-, plotly
-, pydispatcher
-, requests
-, ruamel-yaml
-, scipy
-, six
-, spglib
-, sympy
-, tabulate
-, uncertainties
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  pythonAtLeast,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # nativeBuildInputs
+  cython,
+  glibcLocales,
+
+  # dependencies
+  bibtexparser,
+  joblib,
+  matplotlib,
+  monty,
+  networkx,
+  numpy,
+  orjson,
+  palettable,
+  pandas,
+  plotly,
+  pybtex,
+  requests,
+  ruamel-yaml,
+  scipy,
+  spglib,
+  sympy,
+  tabulate,
+  tqdm,
+  uncertainties,
+
+  # optional-dependencies
+  netcdf4,
+  ase,
+  numba,
+  vtk,
+
+  # tests
+  addBinToPathHook,
+  moyopy,
+  pytest-xdist,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "pymatgen";
-  version = "2022.0.16";
+  version = "2025.10.7";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "fb4db7d547f062266a1a113d898fb0626ded5a1f9101ef79681e171b7e45fad0";
+  disabled = pythonAtLeast "3.13";
+
+  src = fetchFromGitHub {
+    owner = "materialsproject";
+    repo = "pymatgen";
+    tag = "v${version}";
+    hash = "sha256-pbnWSmU2rtqUbjZBmzJz3HE1t5zZTJv7HSfrcVUFxmU=";
   };
 
-  nativeBuildInputs = [ glibcLocales ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
-    enum34
+  nativeBuildInputs = [
+    cython
+    glibcLocales
+  ];
+
+  dependencies = [
+    bibtexparser
+    joblib
     matplotlib
     monty
     networkx
     numpy
+    orjson
     palettable
     pandas
     plotly
-    pydispatcher
+    pybtex
     requests
     ruamel-yaml
     scipy
-    six
     spglib
     sympy
     tabulate
+    tqdm
     uncertainties
   ];
 
-  # No tests in pypi tarball.
-  doCheck = false;
+  optional-dependencies = {
+    abinit = [ netcdf4 ];
+    ase = [ ase ];
+    electronic_structure = [
+      # fdint
+    ];
+    mlp = [
+      # chgnet
+      # matgl
+    ];
+    numba = [ numba ];
+    vis = [ vtk ];
+  };
+
   pythonImportsCheck = [ "pymatgen" ];
 
-  meta = with lib; {
-    description = "A robust materials analysis code that defines core object representations for structures and molecules";
+  nativeCheckInputs = [
+    addBinToPathHook
+    moyopy
+    pytestCheckHook
+    pytest-xdist
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  preCheck =
+    # ensure tests can find these
+    ''
+      export PMG_TEST_FILES_DIR="$(realpath ./tests/files)"
+    ''
+    # Prevents 'Fatal Python error: Aborted' on darwin during checkPhase
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
+      export MPLBACKEND="Agg"
+    '';
+
+  disabledTests = [
+    # Flaky
+    "test_numerical_eos_values"
+    "test_pca"
+    "test_static_si_no_kgrid"
+    "test_thermal_conductivity"
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+    # AttributeError: 'NoneType' object has no attribute 'items'
+    "test_mean_field"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # attempt to insert nil object from objects[1]
+    "test_timer_10_2_7"
+    "test_timer"
+  ];
+
+  disabledTestPaths = lib.optionals stdenv.hostPlatform.isDarwin [
+    # Crash when running the pmg command
+    # Critical error: required built-in appearance SystemAppearance not found
+    "tests/cli/test_pmg_plot.py"
+
+    # attempt to insert nil object from objects[1]
+    # https://github.com/materialsproject/pymatgen/issues/4452
+    "tests/io/abinit/test_abitimer.py"
+  ];
+
+  meta = {
+    description = "Robust materials analysis code that defines core object representations for structures and molecules";
     homepage = "https://pymatgen.org/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ psyanticy ];
+    changelog = "https://github.com/materialsproject/pymatgen/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ psyanticy ];
   };
 }

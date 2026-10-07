@@ -1,24 +1,42 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, future
-, pyjwt
-, requests
-, requests-toolbelt
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  future,
+  pyjwt,
+  requests,
+  requests-toolbelt,
+  setuptools,
+  versioneer,
 }:
 
 buildPythonPackage rec {
   pname = "webexteamssdk";
-  version = "1.6";
+  version = "1.6.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "CiscoDevNet";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0bw28ag1iqyqlxz83m4qb3r94kipv5mpf3bsvc8zv5vh4dv52bp2";
+    repo = "webexteamssdk";
+    tag = "v${version}";
+    hash = "sha256-xlkmXl4tVm48drXmkUijv9GNXzJcDnfSKbOMciPIRRo=";
   };
 
-  propagatedBuildInputs = [
+  # opsdroid still depends on webexteamssdk but package was renamed
+  # to webexpythonsdk
+  passthru.skipBulkUpdate = true;
+
+  postPatch = ''
+    # Remove vendorized versioneer
+    rm versioneer.py
+  '';
+
+  build-system = [
+    setuptools
+    versioneer
+  ];
+
+  dependencies = [
     future
     pyjwt
     requests
@@ -27,12 +45,14 @@ buildPythonPackage rec {
 
   # Tests require a Webex Teams test domain
   doCheck = false;
+
   pythonImportsCheck = [ "webexteamssdk" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for Webex Teams APIs";
     homepage = "https://github.com/CiscoDevNet/webexteamssdk";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/WebexCommunity/WebexPythonSDK/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

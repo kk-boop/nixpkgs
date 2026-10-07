@@ -1,36 +1,71 @@
-{ lib, stdenv, fetchFromGitHub
-, autoreconfHook, pkg-config
-, cunit, file
-, jemalloc, libev, nghttp3, quictls
+{
+  lib,
+  stdenv,
+  fetchurl,
+  cmake,
+  brotli,
+  libev,
+  nghttp3,
+  openssl,
+  withJemalloc ? false,
+  jemalloc,
+  curl,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "ngtcp2";
-  version = "unstable-2021-11-10";
+  version = "1.23.0";
 
-  src = fetchFromGitHub {
-    owner = "ngtcp2";
-    repo = pname;
-    rev = "7039808c044152c14b44046468bd16249b4d7048";
-    sha256 = "1cjsky24f6fazw9b1r6w9cgp09vi8wp99sv76gg2b1r8ic3hgq23";
+  src = fetchurl {
+    url = "https://github.com/ngtcp2/ngtcp2/releases/download/v${finalAttrs.version}/ngtcp2-${finalAttrs.version}.tar.bz2";
+    hash = "sha256-3kuZ/8kNm5V0TESg2rYcnyqYSLiBuP3rl0rrXqEIAso=";
   };
 
-  nativeBuildInputs = [ autoreconfHook pkg-config cunit file ];
-  buildInputs = [ jemalloc libev nghttp3 quictls ];
+  outputs = [
+    "out"
+    "dev"
+    "doc"
+  ];
 
-  preConfigure = ''
-    substituteInPlace ./configure --replace /usr/bin/file ${file}/bin/file
-  '';
+  nativeBuildInputs = [ cmake ];
+  buildInputs = [
+    brotli
+    libev
+    nghttp3
+    openssl
+  ]
+  ++ lib.optional withJemalloc jemalloc;
 
-  outputs = [ "out" "dev" ];
+  strictDeps = true;
+
+  cmakeFlags = [
+    # The examples try to link against `ngtcp2_crypto_ossl` and `ngtcp2` libraries.
+    # This works in the dynamic case where the targets have the same name, but not here where they're suffixed with `_static`.
+    # Also, the examples depend on Linux-specific APIs, so we avoid them on FreeBSD/Cygwin too.
+    (lib.cmakeBool "ENABLE_LIB_ONLY" (
+      stdenv.hostPlatform.isStatic
+      || stdenv.hostPlatform.isFreeBSD
+      || stdenv.hostPlatform.isCygwin
+      || stdenv.hostPlatform.isWindows
+    ))
+    (lib.cmakeBool "ENABLE_SHARED_LIB" (!stdenv.hostPlatform.isStatic))
+    (lib.cmakeBool "ENABLE_STATIC_LIB" stdenv.hostPlatform.isStatic)
+  ];
 
   doCheck = true;
 
-  meta = with lib; {
-    homepage = "https://github.com/ngtcp2/ngtcp2";
-    description = "ngtcp2 project is an effort to implement QUIC protocol which is now being discussed in IETF QUICWG for its standardization.";
-    license = licenses.mit;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ izorkin ];
+  passthru.tests = {
+    inherit curl;
   };
-}
+
+  __structuredAttrs = true;
+
+  meta = {
+    homepage = "https://github.com/ngtcp2/ngtcp2";
+    changelog = "https://github.com/ngtcp2/ngtcp2/releases/tag/v${finalAttrs.version}";
+    description = "Implementation of the QUIC protocol (RFC9000)";
+    license = lib.licenses.mit;
+    platforms = lib.platforms.unix ++ lib.platforms.windows;
+    maintainers = with lib.maintainers; [ izorkin ];
+  };
+})

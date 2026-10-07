@@ -1,66 +1,135 @@
-{ lib, buildPythonPackage, fetchFromGitHub, xdg-utils
-, requests, filetype, pyparsing, configparser, arxiv2bib
-, pyyaml, chardet, beautifulsoup4, colorama, bibtexparser
-, click, python-slugify, habanero, isbnlib, typing-extensions
-, prompt-toolkit, pygments, stevedore, tqdm, lxml
-, python-doi, isPy3k, pytest-cov
-#, optional, dependencies
-, whoosh, pytest
-, stdenv
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # dependencies
+  arxiv,
+  beautifulsoup4,
+  bibtexparser,
+  click,
+  colorama,
+  dominate,
+  filetype,
+  habanero,
+  lark,
+  lxml,
+  platformdirs,
+  prompt-toolkit,
+  pygments,
+  python-doi,
+  python-slugify,
+  pyyaml,
+  requests,
+
+  # optional dependencies
+  chardet,
+  citeproc-py,
+  jinja2,
+  markdownify,
+  whoosh,
+
+  # switch for optional dependencies
+  withOptDeps ? false,
+
+  # tests
+  docutils,
+  git,
+  pytestCheckHook,
+  pytest-cov-stub,
+  sphinx,
+  sphinx-click,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "papis";
-  version = "0.11.1";
-  disabled = !isPy3k;
+  version = "0.16.0";
+  pyproject = true;
 
-  # Missing tests on Pypi
   src = fetchFromGitHub {
     owner = "papis";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0bbkjyw1fsvvp0380l404h2lys8ib4xqga5s6401k1y1hld28nl6";
+    repo = "papis";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ZDGcuOCmddPaX6CldPf7YGHyIZfrG62ZQ6NXzFPDVAM=";
   };
 
-  propagatedBuildInputs = [
-    requests filetype pyparsing configparser arxiv2bib
-    pyyaml chardet beautifulsoup4 colorama bibtexparser
-    click python-slugify habanero isbnlib
-    prompt-toolkit pygments typing-extensions
-    stevedore tqdm lxml
+  build-system = [ hatchling ];
+
+  dependencies = [
+    arxiv
+    beautifulsoup4
+    bibtexparser
+    click
+    colorama
+    dominate
+    filetype
+    habanero
+    lark
+    lxml
+    platformdirs
+    prompt-toolkit
+    pygments
     python-doi
-    # optional dependencies
-    whoosh
+    python-slugify
+    pyyaml
+    requests
+  ]
+  ++ lib.optionals withOptDeps finalAttrs.passthru.optional-dependencies.complete;
+
+  optional-dependencies = {
+    complete = [
+      chardet
+      citeproc-py
+      jinja2
+      markdownify
+      whoosh
+    ];
+  };
+
+  pythonImportsCheck = [ "papis" ];
+
+  nativeCheckInputs = [
+    docutils
+    git
+    pytestCheckHook
+    pytest-cov-stub
+    sphinx
+    sphinx-click
+    writableTmpDirAsHomeHook
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "lxml<=4.3.5" "lxml~=4.3" \
-      --replace "isbnlib>=3.9.1,<3.10" "isbnlib~=3.9" \
-      --replace "python-slugify>=1.2.6,<4" "python-slugify"
-  '';
-
-  doCheck = !stdenv.isDarwin;
-
-  checkInputs = ([
-    pytest pytest-cov
-  ]) ++ [
-    xdg-utils
+  enabledTestPaths = [
+    "papis"
+    "tests"
   ];
 
-  # most of the downloader tests and 4 other tests require a network connection
-  # test_export_yaml and test_citations check for the exact output produced by pyyaml 3.x and
-  # fail with 5.x
-  checkPhase = ''
-    HOME=$(mktemp -d) pytest papis tests --ignore tests/downloaders \
-      -k "not test_get_data and not test_doi_to_data and not test_general and not get_document_url \
-      and not test_validate_arxivid and not test_downloader_getter and not match"
-  '';
+  disabledTests = [
+    # Require network access
+    "test_add_folder_name_cli"
+    "test_add_link_cli"
+    "test_download_document"
+    "test_get_matching_importers_by_name"
+    "test_matching_importers_by_uri"
+    "test_yaml_unicode_dump"
+  ]
+  ++ lib.optionals withOptDeps [
+    # Require network access
+    "test_csl_style_download"
+  ];
 
   meta = {
     description = "Powerful command-line document and bibliography manager";
-    homepage = "https://papis.readthedocs.io/en/latest/";
-    license = lib.licenses.gpl3;
-    maintainers = with lib.maintainers; [ nico202 teto ];
+    mainProgram = "papis";
+    homepage = "https://papis.readthedocs.io/";
+    changelog = "https://github.com/papis/papis/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [
+      nico202
+      octvs
+    ];
   };
-}
+})

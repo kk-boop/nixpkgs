@@ -1,110 +1,141 @@
-{ lib
-, stdenv
-, aiofiles
-, beautifulsoup4
-, buildPythonPackage
-, doCheck ? true
-, fetchFromGitHub
-, gunicorn
-, httptools
-, multidict
-, pytest-asyncio
-, pytest-benchmark
-, pytest-sugar
-, pytestCheckHook
-, sanic-routing
-, sanic-testing
-, ujson
-, uvicorn
-, uvloop
-, websockets
+{
+  lib,
+  stdenv,
+  aiofiles,
+  aioquic,
+  beautifulsoup4,
+  buildPythonPackage,
+  fetchFromGitHub,
+  gunicorn,
+  html5tagger,
+  httptools,
+  multidict,
+  pytest-asyncio,
+  pytestCheckHook,
+  sanic-ext,
+  sanic-routing,
+  sanic-testing,
+  setuptools,
+  tracerite,
+  typing-extensions,
+  ujson,
+  uvicorn,
+  uvloop,
+  websockets,
 }:
 
 buildPythonPackage rec {
   pname = "sanic";
-  version = "21.9.1";
+  version = "25.12.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sanic-org";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-TRrJr/L8AXLAARPjhBi2FxNh+jvxxdeMN24cT1njmqY=";
+    repo = "sanic";
+    tag = "v${version}";
+    hash = "sha256-0P5UyLi9W5maoR1EpRxfhysckDWpjgmqndgxsVHm47c=";
   };
 
-  postPatch = ''
-    # Loosen dependency requirements.
-    substituteInPlace setup.py \
-      --replace '"pytest==6.2.5"' '"pytest"' \
-      --replace '"gunicorn==20.0.4"' '"gunicorn"' \
-      --replace '"pytest-sanic",' "" \
-    # Patch a request headers test to allow brotli encoding
-    # (we build httpx with brotli support, upstream doesn't).
-    substituteInPlace tests/test_headers.py \
-      --replace "deflate\r\n" "deflate, br\r\n"
-  '';
+  # test compat for testing with pytest-asyncio
+  patches = [ ./pytest9-compat.patch ];
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     aiofiles
     httptools
+    html5tagger
     multidict
     sanic-routing
+    tracerite
+    typing-extensions
     ujson
     uvloop
     websockets
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    ext = [ sanic-ext ];
+    http3 = [ aioquic ];
+  };
+
+  nativeCheckInputs = [
     beautifulsoup4
     gunicorn
-    pytest-asyncio
-    pytest-benchmark
-    pytest-sugar
+    pytest-asyncio # upstream tests with anyio + pytest-sanic instead
     pytestCheckHook
     sanic-testing
     uvicorn
-  ];
-
-  inherit doCheck;
+  ]
+  ++ optional-dependencies.http3;
 
   preCheck = ''
     # Some tests depends on sanic on PATH
     PATH="$out/bin:$PATH"
+    PYTHONPATH=$PWD:$PYTHONPATH
+
+    # needed for relative paths for some packages
+    cd tests
+  ''
+  # Work around "OSError: AF_UNIX path too long"
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    substituteInPlace worker/test_socket.py \
+      --replace-fail '"./test.sock"' '"/tmp/test.sock"'
   '';
 
   disabledTests = [
-    # Tests are flaky
-    "test_keep_alive_client_timeout"
-    "test_check_timeouts_request_timeout"
-    "test_check_timeouts_response_timeout"
-    "test_reloader_live"
-    "test_zero_downtime"
-    # Not working from 21.9.1
-    "test_create_server_main"
+    # EOFError: Ran out of input
+    "test_server_run_with_repl"
+    # InvalidStatusCode: server rejected WebSocket connection: HTTP 400
+    "test_websocket_route_with_subprotocols"
+    # nic.exceptions.SanicException: Cannot setup Sanic Simple Server without a path to a directory
+    "test_load_app_simple"
+    # ModuleNotFoundError: No module named '/build/source/tests/tests/static'
+    "test_input_is_dir"
+    # Racy, e.g. Address already in use
+    "test_logger_vhosts"
+    # Event loop is closed
+    "test_asyncio_server_no_start_serving"
+    "test_asyncio_server_start_serving"
+    "test_create_asyncio_server"
     "test_create_server_main_convenience"
-    "test_debug"
-    "test_auto_reload"
-    "test_no_exceptions_when_cancel_pending_request"
-    "test_ipv6_address_is_not_wrapped"
-    # These appear to be very sensitive to output of commands
-    "test_access_logs"
-    "test_auto_reload"
-    "test_host_port"
-    "test_no_exceptions_when_cancel_pending_request"
-    "test_num_workers"
-    "test_server_run"
-    "test_version"
+    "test_create_server_main"
+    "test_create_server_no_startup"
+    "test_create_server_trigger_events"
+    "test_multiple_uvloop_configs_display_warning"
+    "test_uvloop_cannot_never_called_with_create_server"
+    # Our mailcap database has a different mime type name for xml documentations
+    # AssertionError: assert 'text/xml; charset=utf-8' == 'application/xml'
+    "test_guess_content_type"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # KeyError: "getgrnam(): name not found: 'root'"
+    "test_validate_group_sets_gid"
   ];
 
-  # avoid usage of nixpkgs-review in darwin since tests will compete usage
+  disabledTestPaths = [
+    # We are not interested in benchmarks
+    "benchmark/"
+    # We are also not interested in typing
+    "typing/test_typing.py"
+    # occasionally hangs
+    "test_multiprocessing.py"
+    # Failed: async def functions are not natively supported.
+    "test_touchup.py"
+  ];
+
+  # Avoid usage of nixpkgs-review in darwin since tests will compete usage
   # for the same local port
   __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "sanic" ];
 
-  meta = with lib; {
+  meta = {
     description = "Web server and web framework";
     homepage = "https://github.com/sanic-org/sanic/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ costrouc AluisioASG ];
+    changelog = "https://github.com/sanic-org/sanic/releases/tag/${src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ p0lyw0lf ];
+    mainProgram = "sanic";
   };
 }

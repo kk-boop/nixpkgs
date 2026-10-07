@@ -1,28 +1,40 @@
-{ buildPythonPackage, fetchPypi, lib, pypiserver, pytestCheckHook
-, setuptools-scm, virtualenv }:
+{
+  buildPythonPackage,
+  fetchPypi,
+  lib,
+  pypiserver,
+  pytestCheckHook,
+  setuptools-scm,
+  virtualenv,
+}:
 
 buildPythonPackage rec {
   pname = "setuptools-declarative-requirements";
-  version = "1.2.0";
+  version = "1.3.0";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1l8zmcnp9h8sp8hsw7b81djaa1a9yig0y7i4phh5pihqz1gdn7yi";
+    hash = "sha256-V6W5u5rTUMJ46Kpr5M3rvNklubpx1qcSoXimGM+4mPc=";
   };
 
   buildInputs = [ setuptools-scm ];
 
-  checkInputs = [ pypiserver pytestCheckHook virtualenv ];
+  nativeCheckInputs = [
+    pypiserver
+    pytestCheckHook
+    virtualenv
+  ];
 
   # Tests use network
   doCheck = false;
 
   pythonImportsCheck = [ "declarative_requirements" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/s0undt3ch/setuptools-declarative-requirements";
     description = "Declarative setuptools Config Requirements Files Support";
-    license = licenses.asl20;
-    maintainers = [ maintainers.austinbutler ];
+    license = lib.licenses.asl20;
+    maintainers = [ lib.maintainers.austinbutler ];
   };
 }

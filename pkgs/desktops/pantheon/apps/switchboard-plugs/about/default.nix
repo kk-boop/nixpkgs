@@ -1,41 +1,45 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, substituteAll
-, meson
-, ninja
-, pkg-config
-, vala
-, libgee
-, libgtop
-, libhandy
-, granite
-, gtk3
-, switchboard
-, fwupd
-, appstream
-, nixos-artwork
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  json-glib,
+  libadwaita,
+  libgee,
+  libgtop,
+  libgudev,
+  libsoup_3,
+  gettext,
+  glib,
+  granite7,
+  gtk4,
+  packagekit,
+  polkit,
+  switchboard,
+  udisks,
+  fwupd,
+  appstream,
+  elementary-settings-daemon,
 }:
 
 stdenv.mkDerivation rec {
   pname = "switchboard-plug-about";
-  version = "6.0.1";
+  version = "8.2.3";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
-    rev = version;
-    sha256 = "0c075ac7iqz4hqbp2ph0cwyhiq0jn6c1g1jjfhygjbssv3vvd268";
-  };
-
-  passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    repo = "settings-system";
+    tag = version;
+    hash = "sha256-skuMgLZTkJEWrmDGwSuCivsJrvKIUYT2YISYj7/BVe4=";
   };
 
   nativeBuildInputs = [
+    gettext # msgfmt
+    glib # glib-compile-resources
     meson
     ninja
     pkg-config
@@ -44,29 +48,32 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     appstream
+    elementary-settings-daemon # for gsettings schemas
     fwupd
-    granite
-    gtk3
+    granite7
+    gtk4
+    json-glib
+    libadwaita
     libgee
     libgtop
-    libhandy
+    libgudev
+    libsoup_3
+    packagekit
+    polkit
     switchboard
+    udisks
   ];
 
-  patches = [
-    # Use NixOS's default wallpaper
-    (substituteAll {
-      src = ./fix-background-path.patch;
-      default_wallpaper = "${nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath}";
-    })
-  ];
+  passthru = {
+    updateScript = nix-update-script { };
+  };
 
-  meta = with lib; {
+  meta = {
     description = "Switchboard About Plug";
-    homepage = "https://github.com/elementary/switchboard-plug-about";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    homepage = "https://github.com/elementary/settings-system";
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 
 }

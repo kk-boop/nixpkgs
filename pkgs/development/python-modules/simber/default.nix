@@ -1,25 +1,39 @@
-{ lib, buildPythonPackage, fetchFromGitHub, colorama, pytestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  colorama,
+  pytestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "simber";
-  version = "0.2.3";
+  version = "0.2.6";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "deepjyoti30";
-    repo = pname;
-    rev = version;
-    sha256 = "04dp9b4s7zb166vlacsaypc6iw1p75azqas1wf0flp570qqf3rkx";
+    repo = "simber";
+    tag = finalAttrs.version;
+    hash = "sha256-kHoFZD7nhVxJu9MqePLkL7KTG2saPecY9238c/oeEco=";
   };
 
-  propagatedBuildInputs = [ colorama ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytestCheckHook ];
+  dependencies = [ colorama ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
   pythonImportsCheck = [ "simber" ];
 
-  meta = with lib; {
+  meta = {
     description = "Simple, minimal and powerful logger for Python";
     homepage = "https://github.com/deepjyoti30/simber";
-    license = licenses.mit;
-    maintainers = with maintainers; [ j0hax ];
+    changelog = "https://github.com/deepjyoti30/simber/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ j0hax ];
   };
-}
+})

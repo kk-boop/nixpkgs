@@ -1,22 +1,32 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "css-parser";
-  version = "1.0.6";
+  version = "1.0.10";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "4ed448a8a5622edb1d30d616bbc4bd3d30f11be922343d7a92d7e418e324af2e";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-vx6XKtMzROkyBpZPtM2QjZ3e+fzQwB+pPg1zRnU5Q2M=";
   };
 
-  # Test suite not included in tarball yet
-  # See https://github.com/ebook-utils/css-parser/pull/2
-  doCheck = false;
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "A CSS Cascading Style Sheets library for Python";
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "css_parser" ];
+
+  meta = {
+    description = "CSS Cascading Style Sheets library for Python";
     homepage = "https://github.com/ebook-utils/css-parser";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ jethro ];
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ jethro ];
   };
-}
+})

@@ -1,4 +1,10 @@
-{ lib, stdenv, kernel, fetchFromGitHub }:
+{
+  lib,
+  stdenv,
+  kernel,
+  kernelModuleMakeFlags,
+  fetchFromGitHub,
+}:
 
 stdenv.mkDerivation {
   pname = "can-isotp";
@@ -13,24 +19,22 @@ stdenv.mkDerivation {
     sha256 = "1laax93czalclg7cy9iq1r7hfh9jigh7igj06y9lski75ap2vhfq";
   };
 
-  KERNELDIR = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
-  INSTALL_MOD_PATH = "\${out}";
+  makeFlags = kernelModuleMakeFlags ++ [
+    "KERNELDIR=${kernel.dev}/lib/modules/${kernel.modDirVersion}/build"
+    "INSTALL_MOD_PATH=${placeholder "out"}"
+  ];
 
-  buildPhase = ''
-    make modules
-  '';
-
-  installPhase = ''
-    make modules_install
-  '';
+  buildFlags = [ "modules" ];
+  installTargets = [ "modules_install" ];
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
-  meta = with lib; {
+  meta = {
+    broken = kernel.kernelAtLeast "5.16";
     description = "Kernel module for ISO-TP (ISO 15765-2)";
     homepage = "https://github.com/hartkopp/can-isotp";
-    license = licenses.gpl2;
-    platforms = platforms.linux;
-    maintainers = [ maintainers.evck ];
+    license = lib.licenses.gpl2Only;
+    platforms = lib.platforms.linux;
+    maintainers = [ lib.maintainers.evck ];
   };
 }

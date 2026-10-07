@@ -1,32 +1,33 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, beautifulsoup4
-, geojson
-, lxml
-, matplotlib
-, numpy
-, pandas
-, ujson
-, xarray
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  beautifulsoup4,
+  geojson,
+  lxml,
+  matplotlib,
+  numpy,
+  pandas,
+  setuptools,
+  ujson,
+  xarray,
 }:
 
 buildPythonPackage rec {
   pname = "osmpythontools";
-  version = "0.3.2";
+  version = "0.3.6";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mocnik-science";
     repo = "osm-python-tools";
-    rev = "v${version}";
-    sha256 = "1m5ai9h1zbp79x0vb138fmyh2hg8lqp859s7j33lra9hds6wb40a";
+    tag = "v${version}";
+    hash = "sha256-ajZJSuMbku08vHvn4fqsLqCS/E2XR3uVqiH7R1GHH5o=";
   };
 
-  # Upstream setup.py has test dependencies in `install_requires` argument.
-  # Remove them, as we don't run the tests.
-  patches = [ ./remove-test-only-dependencies.patch ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     beautifulsoup4
     geojson
     lxml
@@ -49,15 +50,17 @@ buildPythonPackage rec {
     "OSMPythonTools.overpass"
   ];
 
-  meta = with lib; {
-    description = "A library to access OpenStreetMap-related services";
+  meta = {
+    description = "Library to access OpenStreetMap-related services";
     longDescription = ''
       The python package OSMPythonTools provides easy access to
       OpenStreetMap-related services, among them an Overpass endpoint,
       Nominatim, and the OpenStreetMap editing API.
     '';
     homepage = "https://github.com/mocnik-science/osm-python-tools";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ das-g ];
+    license = lib.licenses.gpl3Only;
+    changelog = "https://raw.githubusercontent.com/mocnik-science/osm-python-tools/v${version}/version-history.md";
+    maintainers = with lib.maintainers; [ das-g ];
+    teams = [ lib.teams.geospatial ];
   };
 }

@@ -1,38 +1,42 @@
-{ lib
-, aiohttp
-, async-timeout
-, buildPythonPackage
-, fetchFromGitHub
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  pyprojectVersionPatchHook,
 }:
 
 buildPythonPackage rec {
   pname = "pycfdns";
-  version = "1.2.2";
-  format = "setuptools";
+  version = "3.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ludeeus";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-bsalfZEkZrBG0/SyEXCWOZyrhOYU/3YJR/78FQTpXYk=";
+    repo = "pycfdns";
+    tag = version;
+    hash = "sha256-bLzDakxKq8fcjEKSxc6D5VN9gfAu1M3/zaAU2UYnwSs=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
-    async-timeout
+  nativeBuildInputs = [
+    pyprojectVersionPatchHook
   ];
+
+  build-system = [ poetry-core ];
+
+  dependencies = [ aiohttp ];
 
   # Project has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "pycfdns"
-  ];
+  pythonImportsCheck = [ "pycfdns" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for updating Cloudflare DNS A records";
     homepage = "https://github.com/ludeeus/pycfdns";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/ludeeus/pycfdns/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

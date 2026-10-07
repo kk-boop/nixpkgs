@@ -1,32 +1,48 @@
-{ lib, fetchFromGitHub, buildDunePackage, ocaml
-, cryptokit, ocamlnet, ocurl, yojson
-, ounit
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  camlp-streams,
+  cppo,
+  cryptokit,
+  ocurl,
+  yojson,
+  ounit2,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "gapi-ocaml";
-  version = "0.4.1";
-
-  useDune2 = true;
-
-  minimumOCamlVersion = "4.02";
+  version = if lib.versionAtLeast cryptokit.version "1.21" then "0.4.9" else "0.4.7";
 
   src = fetchFromGitHub {
     owner = "astrada";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0riax23grjnq9pczmp1yv02ji0svvs2kbiqskj6f6yjviamnpa31";
+    repo = "gapi-ocaml";
+    tag = "v${finalAttrs.version}";
+    hash =
+      {
+        "0.4.7" = "sha256-uQJfrgF0oafURlamHslt9hX9MP4vFeVqDhuX7T/kjiY=";
+        "0.4.9" = "sha256-UWoWWpCAKCNEwEFO4UBXrTO49QyxLXrulDHX6dGr0z4=";
+      }
+      ."${finalAttrs.version}";
   };
 
-  propagatedBuildInputs = [ cryptokit ocamlnet ocurl yojson ];
+  nativeBuildInputs = [ cppo ];
 
-  doCheck = lib.versionAtLeast ocaml.version "4.04";
-  checkInputs = [ ounit ];
+  propagatedBuildInputs = [
+    camlp-streams
+    cryptokit
+    ocurl
+    yojson
+  ];
+
+  doCheck = true;
+  checkInputs = [ ounit2 ];
 
   meta = {
     description = "OCaml client for google services";
-    homepage = "http://gapi-ocaml.forge.ocamlcore.org";
+    homepage = "https://github.com/astrada/gapi-ocaml";
     license = lib.licenses.mit;
+    platforms = lib.platforms.linux;
     maintainers = with lib.maintainers; [ bennofs ];
   };
-}
+})

@@ -1,36 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-cov-stub,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyxbe";
-  version = "unstable-2021-01-10";
+  version = "1.0.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mborgerson";
-    repo = pname;
-    rev = "a7ae1bb21b02a57783831eb080c1edbafaad1d5d";
-    sha256 = "1cp9a5f41z8j7bzip6nhka8qnxs12v75cdf80sk2nzgf1k15wi2p";
+    repo = "pyxbe";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-MtkY4vwPvlYoS4ws8MzIFR8D6ORVqFXA0JvOEspzmtQ=";
   };
 
-  checkInputs = [
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  # Update location for run with pytest
-  preCheck = ''
-    substituteInPlace tests/test_load.py \
-      --replace "'xbefiles'" "'tests/xbefiles'"
-  '';
-
   pythonImportsCheck = [ "xbe" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library to work with XBE files";
     homepage = "https://github.com/mborgerson/pyxbe";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

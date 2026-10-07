@@ -1,54 +1,75 @@
-{ lib
-, aiohttp
-, aresponses
-, buildPythonPackage
-, fetchFromGitHub
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, xmltodict
-, yarl
+{
+  lib,
+  aiohttp,
+  aresponses,
+  awesomeversion,
+  backoff,
+  buildPythonPackage,
+  cachetools,
+  fetchFromGitHub,
+  poetry-core,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-freezegun,
+  pytestCheckHook,
+  xmltodict,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "rokuecp";
-  version = "0.8.4";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "0.19.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ctalkington";
     repo = "python-rokuecp";
-    rev = version;
-    sha256 = "sha256-vwXBYwiDQZBxEZDwLX9if6dt7tKQQOLyKL5m0q/3eUw=";
+    tag = version;
+    hash = "sha256-HPJORJQ/LqWCpywiZmwFXKKFRE8V9kG5iDrbzPX2YVg=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'version = "0.0.0"' 'version = "${version}"'
+  '';
+
+  build-system = [ poetry-core ];
+
+  dependencies = [
     aiohttp
+    backoff
+    cachetools
     xmltodict
+    awesomeversion
     yarl
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     aresponses
-    pytestCheckHook
     pytest-asyncio
+    pytest-cov-stub
+    pytest-freezegun
+    pytestCheckHook
   ];
 
   disabledTests = [
-    # https://github.com/ctalkington/python-rokuecp/issues/249
+    # Network related tests are having trouble in the sandbox
     "test_resolve_hostname"
+    "test_get_dns_state"
+    # Assertion issue
+    "test_guess_stream_format"
+    "test_update_tv"
+    "test_get_apps_single_app"
+    "test_get_tv_channels_single_channel"
   ];
 
-  pythonImportsCheck = [
-    "rokuecp"
-  ];
+  pythonImportsCheck = [ "rokuecp" ];
 
-  meta = with lib; {
+  meta = {
     description = "Asynchronous Python client for Roku (ECP)";
     homepage = "https://github.com/ctalkington/python-rokuecp";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/ctalkington/python-rokuecp/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

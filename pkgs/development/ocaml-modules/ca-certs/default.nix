@@ -1,33 +1,49 @@
-{ lib, buildDunePackage, fetchurl
-, bos, fpath, rresult, ptime, mirage-crypto, x509, astring, logs
-, cacert, alcotest
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  bos,
+  fpath,
+  ptime,
+  mirage-crypto,
+  x509,
+  astring,
+  logs,
+  cacert,
+  alcotest,
+  fmt,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "ca-certs";
-  version = "0.2.1";
-
-  minimumOCamlVersion = "4.07";
+  version = "1.0.3";
 
   src = fetchurl {
-    url = "https://github.com/mirage/ca-certs/releases/download/v${version}/ca-certs-v${version}.tbz";
-    sha256 = "d43109496a5129feff967d557c556af96f8b10456896a405c43b7cf0c35d0af3";
+    url = "https://github.com/mirage/ca-certs/releases/download/v${finalAttrs.version}/ca-certs-${finalAttrs.version}.tbz";
+    hash = "sha256-At/J53cLGCGN8uJRGScR3UTFhYrSRXVpOxRas9fUHCk=";
   };
 
-  useDune2 = true;
-
-  propagatedBuildInputs = [ bos fpath rresult ptime mirage-crypto x509 astring logs ];
+  propagatedBuildInputs = [
+    bos
+    fpath
+    ptime
+    mirage-crypto
+    x509
+    astring
+    logs
+  ];
 
   doCheck = true;
   checkInputs = [
-    cacert    # for /etc/ssl/certs/ca-bundle.crt
+    cacert # for /etc/ssl/certs/ca-bundle.crt
     alcotest
+    fmt
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Detect root CA certificates from the operating system";
-    maintainers = [ maintainers.sternenseemann ];
-    license = licenses.isc;
+    maintainers = [ lib.maintainers.sternenseemann ];
+    license = lib.licenses.isc;
     homepage = "https://github.com/mirage/ca-certs";
   };
-}
+})

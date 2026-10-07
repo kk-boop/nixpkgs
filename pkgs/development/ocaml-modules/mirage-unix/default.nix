@@ -1,23 +1,34 @@
-{ lib, buildDunePackage, fetchurl, ocaml_lwt, duration, mirage-runtime, io-page-unix }:
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  lwt,
+  duration,
+  mirage-runtime,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "mirage-unix";
-  version = "4.0.0";
+  version = "5.0.1";
 
-  useDune2 = true;
+  duneVersion = "3";
 
   src = fetchurl {
-    url = "https://github.com/mirage/${pname}/releases/download/v${version}/${pname}-v${version}.tbz";
-    sha256 = "0kyd83bkpjhn382b4mw3a4325xr8vms78znxqvifpcyfvfnlx7hj";
+    url = "https://github.com/mirage/mirage-unix/releases/download/v${finalAttrs.version}/mirage-unix-${finalAttrs.version}.tbz";
+    hash = "sha256-U1oLznUDBcJLcVygfSiyl5qRLDM27cm/WrjT0vSGhPg=";
   };
 
-  propagatedBuildInputs = [ ocaml_lwt duration mirage-runtime io-page-unix ];
+  propagatedBuildInputs = [
+    lwt
+    duration
+    mirage-runtime
+  ];
   doCheck = true;
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/mirage/mirage-unix";
     description = "Unix core platform libraries for MirageOS";
-    license = licenses.isc;
-    maintainers = with maintainers; [ sternenseemann ];
+    license = lib.licenses.isc;
+    maintainers = with lib.maintainers; [ sternenseemann ];
   };
-}
+})

@@ -1,49 +1,70 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, emoji
-, numpy
-, protobuf
-, requests
-, six
-, pytorch
-, tqdm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  # build-system
+  setuptools,
+  # dependencies
+  emoji,
+  huggingface-hub,
+  networkx,
+  numpy,
+  peft,
+  platformdirs,
+  protobuf,
+  requests,
+  torch,
+  tqdm,
+  transformers,
+  udtools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "stanza";
-  version = "1.3.0";
+  version = "1.14.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "stanfordnlp";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1j5918n875p3ibhzc5zp3vb97asbbnb04pj1igxwzl0xm6qcsbh8";
+    repo = "stanza";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-+yt3FIOe51zzQVOm19LKYhlmoCANTQ299qLtP4JHF+Q=";
   };
 
-  disabled = pythonOlder "3.6";
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     emoji
+    huggingface-hub
+    networkx
     numpy
+    peft
+    platformdirs
     protobuf
     requests
-    six
-    pytorch
+    torch
     tqdm
+    transformers
+    udtools
   ];
 
-  # disabled, because the tests try to connect to the internet which
-  # is forbidden in the sandbox
+  # Most tests require resources from the network (models). Many of the ones that do run are slow
+  # and some of them fail.
+  #
+  # Maintaining a list of "tests we can actually run in CI" isn't feasible, there are WAY too many
+  # exceptions and no useful pytest marks.
   doCheck = false;
 
   pythonImportsCheck = [ "stanza" ];
 
-  meta = with lib; {
+  meta = {
     description = "Official Stanford NLP Python Library for Many Human Languages";
     homepage = "https://github.com/stanfordnlp/stanza/";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ riotbib ];
+    changelog = "https://github.com/stanfordnlp/stanza/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      riotbib
+      Stebalien
+    ];
   };
-}
+})

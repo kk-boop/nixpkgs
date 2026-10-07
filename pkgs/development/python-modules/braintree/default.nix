@@ -1,27 +1,44 @@
-{ lib,
-  fetchPypi,
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
   requests,
-  buildPythonPackage
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "braintree";
-  version = "4.13.0";
+  version = "4.47.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "de8270c24c4557bcb76d2079bb4cabf380ce467d17c65f10ee5159da7ff8496a";
+  __structuredAttrs = true;
+
+  src = fetchFromGitHub {
+    owner = "braintree";
+    repo = "braintree_python";
+    tag = finalAttrs.version;
+    hash = "sha256-Bpa6X9O/MbGNiV/WmUZJ9jA58PRWqjRPANxi6ERGNf4=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  build-system = [ setuptools ];
 
-  # pypi release does not include tests
-  doCheck = false;
+  dependencies = [ requests ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "braintree" ];
+
+  # Most integration tests require a running Braintree gateway.
+  enabledTestPaths = [
+    "tests/unit"
+    "tests/integration/test_credentials_parser.py"
+  ];
+
+  meta = {
     description = "Python library for integration with Braintree";
     homepage = "https://github.com/braintree/braintree_python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

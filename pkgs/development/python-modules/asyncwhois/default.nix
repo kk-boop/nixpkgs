@@ -1,40 +1,46 @@
-{ lib
-, aiodns
-, asynctest
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, tldextract
-, whodap
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytest-asyncio,
+  pytest-mock,
+  pytestCheckHook,
+  python-dateutil,
+  python-socks,
+  tldextract,
+  whodap,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "asyncwhois";
-  version = "0.4.1";
-
-  disabled = pythonOlder "3.7";
+  version = "1.1.14";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pogzyb";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-mKKN2IuveOE+3mZGS5LFa15lJPA9y7KgLd0FoRuEMH0=";
+    repo = "asyncwhois";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-CFrvmPApOyTVrtjhae9rfmAufJTm4l2QCNlwCQwMod4=";
   };
 
-  propagatedBuildInputs = [
-    aiodns
+  build-system = [ hatchling ];
+
+  dependencies = [
+    python-dateutil
+    python-socks
     tldextract
     whodap
   ];
 
-  checkInputs = [
-    asynctest
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-mock
     pytestCheckHook
   ];
 
-  # Disable tests that require network access
   disabledTests = [
+    # Tests require network access
     "test_pywhois_aio_get_hostname_from_ip"
     "test_pywhois_get_hostname_from_ip"
     "test_pywhois_aio_lookup_ipv4"
@@ -44,14 +50,19 @@ buildPythonPackage rec {
     "test_from_whois_cmd"
     "test_get_hostname_from_ip"
     "test_whois_query_run"
+    "test_whois_query_create_connection"
+    "test_whois_query_send_and_recv"
+    "test_input_parameters_for_domain_query"
+    "test__get_top_level_domain"
   ];
 
   pythonImportsCheck = [ "asyncwhois" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for retrieving WHOIS information";
     homepage = "https://github.com/pogzyb/asyncwhois";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/pogzyb/asyncwhois/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

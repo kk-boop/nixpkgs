@@ -1,24 +1,38 @@
-{ lib, fetchPypi, buildPythonPackage
-, dnspython
-, mock, nose
+{
+  lib,
+  buildPythonPackage,
+  dnspython,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "srvlookup";
-  version = "2.0.0";
+  version = "3.0.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1zf1v04zd5phabyqh0nhplr5a8vxskzfrzdh4akljnz1yk2n2a0b";
+  __structuredAttrs = true;
+
+  src = fetchFromGitHub {
+    owner = "gmr";
+    repo = "srvlookup";
+    tag = finalAttrs.version;
+    hash = "sha256-iXbi25HsoNX0hnhwZoFik5ddlJ7i+xml3HGaezj3jgY=";
   };
 
-  propagatedBuildInputs = [ dnspython ];
-  checkInputs = [ mock nose ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  dependencies = [ dnspython ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "srvlookup" ];
+
+  meta = {
+    description = "Wrapper for dnspython to return SRV records for a given host, protocol, and domain name";
     homepage = "https://github.com/gmr/srvlookup";
-    license = [ licenses.bsd3 ];
-    description = "A small wrapper for dnspython to return SRV records for a given host, protocol, and domain name as a list of namedtuples.";
-    maintainers = [ maintainers.mmlb ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ mmlb ];
   };
-}
+})

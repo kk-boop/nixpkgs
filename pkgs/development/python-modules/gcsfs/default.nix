@@ -1,65 +1,71 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, google-auth
-, google-auth-oauthlib
-, google-cloud-storage
-, requests
-, decorator
-, fsspec
-, ujson
-, aiohttp
-, crcmod
-, pytest-vcr
-, vcrpy
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+  hatch-vcs,
+
+  # dependencies
+  aiohttp,
+  decorator,
+  fsspec,
+  google-auth,
+  google-auth-oauthlib,
+  google-cloud-storage,
+  google-cloud-storage-control,
+  requests,
+
+  # optional-dependencies
+  fusepy,
+  crcmod,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "gcsfs";
-  version = "2021.10.1";
-
-  disabled = pythonOlder "3.6";
+  version = "2026.7.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
-    owner = "dask";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-BME40kyxZHx9+XrMCqWYp8+q6tjeYwAw/zISMNpQxDU=";
+    owner = "fsspec";
+    repo = "gcsfs";
+    tag = finalAttrs.version;
+    hash = "sha256-Q+aqlFyNiGj0alOrnyjV9ILSSv6jRp+2DjDF/+f65po=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [
+    hatchling
+    hatch-vcs
+  ];
+
+  dependencies = [
     aiohttp
-    crcmod
     decorator
     fsspec
     google-auth
     google-auth-oauthlib
     google-cloud-storage
+    google-cloud-storage-control
     requests
-    ujson
   ];
 
-  checkInputs = [
-    pytest-vcr
-    pytestCheckHook
-    vcrpy
-  ];
-
-  disabledTests = [
-    # Tests wants to communicate with the Link-local address
-    "test_GoogleCredentials_None"
-  ];
-
-  pythonImportsCheck = [
-    "gcsfs"
-  ];
-
-  meta = with lib; {
-    description = "Convenient Filesystem interface over GCS";
-    homepage = "https://github.com/dask/gcsfs";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ nbren12 ];
+  optional-dependencies = {
+    gcsfuse = [ fusepy ];
+    crc = [ crcmod ];
   };
-}
+
+  # Tests require a running Docker instance
+  doCheck = false;
+
+  pythonImportsCheck = [ "gcsfs" ];
+
+  meta = {
+    description = "Convenient Filesystem interface over GCS";
+    homepage = "https://github.com/fsspec/gcsfs";
+    changelog = "https://github.com/fsspec/gcsfs/raw/${finalAttrs.src.tag}/docs/source/changelog.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ nbren12 ];
+  };
+})

@@ -1,24 +1,59 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  glibcLocales,
+  importlib-metadata,
+  packaging,
+  htslib,
+  fsspec,
+  pytestCheckHook,
+  biopython,
+  setuptools,
+  setuptools-scm,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyfaidx";
-  version = "0.6.2";
+  version = "0.9.0.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "d1258f8d053cba0c90fe329254e8ec59eb28b535b48d9d06e8c7f1d74b8e4531";
+  src = fetchFromGitHub {
+    owner = "mdshw5";
+    repo = "pyfaidx";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-hefRqpI9xzlfdUbr8mpQ6I1+EGAmS50f28avbtRMlSk=";
   };
 
-  propagatedBuildInputs = [ six ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  meta = with lib; {
-    homepage = "https://github.com/mdshw5/pyfaidx";
+  dependencies = [
+    importlib-metadata
+    packaging
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    biopython
+    htslib
+    fsspec
+    glibcLocales
+  ];
+
+  pythonImportsCheck = [ "pyfaidx" ];
+
+  # Require a network access to download test files
+  doCheck = false;
+
+  meta = {
     description = "Python classes for indexing, retrieval, and in-place modification of FASTA files using a samtools compatible index";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.jbedo ];
+    homepage = "https://github.com/mdshw5/pyfaidx";
+    changelog = "https://github.com/mdshw5/pyfaidx/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ jbedo ];
+    mainProgram = "faidx";
   };
-}
+})

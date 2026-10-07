@@ -1,36 +1,71 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, mock
-, pytest
-, cryptography
-, blinker
-, pyjwt
+{
+  lib,
+  blinker,
+  buildPythonPackage,
+  cryptography,
+  fetchFromGitHub,
+  mock,
+  pyjwt,
+  pytestCheckHook,
+  setuptools,
+
+  # for passthru.tests
+  django-allauth,
+  django-oauth-toolkit,
+  google-auth-oauthlib,
+  requests-oauthlib,
 }:
 
 buildPythonPackage rec {
   pname = "oauthlib";
-  version = "unstable-2020-05-08";
+  version = "3.3.1";
+  pyproject = true;
 
-  # master supports pyjwt==1.7.1
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = "46647402896db5f0d979eba9594623e889739060";
-    sha256 = "1wrdjdvlfcd74lckcgascnasrffg8sip0z673si4ag5kv4afiz3l";
+    owner = "oauthlib";
+    repo = "oauthlib";
+    tag = "v${version}";
+    hash = "sha256-ZTmR+pTNQaRQMnUA+8hXM5VACRd8Hn62KTNooy5FQyk=";
   };
 
-  checkInputs = [ mock pytest ];
-  propagatedBuildInputs = [ cryptography blinker pyjwt ];
+  nativeBuildInputs = [ setuptools ];
 
-  checkPhase = ''
-    py.test tests/
-  '';
+  optional-dependencies = {
+    rsa = [ cryptography ];
+    signedtoken = [
+      cryptography
+      pyjwt
+    ];
+    signals = [ blinker ];
+  };
 
-  meta = with lib; {
-    homepage = "https://github.com/idan/oauthlib";
-    description = "A generic, spec-compliant, thorough implementation of the OAuth request-signing logic";
-    maintainers = with maintainers; [ prikhi ];
-    license = licenses.bsd3;
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  disabledTests = [
+    # too narrow time comparison issues
+    "test_fetch_access_token"
+  ];
+
+  pythonImportsCheck = [ "oauthlib" ];
+
+  passthru.tests = {
+    inherit
+      django-allauth
+      django-oauth-toolkit
+      google-auth-oauthlib
+      requests-oauthlib
+      ;
+  };
+
+  meta = {
+    changelog = "https://github.com/oauthlib/oauthlib/blob/${src.tag}/CHANGELOG.rst";
+    description = "Generic, spec-compliant, thorough implementation of the OAuth request-signing logic";
+    homepage = "https://github.com/oauthlib/oauthlib";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ prikhi ];
   };
 }

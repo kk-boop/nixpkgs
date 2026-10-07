@@ -1,33 +1,32 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, pkg-config
-, meson
-, ninja
-, vala
-, gtk3
-, libgee
-, granite
-, polkit
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  pkg-config,
+  meson,
+  ninja,
+  vala,
+  gcr_4,
+  gtk4,
+  libadwaita,
+  libgee,
+  granite7,
+  pantheon-wayland,
+  polkit,
+  systemdLibs,
+  wrapGAppsHook4,
 }:
 
 stdenv.mkDerivation rec {
   pname = "pantheon-agent-polkit";
-  version = "1.0.4";
+  version = "8.1.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
+    repo = "pantheon-agent-polkit";
     rev = version;
-    sha256 = "1acqjjarl225yk0f68wkldsamcrzrj0ibpcxma04wq9w7jlmz60c";
-  };
-
-  passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    hash = "sha256-ge/RZhzujI++ye7Gka/28W9CQjbmy+/5NstjqcVDUXw=";
   };
 
   nativeBuildInputs = [
@@ -35,21 +34,29 @@ stdenv.mkDerivation rec {
     ninja
     pkg-config
     vala
-    wrapGAppsHook
+    wrapGAppsHook4
   ];
 
   buildInputs = [
-    granite
-    gtk3
+    gcr_4
+    granite7
+    gtk4
+    libadwaita
     libgee
+    pantheon-wayland
     polkit
+    systemdLibs
   ];
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Polkit Agent for the Pantheon Desktop";
     homepage = "https://github.com/elementary/pantheon-agent-polkit";
-    license = licenses.lgpl21Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.lgpl21Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

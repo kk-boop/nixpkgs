@@ -1,40 +1,38 @@
-{ lib
-, aiohttp
-, aresponses
-, buildPythonPackage
-, fetchFromGitHub
-, poetry-core
-, pylint
-, pytest-aiohttp
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  aresponses,
+  buildPythonPackage,
+  certifi,
+  fetchFromGitHub,
+  poetry-core,
+  pytest-aiohttp,
+  pytest-asyncio,
+  pytestCheckHook,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "pytile";
-  version = "2021.10.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "2024.12.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "bachya";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-9FbcGhRmXULJgfJOmy6mhiZwQUDNmvxZI/WxjJIbnc8=";
+    repo = "pytile";
+    tag = version;
+    hash = "sha256-6vcFGMj7E1xw01yHOq/WDpqMxd7OIiRBCmw5LForAR0=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  nativeBuildInputs = [ poetry-core ];
 
   propagatedBuildInputs = [
     aiohttp
-    pylint
+    certifi
+    yarl
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     aresponses
     pytest-aiohttp
     pytest-asyncio
@@ -46,20 +44,19 @@ buildPythonPackage rec {
     "examples/"
   ];
 
-  pythonImportsCheck = [
-    "pytile"
-  ];
+  pythonImportsCheck = [ "pytile" ];
 
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
-    description = " Python API for Tile Bluetooth trackers";
+  meta = {
+    description = "Python API for Tile Bluetooth trackers";
     longDescription = ''
       pytile is a simple Python library for retrieving information on Tile
       Bluetooth trackers (including last location and more).
     '';
     homepage = "https://github.com/bachya/pytile";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/bachya/pytile/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

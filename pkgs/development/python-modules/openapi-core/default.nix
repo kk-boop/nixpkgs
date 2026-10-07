@@ -1,71 +1,104 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, isodate
-, dictpath
-, openapi-spec-validator
-, openapi-schema-validator
-, six
-, lazy-object-proxy
-, attrs
-, werkzeug
-, parse
-, more-itertools
-, pytestCheckHook
-, falcon
-, flask
-, django
-, djangorestframework
-, responses
-, mock
+{
+  lib,
+  aiohttp,
+  aioitertools,
+  buildPythonPackage,
+  django,
+  falcon,
+  fastapi,
+  fetchFromGitHub,
+  flask,
+  httpx,
+  isodate,
+  jsonschema,
+  jsonschema-path,
+  more-itertools,
+  multidict,
+  openapi-schema-validator,
+  openapi-spec-validator,
+  parse,
+  poetry-core,
+  pytest-aiohttp,
+  pytest-cov-stub,
+  pytestCheckHook,
+  responses,
+  requests,
+  starlette,
+  webob,
+  werkzeug,
 }:
 
 buildPythonPackage rec {
   pname = "openapi-core";
-  version = "0.14.2";
+  version = "0.23.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "p1c2u";
     repo = "openapi-core";
-    rev = version;
-    sha256 = "1npsibyf8zx6z230yl19kyap8g25kqvgm7z1w6rm6jxv58yqsp7r";
+    tag = version;
+    hash = "sha256-wGaRx+IEqsvs7ygCDgh1H4di662SQhjmpB9LMP/YGKM=";
   };
 
-  postPatch = ''
-    sed -i "/^addopts/d" setup.cfg
-  '';
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
-    isodate
-    dictpath
-    openapi-spec-validator
-    openapi-schema-validator
-    six
-    lazy-object-proxy
-    attrs
-    werkzeug
-    parse
-    more-itertools
+  pythonRelaxDeps = [
+    "jsonschema-path"
   ];
 
-  checkInputs = [
+  dependencies = [
+    isodate
+    more-itertools
+    parse
+    openapi-schema-validator
+    openapi-spec-validator
+    werkzeug
+    jsonschema-path
+    jsonschema
+  ];
+
+  optional-dependencies = {
+    aiohttp = [
+      aiohttp
+      multidict
+    ];
+    django = [ django ];
+    falcon = [ falcon ];
+    fastapi = [ fastapi ];
+    flask = [ flask ];
+    requests = [ requests ];
+    starlette = [
+      aioitertools
+      starlette
+    ];
+  };
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
+    httpx
+    pytest-aiohttp
+    pytest-cov-stub
     pytestCheckHook
-    falcon
-    flask
-    django
-    djangorestframework
     responses
-    mock
+    webob
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  pytestFlags = [
+    "-Wignore::pytest.PytestRemovedIn10Warning"
+    # Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    "-Wignore::starlette.exceptions.StarletteDeprecationWarning"
   ];
 
   disabledTestPaths = [
-    # AttributeError: 'str' object has no attribute '__name__'
-    "tests/integration/validation"
+    # Requires secrets and additional configuration
+    "tests/integration/contrib/django/"
   ];
 
   disabledTests = [
-    # TypeError: Unexpected keyword arguments passed to pytest.raises: message
-    "test_string_format_invalid_value"
+    # https://github.com/p1c2u/jsonschema-path/pull/262 broke comparison of `SchemaPath`s
+    "test_returns_default_server"
   ];
 
   pythonImportsCheck = [
@@ -74,10 +107,11 @@ buildPythonPackage rec {
     "openapi_core.validation.response.validators"
   ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/python-openapi/openapi-core/releases/tag/${version}";
     description = "Client-side and server-side support for the OpenAPI Specification v3";
-    homepage = "https://github.com/p1c2u/openapi-core";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ dotlambda ];
+    homepage = "https://github.com/python-openapi/openapi-core";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

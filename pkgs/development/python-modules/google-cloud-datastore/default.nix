@@ -1,33 +1,51 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, google-cloud-core
-, libcst
-, proto-plus
-, mock
-, pytestCheckHook
-, pytest-asyncio
-, google-cloud-testutils
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-auth,
+  google-cloud-core,
+  google-cloud-testutils,
+  grpcio,
+  libcst,
+  mock,
+  proto-plus,
+  protobuf,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-cloud-datastore";
-  version = "2.4.0";
+  version = "2.26.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "4a6f04112f2685a0a5cd8c7cb7946572bb7e0f6ca7cbe0088514006fca8594ca";
+    pname = "google_cloud_datastore";
+    inherit (finalAttrs) version;
+    hash = "sha256-V6HCsn9ns6XwmtXgFcjqSzQ9TZgKhZoN2aZh3XngA/g=";
   };
 
-  propagatedBuildInputs = [
-    google-api-core
-    google-cloud-core
-    libcst
-    proto-plus
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  pythonRelaxDeps = [ "protobuf" ];
+
+  dependencies = [
+    google-api-core
+    google-auth
+    google-cloud-core
+    grpcio
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  optional-dependencies = {
+    libcst = [ libcst ];
+  };
+
+  nativeCheckInputs = [
     google-cloud-testutils
     mock
     pytestCheckHook
@@ -41,9 +59,11 @@ buildPythonPackage rec {
 
   disabledTestPaths = [
     # Requires credentials
+    "tests/system/test_aggregation_query.py"
     "tests/system/test_allocate_reserve_ids.py"
     "tests/system/test_query.py"
     "tests/system/test_put.py"
+    "tests/system/test_read_consistency.py"
     "tests/system/test_transaction.py"
   ];
 
@@ -53,10 +73,11 @@ buildPythonPackage rec {
     "google.cloud.datastore_v1"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Datastore API client library";
-    homepage = "https://github.com/googleapis/python-datastore";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://cloud.google.com/datastore";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-datastore-v${finalAttrs.version}/packages/google-cloud-datastore/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

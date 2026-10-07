@@ -1,30 +1,30 @@
-{ lib, stdenv, fetchFromGitHub, postgresql, freetds }:
+{
+  fetchFromGitHub,
+  freetds,
+  lib,
+  postgresql,
+  postgresqlBuildExtension,
+}:
 
-stdenv.mkDerivation rec {
+postgresqlBuildExtension (finalAttrs: {
   pname = "tds_fdw";
-  version = "2.0.2";
+  version = "2.0.5";
 
-  buildInputs = [ postgresql freetds ];
+  buildInputs = [ freetds ];
 
   src = fetchFromGitHub {
-    owner  = "tds-fdw";
-    repo   =  pname;
-    rev    = "refs/tags/v${version}";
-    sha256 = "024syj21gmdfkpr51l8ca70n5jimr35zwdy719b8h4zjn64ci1fk";
+    owner = "tds-fdw";
+    repo = "tds_fdw";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-4ecdErksaZ7SyCKzvSY5sD7rrKljq7BMn+gI9Yz49r0=";
   };
 
-  installPhase = ''
-    install -D tds_fdw.so                  -t $out/lib
-    install -D sql/tds_fdw--${version}.sql -t $out/share/postgresql/extension
-    install -D tds_fdw.control             -t $out/share/postgresql/extension
-  '';
-
-  meta = with lib; {
-    description = "A PostgreSQL foreign data wrapper to connect to TDS databases (Sybase and Microsoft SQL Server)";
-    homepage    = "https://github.com/tds-fdw/tds_fdw";
-    maintainers = [ maintainers.steve-chavez ];
-    platforms   = postgresql.meta.platforms;
-    license     = licenses.postgresql;
-    broken = versionAtLeast postgresql.version "11.0";
+  meta = {
+    description = "PostgreSQL foreign data wrapper to connect to TDS databases (Sybase and Microsoft SQL Server)";
+    homepage = "https://github.com/tds-fdw/tds_fdw";
+    changelog = "https://github.com/tds-fdw/tds_fdw/releases/tag/v${finalAttrs.version}";
+    maintainers = with lib.maintainers; [ steve-chavez ];
+    platforms = postgresql.meta.platforms;
+    license = lib.licenses.postgresql;
   };
-}
+})

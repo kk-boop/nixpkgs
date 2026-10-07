@@ -1,129 +1,269 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, python
-, cython
-, numpy
-, python-dateutil
-, pytz
-, scipy
-, sqlalchemy
-, tables
-, xlrd
-, xlwt
-# Test inputs
-, glibcLocales
-, hypothesis
-, jinja2
-, pytestCheckHook
-, pytest-xdist
-, pytest-asyncio
-, XlsxWriter
-# Darwin inputs
-, runtimeShell
-, libcxx
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  meson-python,
+  meson,
+  pkg-config,
+  versioneer,
+  wheel,
+
+  # propagates
+  numpy,
+  python-dateutil,
+  pytz,
+  tzdata,
+
+  # optionals
+  beautifulsoup4,
+  bottleneck,
+  blosc2,
+  fsspec,
+  gcsfs,
+  html5lib,
+  jinja2,
+  lxml,
+  matplotlib,
+  numba,
+  numexpr,
+  odfpy,
+  openpyxl,
+  psycopg2,
+  pyarrow,
+  pymysql,
+  pyqt5,
+  pyreadstat,
+  pyxlsb,
+  qtpy,
+  s3fs,
+  scipy,
+  sqlalchemy,
+  tables,
+  tabulate,
+  xarray,
+  xlrd,
+  xlsxwriter,
+  zstandard,
+
+  # tests
+  adv_cmds,
+  glibc,
+  hypothesis,
+  pytestCheckHook,
+  pytest-xdist,
+  pytest-asyncio,
+  python,
+  runtimeShell,
 }:
 
-buildPythonPackage rec {
-  pname = "pandas";
-  version = "1.3.3";
+let
+  pandas = buildPythonPackage rec {
+    pname = "pandas";
+    version = "3.0.4";
+    pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "272c8cb14aa9793eada6b1ebe81994616e647b5892a370c7135efb2924b701df";
+    src = fetchFromGitHub {
+      owner = "pandas-dev";
+      repo = "pandas";
+      tag = "v${version}";
+      postFetch = ''
+        sed -i 's/git_refnames = "[^"]*"/git_refnames = " (tag: ${src.tag})"/' $out/pandas/_version.py
+      '';
+      hash = "sha256-cPnvBVs5xXjbRoj6KU/KeNn+To9oue7H0OBaJ2JdJG4=";
+    };
+
+    # A NOTE regarding the Numpy version relaxing: Both Numpy versions 1.x &
+    # 2.x are supported. However upstream wants to always build with Numpy 2,
+    # and with it to still be able to run with a Numpy 1 or 2. We insist to
+    # perform this substitution even though python3.pkgs.numpy is of version 2
+    # nowadays, because our ecosystem unfortunately doesn't allow easily
+    # separating runtime and build-system dependencies. See also:
+    #
+    # https://discourse.nixos.org/t/several-comments-about-priorities-and-new-policies-in-the-python-ecosystem/51790
+    #
+    # Being able to build (& run) with Numpy 1 helps for python environments
+    # that override globally the `numpy` attribute to point to `numpy_1`.
+    postPatch = ''
+      substituteInPlace pyproject.toml \
+        --replace-fail "numpy>=2.0.0" numpy
+    '';
+
+    build-system = [
+      cython
+      meson-python
+      meson
+      numpy
+      pkg-config
+      versioneer
+      wheel
+    ];
+
+    enableParallelBuilding = true;
+
+    dependencies = [
+      numpy
+      python-dateutil
+      pytz
+      tzdata
+    ];
+
+    optional-dependencies =
+      let
+        extras = {
+          aws = [ s3fs ];
+          clipboard = [
+            pyqt5
+            qtpy
+          ];
+          compression = [ zstandard ];
+          computation = [
+            scipy
+            xarray
+          ];
+          excel = [
+            odfpy
+            openpyxl
+            pyxlsb
+            xlrd
+            xlsxwriter
+          ];
+          feather = [ pyarrow ];
+          fss = [ fsspec ];
+          gcp = [
+            gcsfs
+            # TODO: pandas-gqb
+          ];
+          hdf5 = [
+            blosc2
+            tables
+          ];
+          html = [
+            beautifulsoup4
+            html5lib
+            lxml
+          ];
+          mysql = [
+            sqlalchemy
+            pymysql
+          ];
+          output_formatting = [
+            jinja2
+            tabulate
+          ];
+          parquet = [ pyarrow ];
+          performance = [
+            bottleneck
+            numba
+            numexpr
+          ];
+          plot = [ matplotlib ];
+          postgresql = [
+            sqlalchemy
+            psycopg2
+          ];
+          spss = [ pyreadstat ];
+          sql-other = [ sqlalchemy ];
+          xml = [ lxml ];
+        };
+      in
+      extras // { all = lib.concatLists (lib.attrValues extras); };
+
+    doCheck = false; # various infinite recursions
+
+    passthru.tests.pytest = pandas.overridePythonAttrs (_: {
+      doCheck = true;
+    });
+
+    nativeCheckInputs = [
+      hypothesis
+      pytest-asyncio
+      pytest-xdist
+      pytestCheckHook
+    ]
+    ++ lib.concatAttrValues optional-dependencies
+    ++ lib.optionals (stdenv.hostPlatform.isLinux) [
+      # for locale executable
+      glibc
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isDarwin) [
+      # for locale executable
+      adv_cmds
+    ];
+
+    # don't max out build cores, it breaks tests
+    dontUsePytestXdist = true;
+
+    __darwinAllowLocalNetworking = true;
+
+    pytestFlags = [
+      # https://github.com/pandas-dev/pandas/issues/54907
+      "--no-strict-data-files"
+      "--numprocesses=4"
+    ];
+
+    disabledTestMarks = [
+      # https://github.com/pandas-dev/pandas/blob/main/test_fast.sh
+      "single_cpu"
+      "slow"
+      "network"
+      "db"
+      "slow_arm"
+    ];
+
+    disabledTests = [
+      # AssertionError: Did not see expected warning of class 'FutureWarning'
+      "test_parsing_tzlocal_deprecated"
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64) [
+      # tests/generic/test_finalize.py::test_binops[and_-args4-right] - AssertionError: assert {} == {'a': 1}
+      "test_binops"
+      # These tests are unreliable on aarch64-darwin. See https://github.com/pandas-dev/pandas/issues/38921.
+      "test_rolling"
+    ]
+    ++ lib.optionals stdenv.hostPlatform.is32bit [
+      # https://github.com/pandas-dev/pandas/issues/37398
+      "test_rolling_var_numerical_issues"
+    ];
+
+    # Tests have relative paths, and need to reference compiled C extensions
+    # so change directory where `import .test` is able to be resolved
+    preCheck = ''
+      export HOME=$TMPDIR
+      cd $out/${python.sitePackages}/pandas
+    ''
+    # TODO: Get locale and clipboard support working on darwin.
+    #       Until then we disable the tests.
+    + lib.optionalString stdenv.hostPlatform.isDarwin ''
+      # Fake the impure dependencies pbpaste and pbcopy
+      echo "#!${runtimeShell}" > pbcopy
+      echo "#!${runtimeShell}" > pbpaste
+      chmod a+x pbcopy pbpaste
+      export PATH=$(pwd):$PATH
+    '';
+
+    pythonImportsCheck = [ "pandas" ];
+
+    meta = {
+      # pandas devs no longer test i686, it's commonly broken
+      # broken = stdenv.hostPlatform.isi686;
+      changelog = "https://pandas.pydata.org/docs/whatsnew/index.html";
+      description = "Powerful data structures for data analysis, time series, and statistics";
+      downloadPage = "https://github.com/pandas-dev/pandas";
+      homepage = "https://pandas.pydata.org";
+      license = lib.licenses.bsd3;
+      longDescription = ''
+        Flexible and powerful data analysis / manipulation library for
+        Python, providing labeled data structures similar to R data.frame
+        objects, statistical functions, and much more.
+      '';
+      maintainers = with lib.maintainers; [
+        raskin
+      ];
+    };
   };
-
-  nativeBuildInputs = [ cython ];
-
-  buildInputs = lib.optional stdenv.isDarwin libcxx;
-
-  propagatedBuildInputs = [
-    numpy
-    python-dateutil
-    pytz
-  ];
-
-  checkInputs = [
-    glibcLocales
-    hypothesis
-    jinja2
-    pytest-asyncio
-    pytest-xdist
-    pytestCheckHook
-    XlsxWriter
-  ];
-
-  # Doesn't work with -Werror,-Wunused-command-line-argument
-  # https://github.com/NixOS/nixpkgs/issues/39687
-  hardeningDisable = lib.optional stdenv.cc.isClang "strictoverflow";
-
-  # For OSX, we need to add a dependency on libcxx, which provides
-  # `complex.h` and other libraries that pandas depends on to build.
-  postPatch = lib.optionalString stdenv.isDarwin ''
-    cpp_sdk="${lib.getDev libcxx}/include/c++/v1";
-    echo "Adding $cpp_sdk to the setup.py common_include variable"
-    substituteInPlace setup.py \
-      --replace "['pandas/src/klib', 'pandas/src']" \
-                "['pandas/src/klib', 'pandas/src', '$cpp_sdk']"
-  '';
-
-  doCheck = !stdenv.isAarch32 && !stdenv.isAarch64; # upstream doesn't test this architecture
-
-  pytestFlagsArray = [
-    "--skip-slow"
-    "--skip-network"
-    "--numprocesses" "0"
-  ];
-
-  disabledTests = [
-    # Locale-related
-    "test_names"
-    "test_dt_accessor_datetime_name_accessors"
-    "test_datetime_name_accessors"
-    # Disable IO related tests because IO data is no longer distributed
-    "io"
-    # Tries to import from pandas.tests post install
-    "util_in_top_level"
-    # Tries to import compiled C extension locally
-    "test_missing_required_dependency"
-    # AssertionError with 1.2.3
-    "test_from_coo"
-    # AssertionError: No common DType exists for the given inputs
-    "test_comparison_invalid"
-  ] ++ lib.optionals stdenv.isDarwin [
-    "test_locale"
-    "test_clipboard"
-  ];
-
-  # Tests have relative paths, and need to reference compiled C extensions
-  # so change directory where `import .test` is able to be resolved
-  preCheck = ''
-    cd $out/${python.sitePackages}/pandas
-    export LC_ALL="en_US.UTF-8"
-    PYTHONPATH=$out/${python.sitePackages}:$PYTHONPATH
-  ''
-  # TODO: Get locale and clipboard support working on darwin.
-  #       Until then we disable the tests.
-  + lib.optionalString stdenv.isDarwin ''
-    # Fake the impure dependencies pbpaste and pbcopy
-    echo "#!${runtimeShell}" > pbcopy
-    echo "#!${runtimeShell}" > pbpaste
-    chmod a+x pbcopy pbpaste
-    export PATH=$(pwd):$PATH
-  '';
-
-  pythonImportsCheck = [ "pandas" ];
-
-  meta = with lib; {
-    # https://github.com/pandas-dev/pandas/issues/14866
-    # pandas devs are no longer testing i686 so safer to assume it's broken
-    broken = stdenv.isi686;
-    homepage = "https://pandas.pydata.org/";
-    changelog = "https://pandas.pydata.org/docs/whatsnew/index.html";
-    description = "Python Data Analysis Library";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ raskin fridh knedlsepp ];
-    platforms = platforms.unix;
-  };
-}
+in
+pandas

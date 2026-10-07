@@ -1,44 +1,57 @@
-{ lib
-, aiohttp
-, backoff
-, buildPythonPackage
-, fetchFromGitHub
-, setuptools-scm
-, yarl
+{
+  lib,
+  aiohttp,
+  backoff,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch,
+  reverse-geocode,
+  setuptools-scm,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "geocachingapi";
-  version = "0.1.0";
+  version = "0.3.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Sholofly";
     repo = "geocachingapi-python";
-    rev = version;
-    sha256 = "1vdknsxd7rvw6g5lwxlxj97l9ic8cch8rdki3aczs6xzw5adxhcs";
+    tag = version;
+    hash = "sha256-zme1jqn3qtoo39zyj4dKxt9M7gypMqJu0bfgY1iYhjs=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
+  patches = [
+    # https://github.com/Sholofly/geocachingapi-python/pull/25
+    (fetchpatch {
+      name = "replace-async-timeout-with-asyncio.timeout.patch";
+      url = "https://github.com/Sholofly/geocachingapi-python/commit/2ba042bc2a6ebb4a494f71821502df4534eeb1a1.patch";
+      hash = "sha256-AtjZJ9tnBeOv76fVIiqY45MeYTzcWvXCtbc6DevH8aM=";
+    })
   ];
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
+  build-system = [ setuptools-scm ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
     backoff
+    reverse-geocode
     yarl
   ];
+
+  pythonRelaxDeps = [ "reverse_geocode" ];
 
   # Tests require a token and network access
   doCheck = false;
 
   pythonImportsCheck = [ "geocachingapi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python API to control the Geocaching API";
     homepage = "https://github.com/Sholofly/geocachingapi-python";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/Sholofly/geocachingapi-python/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

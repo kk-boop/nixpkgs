@@ -1,29 +1,33 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, ninja
-, pkg-config
-, vala
-, wrapGAppsHook
-, glib
-, granite
-, gtk3
-, libhandy
-, systemd
-, vte
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  wrapGAppsHook4,
+  accountsservice,
+  glib,
+  granite7,
+  gsettings-desktop-schemas,
+  gtk4,
+  pantheon-wayland,
+  systemdLibs,
+  libadwaita,
+  libx11,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation {
   pname = "xdg-desktop-portal-pantheon";
-  version = "1.0.1";
+  version = "8.2.0-unstable-2026-06-04";
 
   src = fetchFromGitHub {
     owner = "elementary";
     repo = "portals";
-    rev = version;
-    sha256 = "sha256-8gBMjCMEzrFmKHhkXsgcIESC93EOT0ADkRUIJMmerjw=";
+    rev = "c5f6fa1179bfa51429ddf4b2d268c7f2295dfff8";
+    hash = "sha256-gHWvY205Jy69LpNtqCr+prtalf7bSVZ971sGbhMuqnA=";
   };
 
   nativeBuildInputs = [
@@ -31,16 +35,19 @@ stdenv.mkDerivation rec {
     ninja
     pkg-config
     vala
-    wrapGAppsHook
+    wrapGAppsHook4
   ];
 
   buildInputs = [
+    accountsservice
     glib
-    granite
-    gtk3
-    libhandy
-    systemd
-    vte
+    granite7
+    gsettings-desktop-schemas
+    gtk4
+    pantheon-wayland
+    systemdLibs
+    libadwaita
+    libx11
   ];
 
   mesonFlags = [
@@ -48,16 +55,14 @@ stdenv.mkDerivation rec {
   ];
 
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Backend implementation for xdg-desktop-portal for the Pantheon desktop environment";
     homepage = "https://github.com/elementary/portals";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

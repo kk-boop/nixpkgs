@@ -1,42 +1,62 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
-, python-dateutil
-, ipython_genutils
-, decorator
-, pyzmq
-, ipython
-, jupyter-client
-, ipykernel
-, tornado
-, isPy3k
-, futures ? null
+{
+  lib,
+  buildPythonPackage,
+  decorator,
+  fetchPypi,
+  hatchling,
+  ipykernel,
+  ipython,
+  jupyter-client,
+  psutil,
+  python-dateutil,
+  pyzmq,
+  tornado,
+  tqdm,
+  traitlets,
 }:
 
 buildPythonPackage rec {
   pname = "ipyparallel";
-  version = "6.3.0";
+  version = "9.2.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0a97b276c62db633e9e97a816282bdd166f9df74e28204f0c8fa54b71944cfdc";
+    hash = "sha256-KzG7TpRwjn/7TuZQHX9fZk334cTFcukeng0SSExqaRA=";
   };
 
-  buildInputs = [ nose ];
+  # We do not need the jupyterlab build dependency, because we do not need to
+  # build any JS components; these are present already in the PyPI artifact.
+  #
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace '"jupyterlab==4.*",' ""
+  '';
 
-  propagatedBuildInputs = [ python-dateutil ipython_genutils decorator pyzmq ipython jupyter-client ipykernel tornado
-  ] ++ lib.optionals (!isPy3k) [ futures ];
+  build-system = [ hatchling ];
+
+  dependencies = [
+    decorator
+    ipykernel
+    ipython
+    jupyter-client
+    psutil
+    python-dateutil
+    pyzmq
+    tornado
+    tqdm
+    traitlets
+  ];
 
   # Requires access to cluster
   doCheck = false;
 
-  disabled = !isPy3k;
+  pythonImportsCheck = [ "ipyparallel" ];
 
   meta = {
     description = "Interactive Parallel Computing with IPython";
-    homepage = "http://ipython.org/";
+    homepage = "https://ipyparallel.readthedocs.io/";
+    changelog = "https://github.com/ipython/ipyparallel/blob/${version}/docs/source/changelog.md";
     license = lib.licenses.bsd3;
-    maintainers = with lib.maintainers; [ fridh ];
   };
 }

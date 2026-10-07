@@ -1,42 +1,60 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  loguru,
+  pytest-asyncio,
+  pytestCheckHook,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "python-utils";
-  version = "2.5.6";
+  version = "3.9.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "WoLpH";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0gd2jana5w6bn7z58di4a8dwcxvc8rx282jawbw7ws7qm2a5klz3";
+    repo = "python-utils";
+    tag = "v${version}";
+    hash = "sha256-lzLzYI5jShfIwQqvfA8UtPjGawXE80ww7jb/gPzpeDo=";
   };
 
-  # disable coverage and linting
   postPatch = ''
-    sed -i '/--cov/d' pytest.ini
-    sed -i '/--flake8/d' pytest.ini
+    sed -i pytest.ini \
+      -e '/--cov/d' \
+      -e '/--mypy/d'
   '';
 
-  propagatedBuildInputs = [
-    six
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ typing-extensions ];
+
+  optional-dependencies = {
+    loguru = [ loguru ];
+  };
+
+  nativeCheckInputs = [
+    pytest-asyncio
     pytestCheckHook
+  ]
+  ++ optional-dependencies.loguru;
+
+  pythonImportsCheck = [ "python_utils" ];
+
+  enabledTestPaths = [ "_python_utils_tests" ];
+
+  disabledTests = [
+    # Flaky tests
+    "test_timeout_generator"
   ];
 
-  pytestFlagsArray = [
-    "_python_utils_tests"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Module with some convenient utilities";
     homepage = "https://github.com/WoLpH/python-utils";
-    license = licenses.bsd3;
+    changelog = "https://github.com/wolph/python-utils/releases/tag/v${version}";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

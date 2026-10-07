@@ -1,54 +1,78 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, oslo-config
-, oslo-context
-, oslo-serialization
-, oslo-utils
-, oslotest
-, pbr
-, pyinotify
-, python-dateutil
-, stestr
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  debtcollector,
+  oslo-config,
+  oslo-context,
+  oslo-i18n,
+  oslo-serialization,
+  oslo-utils,
+  pbr,
+  python-dateutil,
+
+  # tests
+  eventlet,
+  oslotest,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "oslo-log";
-  version = "4.6.1";
+  version = "8.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    pname = "oslo.log";
-    inherit version;
-    sha256 = "0dlnxjci9mpwhgfv19fy1z7xrdp8m95skrj5dr60all3pr7n22f6";
+  src = fetchFromGitHub {
+    owner = "openstack";
+    repo = "oslo.log";
+    tag = version;
+    hash = "sha256-teESuCQg8fxCWPMUWTTYyBIGSn9m916Uoy3UkWArVVs=";
   };
 
-  propagatedBuildInputs = [
+  # Manually set version because prb wants to get it from the git upstream repository (and we are
+  # installing from tarball instead)
+  env.PBR_VERSION = version;
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    debtcollector
     oslo-config
     oslo-context
+    oslo-i18n
     oslo-serialization
     oslo-utils
     pbr
     python-dateutil
-  ] ++ lib.optionals stdenv.isLinux [
-    pyinotify
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    eventlet
     oslotest
-    stestr
+    pytestCheckHook
   ];
 
-  checkPhase = ''
-    stestr run
-  '';
+  disabledTests = [
+    # Incompatible Exception Representation, displaying natively
+    "test_logging_handle_error"
+    "test_rotate_log"
+    "test_timed_rotate_log"
+  ];
 
   pythonImportsCheck = [ "oslo_log" ];
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "oslo.log library";
+    mainProgram = "convert-json";
     homepage = "https://github.com/openstack/oslo.log";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
 }

@@ -1,22 +1,25 @@
-{ lib
-, buildDunePackage
-, ppx_sexp_conv
-, base
-, async
-, async_kernel
-, async_unix
-, cohttp
-, conduit-async
-, uri
-, uri-sexp
-, logs
-, fmt
-, sexplib0
-, ipaddr
-, magic-mime
-, ounit
-, mirage-crypto
-, core
+{
+  lib,
+  buildDunePackage,
+  ppx_sexp_conv,
+  base,
+  async,
+  async_kernel,
+  async_unix,
+  cohttp,
+  conduit-async,
+  core_unix ? null,
+  uri,
+  uri-sexp,
+  logs,
+  fmt,
+  sexplib0,
+  ipaddr,
+  magic-mime,
+  ounit,
+  mirage-crypto,
+  core,
+  digestif,
 }:
 
 buildDunePackage {
@@ -25,9 +28,9 @@ buildDunePackage {
   inherit (cohttp)
     version
     src
-    minimumOCamlVersion
-    useDune2
     ;
+
+  minimalOCamlVersion = if lib.versionOlder cohttp.version "6.0.0" then "4.14" else "5.1";
 
   buildInputs = [ ppx_sexp_conv ];
 
@@ -38,6 +41,7 @@ buildDunePackage {
     async_unix
     async
     base
+    core_unix
     magic-mime
     logs
     fmt
@@ -47,11 +51,16 @@ buildDunePackage {
     ipaddr
   ];
 
+  __darwinAllowLocalNetworking = true;
+
   doCheck = true;
   checkInputs = [
     ounit
-    mirage-crypto
     core
+    digestif
+  ]
+  ++ lib.optionals (lib.versionOlder cohttp.version "6.0.0") [
+    mirage-crypto
   ];
 
   meta = cohttp.meta // {

@@ -1,49 +1,97 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, mock
-, noiseprotocol
-, protobuf
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, zeroconf
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  setuptools,
+
+  # dependencies
+  aiohappyeyeballs,
+  async-interrupt,
+  chacha20poly1305-reuseable,
+  cryptography,
+  noiseprotocol,
+  protobuf,
+  tzdata,
+  tzlocal,
+  zeroconf,
+
+  # tests
+  mock,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aioesphomeapi";
-  version = "10.6.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "46.3.0"; # must track the major version that home-assistant pins
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "esphome";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1z9pybis8yi938i3cgzma4w452ik9vggyyhs3y542zpk4183d7xw";
+    repo = "aioesphomeapi";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-xwsNlgcYXUOJdJmpQ3/O1gtYptAeX2Vtn4ywxbdNGOM=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools>=83.0.0" setuptools \
+      --replace-fail "Cython>=3.2.9" Cython
+  '';
+
+  build-system = [
+    setuptools
+    cython
+  ];
+
+  pythonRelaxDeps = [
+    "aiohappyeyeballs"
+    "cryptography"
+  ];
+
+  dependencies = [
+    aiohappyeyeballs
+    async-interrupt
+    chacha20poly1305-reuseable
+    cryptography
     noiseprotocol
     protobuf
+    tzdata
+    tzlocal
     zeroconf
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     mock
     pytest-asyncio
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "aioesphomeapi"
+  # Lack of network sandboxing leads to conflicting listeners when testing
+  # this package e.g. in nixpkgs-review on the two supported python package sets.
+  doCheck = !stdenv.hostPlatform.isDarwin;
+
+  disabledTestPaths = [
+    # benchmarking requires pytest-codespeed
+    "tests/benchmarks"
   ];
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  pythonImportsCheck = [ "aioesphomeapi" ];
+
+  meta = {
     description = "Python Client for ESPHome native API";
     homepage = "https://github.com/esphome/aioesphomeapi";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab hexa ];
+    changelog = "https://github.com/esphome/aioesphomeapi/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      fab
+      hexa
+    ];
   };
-}
+})

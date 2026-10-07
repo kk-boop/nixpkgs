@@ -1,75 +1,81 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, dask
-, bokeh
-, toolz
-, datashape
-, numba
-, numpy
-, pandas
-, pillow
-, xarray
-, colorcet
-, param
-, pyct
-, scipy
-, pytestCheckHook
-, nbsmoke
-, fastparquet
-, nbconvert
-, pytest-xdist
-, netcdf4
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  hatch-vcs,
+  colorcet,
+  hypothesis,
+  multipledispatch,
+  numba,
+  numpy,
+  pandas,
+  param,
+  pyct,
+  requests,
+  scipy,
+  toolz,
+  packaging,
+  xarray,
+  pytestCheckHook,
+  pytest-xdist,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "datashader";
-  version = "0.13.0";
+  version = "0.19.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-6JscHm1QjDmXOLLa83qhAvY/xwvlPM6duQ1lSxnCVV8=";
+  src = fetchFromGitHub {
+    owner = "holoviz";
+    repo = "datashader";
+    tag = "v${version}";
+    hash = "sha256-jP6e7YmLyg3wd8QQZ4Vzr7vRFsRmttjIrEgIFqd6+hQ=";
   };
 
-  propagatedBuildInputs = [
-    dask
-    bokeh
-    toolz
-    datashape
+  build-system = [
+    hatchling
+    hatch-vcs
+  ];
+
+  dependencies = [
+    colorcet
+    multipledispatch
     numba
     numpy
     pandas
-    pillow
-    xarray
-    colorcet
     param
     pyct
+    requests
     scipy
+    toolz
+    packaging
+    xarray
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
-    pytest-xdist # not needed
-    nbsmoke
-    fastparquet
-    nbconvert
-    netcdf4
-  ];
-
-  pytestFlagsArray = [
-    "-n $NIX_BUILD_CORES"
-    "datashader"
+    pytest-xdist
+    writableTmpDirAsHomeHook
+    hypothesis
   ];
 
   disabledTestPaths = [
-    # 31/50 tests fail with TypeErrors
-    "datashader/tests/test_datatypes.py"
+    "scripts/download_data.py"
   ];
 
-  meta = with lib;{
+  pythonImportsCheck = [ "datashader" ];
+
+  meta = {
     description = "Data visualization toolchain based on aggregating into a grid";
+    mainProgram = "datashader";
     homepage = "https://datashader.org";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/holoviz/datashader/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [
+      nickcao
+      locnide
+    ];
   };
 }

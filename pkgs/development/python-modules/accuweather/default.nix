@@ -1,50 +1,58 @@
-{ lib
-, aiohttp
-, aioresponses
-, buildPythonPackage
-, fetchFromGitHub
-, pytest-asyncio
-, pytest-error-for-skips
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  aioresponses,
+  buildPythonPackage,
+  fetchFromGitHub,
+  orjson,
+  pyprojectVersionPatchHook,
+  pytest-asyncio,
+  pytest-error-for-skips,
+  pytestCheckHook,
+  setuptools,
+  syrupy,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "accuweather";
-  version = "0.3.0";
-  disabled = pythonOlder "3.6";
+  version = "5.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "bieniu";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-Kn2hP0mdnC4+Lk8wsTznC23CsYLYKhya+HlHox1Fo2o=";
+    repo = "accuweather";
+    tag = version;
+    hash = "sha256-IXsf78AN5Gl6itQBfxwMEWE0ggoUohD0RgMgsgLaXOI=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "pytest-runner" ""
-    substituteInPlace setup.cfg \
-      --replace "--cov --cov-report term-missing" ""
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
-    aiohttp
+  nativeBuildInputs = [
+    pyprojectVersionPatchHook
   ];
 
-  checkInputs = [
+  dependencies = [
+    aiohttp
+    orjson
+    yarl
+  ];
+
+  nativeCheckInputs = [
     aioresponses
     pytest-asyncio
     pytest-error-for-skips
     pytestCheckHook
+    syrupy
   ];
 
   pythonImportsCheck = [ "accuweather" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python wrapper for getting weather data from AccuWeather servers";
     homepage = "https://github.com/bieniu/accuweather";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ jamiemagee ];
+    changelog = "https://github.com/bieniu/accuweather/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ jamiemagee ];
   };
 }

@@ -1,52 +1,47 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, faker
-, fetchFromGitHub
-, pytest-aiohttp
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  faker,
+  fetchFromGitHub,
+  pytest-aiohttp,
+  pytest-mock,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiolookin";
-  version = "0.0.4";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "1.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ANMalko";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-Kqys76c/9Mw3ETgF0N4rA9mz5DELwTMjAK38PPN8Ahs=";
+    repo = "aiolookin";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-G3/lUgV60CMLskUo83TlvLLIfJtu5DEz+94mdVI4OrI=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ aiohttp ];
+
+  doCheck = false; # all tests are async and no async plugin is configured
+
+  nativeCheckInputs = [
     faker
     pytest-aiohttp
     pytest-mock
     pytestCheckHook
   ];
 
-  disabledTests = [
-    # Not all tests are ready yet
-    "test_successful"
-  ];
+  pythonImportsCheck = [ "aiolookin" ];
 
-  pythonImportsCheck = [
-    "aiolookin"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Python client for interacting with LOOKin devices";
     homepage = "https://github.com/ANMalko/aiolookin";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/ANMalko/aiolookin/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,61 +1,65 @@
-{ lib
-, mkDerivation
-, fetchFromGitHub
-, cmake
-, pkg-config
-, lxqt-build-tools
-, qtbase
-, qttools
-, qtsvg
-, kwindowsystem
-, liblxqt
-, libqtxdg
-, lxqt-globalkeys
-, qtx11extras
-, menu-cache
-, muparser
-, pcre
-, lxqtUpdateScript
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  kwindowsystem,
+  layer-shell-qt,
+  liblxqt,
+  libqtxdg,
+  lxqt-build-tools,
+  lxqt-globalkeys,
+  muparser,
+  pcre2,
+  pkg-config,
+  qtbase,
+  qtsvg,
+  qttools,
+  qtwayland,
+  wrapQtAppsHook,
+  gitUpdater,
 }:
 
-mkDerivation rec {
+stdenv.mkDerivation rec {
   pname = "lxqt-runner";
-  version = "1.0.0";
+  version = "2.4.0";
 
   src = fetchFromGitHub {
     owner = "lxqt";
-    repo = pname;
+    repo = "lxqt-runner";
     rev = version;
-    sha256 = "06b7l2jkh0h4ikddh82nxkz7qhg5ap7l016klg3jl2x659z59hpj";
+    hash = "sha256-L/9STKrYTZP/Ey1BCLaZFRdeipBAWdKkXIoiHvd3vq4=";
   };
 
   nativeBuildInputs = [
     cmake
     pkg-config
     lxqt-build-tools
+    qttools
+    wrapQtAppsHook
   ];
 
   buildInputs = [
-    qtbase
-    qttools
-    qtsvg
-    qtx11extras
     kwindowsystem
+    layer-shell-qt
     liblxqt
     libqtxdg
     lxqt-globalkeys
-    menu-cache
     muparser
-    pcre
+    pcre2
+    qtbase
+    qtsvg
+    qtwayland
   ];
 
-  passthru.updateScript = lxqtUpdateScript { inherit pname version src; };
+  passthru.updateScript = gitUpdater { };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/lxqt/lxqt-runner";
     description = "Tool used to launch programs quickly by typing their names";
-    license = licenses.lgpl21Plus;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ romildo ];
+    mainProgram = "lxqt-runner";
+    license = lib.licenses.lgpl21Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.lxqt ];
   };
 }

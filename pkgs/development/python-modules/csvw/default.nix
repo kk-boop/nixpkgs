@@ -1,46 +1,68 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, attrs
-, isodate
-, python-dateutil
-, rfc3986
-, uritemplate
-, mock
-, pytestCheckHook
-, pytest-mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  attrs,
+  babel,
+  frictionless,
+  isodate,
+  jsonschema,
+  language-tags,
+  python-dateutil,
+  rdflib,
+  requests,
+  rfc3986,
+  setuptools,
+  termcolor,
+  uritemplate,
+  pytestCheckHook,
+  pytest-cov-stub,
+  pytest-mock,
+  requests-mock,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "csvw";
-  version = "1.11.0";
-  disabled = pythonOlder "3.6";
+  version = "3.7.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "cldf";
     repo = "csvw";
-    rev = "v${version}";
-    sha256 = "1393xwqawaxsflbq62vks92vv4zch8p6dd1mdvdi7j4vvf0zljkg";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-HftvI4xJy/MX0WTIFNyZqNqIJIlHsWhhURpeQ1XqrT0=";
   };
 
-  patchPhase = ''
-    substituteInPlace setup.cfg --replace "--cov" ""
+  postPatch = ''
+    substituteInPlace src/csvw/__main__.py \
+      --replace-fail "'frictionless'" "'${lib.getExe frictionless}'"
   '';
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     attrs
+    babel
+    frictionless
     isodate
+    jsonschema
     python-dateutil
+    requests
+    rdflib
     rfc3986
     uritemplate
+    termcolor
+    language-tags
   ];
 
-  checkInputs = [
-    mock
+  nativeCheckInputs = [
     pytestCheckHook
+    pytest-cov-stub
     pytest-mock
+    requests-mock
   ];
+
+  pythonRelaxDeps = [ "rfc3986" ];
 
   disabledTests = [
     # this test is flaky on darwin because it depends on the resolution of filesystem mtimes
@@ -48,10 +70,17 @@ buildPythonPackage rec {
     "test_write_file_exists"
   ];
 
-  meta = with lib; {
+  disabledTestPaths = [
+    # Missing manifest-json.jsonld
+    "tests/test_conformance.py"
+  ];
+
+  pythonImportsCheck = [ "csvw" ];
+
+  meta = {
     description = "CSV on the Web";
     homepage = "https://github.com/cldf/csvw";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ hexa ];
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

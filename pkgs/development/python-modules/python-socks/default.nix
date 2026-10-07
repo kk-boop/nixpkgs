@@ -1,22 +1,67 @@
-{ lib, buildPythonPackage, trio, curio, async-timeout, fetchPypi, pythonOlder }:
+{
+  lib,
+  async-timeout,
+  buildPythonPackage,
+  curio,
+  fetchFromGitHub,
+  anyio,
+  flask,
+  pytest-asyncio,
+  pytest-trio,
+  pytestCheckHook,
+  setuptools,
+  tiny-proxy,
+  trio,
+  trustme,
+  yarl,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-socks";
-  version = "1.2.4";
+  version = "2.8.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1n6xb18jy41ybgkmamakg6psp3qididd45qknxiggngaiibz43kx";
+  __darwinAllowLocalNetworking = true;
+
+  src = fetchFromGitHub {
+    owner = "romis2012";
+    repo = "python-socks";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Eu4xeBZbZvAGfFArMiUlUQQa4yywKWj+azv+OHiKJfU=";
   };
 
-  disabled = pythonOlder "3.6.1";
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ trio curio async-timeout ];
+  dependencies = [
+    trio
+    curio
+    async-timeout
+  ];
 
-  meta = with lib; {
+  optional-dependencies = {
+    trio = [ trio ];
+    curio = [ curio ];
+    anyio = [ anyio ];
+  };
+
+  nativeCheckInputs = [
+    anyio
+    flask
+    pytest-asyncio
+    pytest-trio
+    pytestCheckHook
+    tiny-proxy
+    trustme
+    yarl
+  ];
+
+  pythonImportsCheck = [ "python_socks" ];
+
+  meta = {
+    changelog = "https://github.com/romis2012/python-socks/releases/tag/${finalAttrs.src.tag}";
     description = "Core proxy client (SOCKS4, SOCKS5, HTTP) functionality for Python";
     homepage = "https://github.com/romis2012/python-socks";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ mjlbach ];
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

@@ -1,37 +1,65 @@
-{ lib
-, callPackage
-, fetchPypi
-, buildPythonPackage
-, pytorch
-, pythonOlder
-, spacy
-, spacy-alignments
-, srsly
-, transformers
+{
+  lib,
+  callPackage,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  setuptools,
+
+  # dependencies
+  numpy,
+  spacy,
+  spacy-alignments,
+  srsly,
+  torch,
+  transformers,
+
+  # tests
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "spacy-transformers";
-  version = "1.1.3";
+  version = "1.3.9";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "f4f553d3d2a065147a8c1292b5d9adf050c0f78dd15bb05c9614341cf88c5574";
+  src = fetchFromGitHub {
+    owner = "explosion";
+    repo = "spacy-transformers";
+    tag = "release-v${finalAttrs.version}";
+    hash = "sha256-06M/e8/+hMVQdZfqyI3qGaZY7iznMwMtblEkFR6Sro0=";
   };
 
+  # ImportError: cannot import name 'BatchEncoding' from 'transformers.tokenization_utils' (unknown location)
   postPatch = ''
-    sed -i 's/transformers>=3.4.0,<4.12.0/transformers/' setup.cfg
+    substituteInPlace \
+      spacy_transformers/data_classes.py \
+      spacy_transformers/layers/transformer_model.py \
+      spacy_transformers/util.py \
+      --replace-fail \
+        "from transformers.tokenization_utils import BatchEncoding" \
+        "from transformers import BatchEncoding"
   '';
 
-  propagatedBuildInputs = [
-    pytorch
+  build-system = [
+    cython
+    setuptools
+  ];
+
+  dependencies = [
+    numpy
     spacy
     spacy-alignments
     srsly
+    torch
     transformers
   ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonRelaxDeps = [ "transformers" ];
 
   # Test fails due to missing arguments for trfs2arrays().
   doCheck = false;
@@ -40,10 +68,11 @@ buildPythonPackage rec {
 
   passthru.tests.annotation = callPackage ./annotation-test { };
 
-  meta = with lib; {
+  meta = {
     description = "spaCy pipelines for pretrained BERT, XLNet and GPT-2";
     homepage = "https://github.com/explosion/spacy-transformers";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/explosion/spacy-transformers/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ nickcao ];
   };
-}
+})

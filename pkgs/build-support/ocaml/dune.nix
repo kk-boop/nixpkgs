@@ -1,42 +1,90 @@
-{ lib, stdenv, ocaml, findlib, dune_1, dune_2 }:
+{
+  lib,
+  stdenv,
+  ocaml,
+  findlib,
+  dune_2,
+  dune_3,
+}:
 
-{ pname, version, nativeBuildInputs ? [], enableParallelBuilding ? true, ... }@args:
+lib.extendMkDerivation {
+  constructDrv = stdenv.mkDerivation;
+  excludeDrvArgNames = [
+    "minimalOCamlVersion"
+    "duneVersion"
+  ];
+  extendDrvArgs =
+    finalAttrs:
+    {
+      pname,
+      version,
+      dunePackages ? [ pname ],
+      nativeBuildInputs ? [ ],
+      enableParallelBuilding ? true,
+      ...
+    }@args:
 
-let Dune = if args.useDune2 or false then dune_2 else dune_1; in
+    let
+      Dune =
+        let
+          dune-version = args.duneVersion or "3";
+        in
+        {
+          "1" = throw "Support for dune version 1 has been removed";
+          "2" = dune_2;
+          "3" = dune_3;
+        }
+        ."${dune-version}";
+    in
 
-if (args ? minimumOCamlVersion && ! lib.versionAtLeast ocaml.version args.minimumOCamlVersion) ||
-   (args ? minimalOCamlVersion && ! lib.versionAtLeast ocaml.version args.minimalOCamlVersion)
-then throw "${pname}-${version} is not available for OCaml ${ocaml.version}"
-else
+    if args ? minimalOCamlVersion && lib.versionOlder ocaml.version args.minimalOCamlVersion then
+      throw "${pname}-${version} is not available for OCaml ${ocaml.version}"
+    else
+      {
+        name = "ocaml${ocaml.version}-${pname}-${finalAttrs.version}";
 
-stdenv.mkDerivation ({
+        strictDeps = true;
 
-  inherit enableParallelBuilding;
-  dontAddStaticConfigureFlags = true;
-  configurePlatforms = [];
+        inherit enableParallelBuilding;
+        dontAddStaticConfigureFlags = true;
+        configurePlatforms = [ ];
 
-  buildPhase = ''
-    runHook preBuild
-    dune build -p ${pname} ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
-    runHook postBuild
-  '';
-  checkPhase = ''
-    runHook preCheck
-    dune runtest -p ${pname} ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
-    runHook postCheck
-  '';
-  installPhase = ''
-    runHook preInstall
-    dune install --prefix $out --libdir $OCAMLFIND_DESTDIR ${pname}
-    runHook postInstall
-  '';
+        nativeBuildInputs = [
+          ocaml
+          Dune
+          findlib
+        ]
+        ++ nativeBuildInputs;
 
-} // (builtins.removeAttrs args [ "minimalOCamlVersion" ]) // {
+        buildPhase =
+          args.buildPhase or ''
+            runHook preBuild
+            dune build -p ${lib.concatStringsSep "," dunePackages} ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
+            runHook postBuild
+          '';
 
-  name = "ocaml${ocaml.version}-${pname}-${version}";
+        installPhase =
+          args.installPhase or ''
+            runHook preInstall
+            dune install --prefix $out --libdir $OCAMLFIND_DESTDIR ${lib.concatStringsSep " " dunePackages} \
+             ${
+               if lib.versionAtLeast Dune.version "2.9" then
+                 "--docdir $out/share/doc --mandir $out/share/man"
+               else
+                 ""
+             }
+            runHook postInstall
+          '';
 
-  nativeBuildInputs = [ ocaml Dune findlib ] ++ nativeBuildInputs;
+        checkPhase =
+          args.checkPhase or ''
+            runHook preCheck
+            dune runtest -p ${lib.concatStringsSep "," dunePackages} ''${enableParallelBuilding:+-j $NIX_BUILD_CORES}
+            runHook postCheck
+          '';
 
-  meta = (args.meta or {}) // { platforms = args.meta.platforms or ocaml.meta.platforms; };
-
-})
+        meta = (args.meta or { }) // {
+          platforms = args.meta.platforms or ocaml.meta.platforms;
+        };
+      };
+}

@@ -1,24 +1,35 @@
-{ lib
-, asn1crypto
-, asysocks
-, buildPythonPackage
-, fetchPypi
-, oscrypto
+{
+  lib,
+  asn1crypto,
+  asysocks,
+  buildPythonPackage,
+  fetchPypi,
+  oscrypto,
+  setuptools,
+  six,
+  tqdm,
+  unicrypto,
 }:
 
 buildPythonPackage rec {
   pname = "minikerberos";
-  version = "0.2.14";
+  version = "0.4.9";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-MND7r4Gkx9RnEMgEl62QXFYr1NEloihQ2HeU9hyhsx8=";
+    hash = "sha256-CVqYChl2rf9Iw94fc9de/ps52nIU3HyJGiNjJAcWqec=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     asn1crypto
     asysocks
     oscrypto
+    six
+    tqdm
+    unicrypto
   ];
 
   # no tests are published: https://github.com/skelsec/minikerberos/pull/5
@@ -26,10 +37,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "minikerberos" ];
 
-  meta = with lib; {
+  meta = {
     description = "Kerberos manipulation library in Python";
     homepage = "https://github.com/skelsec/minikerberos";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/skelsec/minikerberos/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

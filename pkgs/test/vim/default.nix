@@ -1,63 +1,99 @@
-{ vimUtils, vim_configurable, writeText, vimPlugins
-, lib, fetchFromGitHub
-, pkgs
+{
+  lib,
+  vimUtils,
+  vim-full,
+  vimPlugins,
+
+  pkgs,
 }:
-let
-  inherit (vimUtils) buildVimPluginFrom2Nix;
-
-  packages.myVimPackage.start = with vimPlugins; [ vim-nix ];
-
-in
-  pkgs.recurseIntoAttrs (rec {
-  vim_empty_config = vimUtils.vimrcFile { beforePlugins = ""; customRC = ""; };
+lib.recurseIntoAttrs {
+  vim_empty_config = vimUtils.vimrcFile {
+    beforePlugins = "";
+    customRC = "";
+  };
 
   ### vim tests
   ##################
-  vim_with_vim2nix = vim_configurable.customize {
-    name = "vim"; vimrcConfig.vam.pluginDictionaries = [ "vim-addon-vim2nix" ];
-  };
 
-  # test cases:
-  test_vim_with_vim_nix_using_vam = vim_configurable.customize {
-   name = "vim-with-vim-addon-nix-using-vam";
-    vimrcConfig.vam.pluginDictionaries = [{name = "vim-nix"; }];
-  };
-
-  test_vim_with_vim_nix_using_pathogen = vim_configurable.customize {
-    name = "vim-with-vim-addon-nix-using-pathogen";
-    vimrcConfig.pathogen.pluginNames = [ "vim-nix" ];
-  };
-
-  test_vim_with_vim_nix_using_plug = vim_configurable.customize {
+  test_vim_with_vim_nix_using_plug = vim-full.customize {
     name = "vim-with-vim-addon-nix-using-plug";
     vimrcConfig.plug.plugins = with vimPlugins; [ vim-nix ];
   };
 
-  test_vim_with_vim_nix = vim_configurable.customize {
+  test_vim_with_vim_nix = vim-full.customize {
     name = "vim-with-vim-addon-nix";
     vimrcConfig.packages.myVimPackage.start = with vimPlugins; [ vim-nix ];
   };
 
-  # regression test for https://github.com/NixOS/nixpkgs/issues/53112
-  # The user may have specified their own plugins which may not be formatted
-  # exactly as the generated ones. In particular, they may not have the `pname`
-  # attribute.
-  test_vim_with_custom_plugin = vim_configurable.customize {
-    name = "vim_with_custom_plugin";
-    vimrcConfig.vam.knownPlugins =
-      vimPlugins // ({
-        vim-trailing-whitespace = buildVimPluginFrom2Nix {
-          name = "vim-trailing-whitespace";
-          src = fetchFromGitHub {
-            owner = "bronson";
-            repo = "vim-trailing-whitespace";
-            rev = "4c596548216b7c19971f8fc94e38ef1a2b55fee6";
-            sha256 = "0f1cpnp1nxb4i5hgymjn2yn3k1jwkqmlgw1g02sq270lavp2dzs9";
-          };
-          # make sure string dependencies are handled
-          dependencies = [ "vim-nix" ];
-        };
-      });
-    vimrcConfig.vam.pluginDictionaries = [ { names = [ "vim-trailing-whitespace" ]; } ];
-  };
-})
+  test_vim_plugin_dont_unpack =
+    let
+      plugin = vimUtils.buildVimPlugin {
+        pname = "vim-plugin-dont-unpack-test";
+        version = "0";
+        src = pkgs.writeText "probe.vim" "";
+        dontUnpack = true;
+        buildPhase = ''
+          install -D "$src" "$out/colors/probe.vim"
+        '';
+      };
+    in
+    pkgs.runCommand "vim-plugin-dont-unpack-test" { } ''
+      test -f ${plugin}/colors/probe.vim
+      for file in env-vars .attrs.json .attrs.sh; do
+        test ! -e ${plugin}/"$file"
+      done
+      mkdir -p "$out"
+    '';
+
+  # test that all vimPlugins have `passthru.vimPlugin = true`
+  test-all-plugins-have-vimPlugin-true =
+    let
+      # we remove aliases as they are irrelevant here and cause warning when evaling this test
+      pkgsNoAliases = (
+        pkgs.extend (
+          self: prev: {
+            config = prev.config // {
+              allowAliases = false;
+            };
+          }
+        )
+      );
+      vimPluginsNoAliases = pkgsNoAliases.vimPlugins;
+    in
+    assert
+      lib.attrNames (
+        lib.filterAttrs (
+          name: elem:
+          # exclude non-plugins
+          lib.isDerivation elem
+          && name != "corePlugins"
+          # only plugins that don't have `vimPlugin = true`
+          && elem.passthru.vimPlugin or false != true
+        ) vimPluginsNoAliases
+      ) == [ ];
+    # testing is done during evaluation above so this derivation is irrelevant
+    vim-full;
+
+  test_vim_plugin_install_phase =
+    let
+      plugin = vimUtils.buildVimPlugin {
+        pname = "vim-plugin-install-phase-test";
+        version = "0";
+        src = pkgs.runCommand "vim-plugin-install-phase-test-src" { } ''
+          mkdir -p $out/plugin $out/extra
+          touch $out/plugin/probe.vim $out/extra/unwanted
+        '';
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out
+          cp -r plugin $out/
+          runHook postInstall
+        '';
+      };
+    in
+    pkgs.runCommand "vim-plugin-install-phase-test" { } ''
+      test -f ${plugin}/plugin/probe.vim
+      test ! -e ${plugin}/extra
+      mkdir -p "$out"
+    '';
+}

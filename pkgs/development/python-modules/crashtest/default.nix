@@ -1,13 +1,17 @@
-{ lib, buildPythonPackage, fetchPypi, pythonAtLeast }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+}:
 
 buildPythonPackage rec {
   pname = "crashtest";
-  version = "0.3.1";
-  disabled = !(pythonAtLeast "3.6");
+  version = "0.4.1";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "42ca7b6ce88b6c7433e2ce47ea884e91ec93104a4b754998be498a8e6c3d37dd";
+    hash = "sha256-gNex8xbr+9Qp9kgHbWJ1yHe6MLpIl53kGRcUp1Jm8M4=";
   };
 
   # has tests, but only on GitHub, however the pyproject build fails for me
@@ -16,10 +20,10 @@ buildPythonPackage rec {
     "crashtest.inspector"
   ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/sdispater/crashtest";
     description = "Manage Python errors with ease";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

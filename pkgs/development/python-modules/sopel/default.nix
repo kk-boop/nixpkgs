@@ -1,63 +1,87 @@
-{ lib, buildPythonPackage, fetchPypi, isPyPy
-, dnspython
-, geoip2
-, ipython
-, praw
-, pyenchant
-, pygeoip
-, pytestCheckHook
-, pytz
-, sqlalchemy
-, xmltodict
+{
+  lib,
+  buildPythonPackage,
+  dnspython,
+  fetchPypi,
+  geoip2,
+  ipython,
+  isPyPy,
+  setuptools,
+  praw,
+  pyenchant,
+  pytestCheckHook,
+  pytz,
+  sqlalchemy,
+  xmltodict,
+  importlib-metadata,
+  packaging,
 }:
 
 buildPythonPackage rec {
   pname = "sopel";
-  version = "7.1.6";
+  version = "8.0.4";
+  pyproject = true;
+
   disabled = isPyPy;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "ebd3b2aa9230835f8a68ea7f5a10324ddf35d70d89a9c92c8cba81c558565efb";
+    hash = "sha256-16QDzsZCquAPH3FPyBjxeXGcvSdjYLZFTXN0ASneROU=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools~=66.1" "setuptools"
+  '';
+
+  dependencies = [
     dnspython
     geoip2
     ipython
     praw
     pyenchant
-    pygeoip
     pytz
     sqlalchemy
     xmltodict
+    importlib-metadata
+    packaging
   ];
 
-  # remove once https://github.com/sopel-irc/sopel/pull/1653 lands
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "praw>=4.0.0,<6.0.0" "praw" \
-      --replace "sqlalchemy<1.4" "sqlalchemy"
-  '';
+  pythonRemoveDeps = [ "sopel-help" ];
 
-  checkInputs = [ pytestCheckHook ];
+  pythonRelaxDeps = [
+    "sqlalchemy"
+    "xmltodict"
+  ];
 
-  preCheck = ''
-    export TESTDIR=$(mktemp -d)
-    cp -R ./test $TESTDIR
-    pushd $TESTDIR
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  postCheck = ''
-    popd
-  '';
+  disabledTests = [
+    # requires network access
+    "test_example_exchange_cmd_0"
+    "test_example_exchange_cmd_1"
+    "test_example_duck_0"
+    "test_example_duck_1"
+    "test_example_suggest_0"
+    "test_example_suggest_1"
+    "test_example_suggest_2"
+    "test_example_tr2_0"
+    "test_example_tr2_1"
+    "test_example_tr2_2"
+    "test_example_title_command_0"
+    "test_example_wiktionary_0"
+    "test_example_wiktionary_ety_0"
+  ];
 
   pythonImportsCheck = [ "sopel" ];
 
-  meta = with lib; {
+  meta = {
     description = "Simple and extensible IRC bot";
-    homepage = "http://sopel.chat";
-    license = licenses.efl20;
-    maintainers = with maintainers; [ mog ];
+    homepage = "https://sopel.chat";
+    license = lib.licenses.efl20;
+    maintainers = with lib.maintainers; [ mog ];
+    mainProgram = "sopel";
   };
 }

@@ -1,25 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  legacy-cgi,
+  pytestCheckHook,
+
+  # for passthru.tests
+  pyramid,
+  routes,
+  tokenlib,
 }:
 
 buildPythonPackage rec {
-  pname = "WebOb";
-  version = "1.8.7";
+  pname = "webob";
+  version = "1.8.10";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "b64ef5141be559cfade448f044fa45c2260351edcb6a8ef6b7e00c7dcef0c323";
+  src = fetchFromGitHub {
+    owner = "Pylons";
+    repo = "webob";
+    tag = version;
+    hash = "sha256-r3fURb+Je/XevpeMGb/XEF2xjj1q172P4pTAbGkeloY=";
   };
 
-  propagatedBuildInputs = [ nose pytest ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  # https://github.com/Pylons/webob/issues/437
+  dependencies = [ legacy-cgi ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "webob" ];
+
+  disabledTestPaths = [
+    # AttributeError: 'Thread' object has no attribute 'isAlive'
+    "tests/test_in_wsgiref.py"
+    "tests/test_client_functional.py"
+  ];
+
+  passthru.tests = {
+    inherit pyramid routes tokenlib;
+  };
+
+  meta = {
     description = "WSGI request and response object";
-    homepage = "http://pythonpaste.org/webob/";
-    license = licenses.mit;
+    homepage = "https://webob.org/";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-
 }

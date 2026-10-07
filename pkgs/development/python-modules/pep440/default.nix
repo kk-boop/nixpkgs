@@ -1,32 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  flit-core,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "pep440";
-  version = "0.1.0";
-  format = "setuptools";
+  version = "0.1.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "m1H/yqqDiFrj6tmD9jo8nDakCBZxkBPq/HtSOXMH4ZQ=";
+    hash = "sha256-WLNyRswrE/7hyio8CSyzcE0h7PYhpb27Fo5E5pf20E0=";
   };
 
-  checkInputs = [
-    pytestCheckHook
+  nativeBuildInputs = [ flit-core ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTestPaths = [
+    # Don't run CLI tests
+    "tests/test_cli.py"
   ];
 
-  pythonImportsCheck = [
-    "pep440"
-  ];
+  pythonImportsCheck = [ "pep440" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to check whether versions number match PEP 440";
+    mainProgram = "pep440";
     homepage = "https://github.com/Carreau/pep440";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

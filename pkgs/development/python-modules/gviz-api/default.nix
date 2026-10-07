@@ -1,25 +1,31 @@
-{ lib, fetchPypi, buildPythonPackage
-, six
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  setuptools,
+  six,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "gviz_api";
-  version = "1.9.0";
-  format = "wheel";
+  version = "1.10.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version format;
-    sha256 = "1yag559lpmwfdxpxn679a6ajifcbpgljr5n6k5b7rrj38k2xq7jg";
+    inherit (finalAttrs) pname version;
+    sha256 = "sha256-hGaS3YzHMiT8MbGOQVib2TThzAUJDGV2r0tLJsLnG5A=";
   };
 
-  propagatedBuildInputs = [
-    six
-  ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  dependencies = [ six ];
+
+  meta = {
     description = "Python API for Google Visualization";
     homepage = "https://developers.google.com/chart/interactive/docs/dev/gviz_api_lib";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ndl ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ ndl ];
   };
-}
+})

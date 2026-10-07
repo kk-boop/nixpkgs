@@ -1,35 +1,30 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, fetchpatch
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pyahocorasick";
-  version = "1.4.1";
+  version = "2.3.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "WojciechMula";
-    repo = pname;
-    rev = version;
-    sha256 = "13x3718if28l50474xrz1b9709kvnvdg3nzm6y8bh7mc9a4zyss5";
+    repo = "pyahocorasick";
+    tag = "v${version}";
+    hash = "sha256-lExpRJlRoYS45Bw9FQwa7GKELBljKA83ZhXg7e5vPwM=";
   };
 
-  patches = [
-    # Use proper temporary directory on Hydra
-    (fetchpatch {
-      url = "https://github.com/WojciechMula/pyahocorasick/commit/b6549e06f3cced7ffdf4d1b587cd7de12041f495.patch";
-      sha256 = "sha256-v3J/0aIPOnBhLlJ18r/l7O0MckqLOCtcmqIS9ZegaSI=";
-    })
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pytestFlagsArray = [ "unittests.py" ];
   pythonImportsCheck = [ "ahocorasick" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module implementing Aho-Corasick algorithm";
     longDescription = ''
       This Python module is a fast and memory efficient library for exact or
@@ -37,7 +32,8 @@ buildPythonPackage rec {
       key strings occurrences at once in some input text.
     '';
     homepage = "https://github.com/WojciechMula/pyahocorasick";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/WojciechMula/pyahocorasick/blob/${src.tag}/CHANGELOG.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

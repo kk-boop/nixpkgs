@@ -1,89 +1,109 @@
-{ lib
-, buildPythonApplication
-, fetchPypi
-, pbr
-, cliff
-, jsonschema
-, testtools
-, paramiko
-, netaddr
-, oslo-concurrency
-, oslo-config
-, oslo-log
-, stestr
-, oslo-serialization
-, oslo-utils
-, fixtures
-, pyyaml
-, subunit
-, stevedore
-, prettytable
-, urllib3
-, debtcollector
-, unittest2
-, hacking
-, oslotest
-, bash
-, python3
+{
+  lib,
+  bash,
+  buildPythonPackage,
+  cliff,
+  debtcollector,
+  defusedxml,
+  fetchPypi,
+  fixtures,
+  hacking,
+  jsonschema,
+  netaddr,
+  oslo-concurrency,
+  oslo-config,
+  oslo-log,
+  oslo-serialization,
+  oslo-utils,
+  oslotest,
+  paramiko,
+  pbr,
+  prettytable,
+  python,
+  pyyaml,
+  setuptools,
+  stestr,
+  stevedore,
+  python-subunit,
+  testscenarios,
+  testtools,
+  urllib3,
 }:
 
-buildPythonApplication rec {
+buildPythonPackage rec {
   pname = "tempest";
-  version = "29.2.0";
+  version = "46.2.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0521d3042360c0fb469b16f99174a9abddbae8a2d2a81268cfc664f1ccfdd0f9";
+    hash = "sha256-F/K0X4wHZOR4dvicGwQ9JOeh25iyqfKkgjiIZc6qWLY=";
   };
 
-  propagatedBuildInputs = [
-    pbr
+  postPatch = ''
+    substituteInPlace tempest/lib/common/http.py \
+      --replace-fail 'getheaders()' 'headers'
+  '';
+
+  pythonRelaxDeps = [ "defusedxml" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     cliff
+    debtcollector
+    defusedxml
+    fixtures
     jsonschema
-    testtools
-    paramiko
     netaddr
     oslo-concurrency
     oslo-config
     oslo-log
-    stestr
     oslo-serialization
     oslo-utils
-    fixtures
-    pyyaml
-    subunit
-    stevedore
+    paramiko
+    pbr
     prettytable
+    pyyaml
+    stestr
+    stevedore
+    python-subunit
+    testscenarios
+    testtools
     urllib3
-    debtcollector
-    unittest2
   ];
 
-  checkInputs = [
-    stestr
+  nativeCheckInputs = [
     hacking
     oslotest
+    stestr
   ];
 
   checkPhase = ''
     # Tests expect these applications available as such.
     mkdir -p bin
     export PATH="$PWD/bin:$PATH"
-    printf '#!${bash}/bin/bash\nexec ${python3.interpreter} -m tempest.cmd.main "$@"\n' > bin/tempest
-    printf '#!${bash}/bin/bash\nexec ${python3.interpreter} -m tempest.cmd.subunit_describe_calls "$@"\n' > bin/subunit-describe-calls
+    printf '#!${bash}/bin/bash\nexec ${python.interpreter} -m tempest.cmd.main "$@"\n' > bin/tempest
+    printf '#!${bash}/bin/bash\nexec ${python.interpreter} -m tempest.cmd.subunit_describe_calls "$@"\n' > bin/subunit-describe-calls
     chmod +x bin/*
 
     stestr --test-path tempest/tests run -e <(echo "
+      tempest.tests.common.test_concurrency.TestConcurrency.test_run_concurrent_tasks_dict_return_values
+      tempest.tests.common.test_concurrency.TestConcurrency.test_run_concurrent_tasks_multiple_workers
+      tempest.tests.common.test_concurrency.TestConcurrency.test_run_concurrent_tasks_single_process
+      tempest.tests.common.test_concurrency.TestConcurrency.test_run_concurrent_tasks_success
+      tempest.tests.common.test_concurrency.TestConcurrency.test_run_concurrent_tasks_with_exception
       tempest.tests.lib.cli.test_execute.TestExecute.test_execute_with_prefix
     ")
   '';
 
   pythonImportsCheck = [ "tempest" ];
 
-  meta = with lib; {
-    description = "An OpenStack integration test suite that runs against live OpenStack cluster and validates an OpenStack deployment";
+  meta = {
+    description = "OpenStack integration test suite that runs against live OpenStack cluster and validates an OpenStack deployment";
     homepage = "https://github.com/openstack/tempest";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    mainProgram = "tempest";
+    teams = [ lib.teams.openstack ];
   };
 }

@@ -1,72 +1,54 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, fetchpatch
-, duet
-, matplotlib
-, networkx
-, numpy
-, pandas
-, requests
-, scipy
-, sortedcontainers
-, sympy
-, tqdm
-, typing-extensions
-  # Contrib requirements
-, withContribRequires ? false
-, autoray ? null
-, opt-einsum
-, ply
-, pylatex ? null
-, pyquil ? null
-, quimb ? null
-  # test inputs
-, pytestCheckHook
-, freezegun
-, pytest-asyncio
+{
+  lib,
+  stdenv,
+  attrs,
+  autoray ? null,
+  buildPythonPackage,
+  duet,
+  fetchFromGitHub,
+  freezegun,
+  matplotlib,
+  networkx,
+  numpy,
+  opt-einsum,
+  pandas,
+  ply,
+  pylatex ? null,
+  pyquil ? null,
+  pytest-asyncio,
+  pytest-benchmark,
+  pytestCheckHook,
+  quimb ? null,
+  requests,
+  scipy,
+  setuptools,
+  sortedcontainers,
+  sympy,
+  tqdm,
+  typing-extensions,
+  withContribRequires ? false,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cirq-core";
-  version = "0.13.1";
-
-  disabled = pythonOlder "3.6";
+  version = "1.7.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "quantumlib";
     repo = "cirq";
-    rev = "v${version}";
-    sha256 = "sha256-MVfJ8iEeW8gFvCNTqrWfYpNNYuDAufHgcjd7Nh3qp8U=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-OAyBYzMEFyVMlxN5UjrKk1x2rSayLyAIAC5h96JeqK0=";
   };
 
-  sourceRoot = "source/${pname}";
+  sourceRoot = "${finalAttrs.src.name}/${finalAttrs.pname}";
 
-  patches = [
-    # present in upstream master - remove after 0.13.1
-    (fetchpatch {
-      name = "fix-test-tolerances.part-1.patch";
-      url = "https://github.com/quantumlib/Cirq/commit/eb1d9031e55d3c8801ea44abbb6a4132b2fc5126.patch";
-      sha256 = "0ka24v6dfxnap9p07ni32z9zccbmw0lbrp5mcknmpsl12hza98xm";
-      stripLen = 1;
-    })
-    (fetchpatch {
-      name = "fix-test-tolerances.part-2.patch";
-      url = "https://github.com/quantumlib/Cirq/commit/a28d601b2bcfc393336375c53e5915fd16455395.patch";
-      sha256 = "0k2dqsm4ydn6556d40kc8j04jgjn59z4wqqg1jn1r916a7yxw493";
-      stripLen = 1;
-    })
-  ];
+  pythonRelaxDeps = [ "matplotlib" ];
 
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "matplotlib~=3.0" "matplotlib" \
-      --replace "networkx~=2.4" "networkx" \
-      --replace "numpy~=1.16" "numpy"
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
+    attrs
     duet
     matplotlib
     networkx
@@ -78,7 +60,8 @@ buildPythonPackage rec {
     sympy
     tqdm
     typing-extensions
-  ] ++ lib.optionals withContribRequires [
+  ]
+  ++ lib.optionals withContribRequires [
     autoray
     opt-einsum
     ply
@@ -87,26 +70,38 @@ buildPythonPackage rec {
     quimb
   ];
 
-  checkInputs = [
-    pytestCheckHook
-    pytest-asyncio
+  nativeCheckInputs = [
     freezegun
+    pytest-asyncio
+    pytest-benchmark
+    pytestCheckHook
   ];
 
-  pytestFlagsArray = lib.optionals (!withContribRequires) [
-    # requires external (unpackaged) libraries, so untested.
-    "--ignore=cirq/contrib/"
+  disabledTestPaths = lib.optionals (!withContribRequires) [
+    # Requires external (unpackaged) libraries, so untested
+    "cirq/contrib/"
+    # No need to test the version number
+    "cirq/_version_test.py"
   ];
+
   disabledTests = [
-    "test_metadata_search_path" # tries to import flynt, which isn't in Nixpkgs
-    "test_benchmark_2q_xeb_fidelities" # fails due pandas MultiIndex. Maybe issue with pandas version in nix?
+    # Assertion error
+    "test_parameterized_cphase"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isAarch64 [
+    # https://github.com/quantumlib/Cirq/issues/5924
+    "test_prepare_two_qubit_state_using_sqrt_iswap"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # test_scalar_division[scalar9-terms9-terms_expected9] result differs in the final digit
+    "test_scalar_division"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Framework for creating, editing, and invoking Noisy Intermediate Scale Quantum (NISQ) circuits";
     homepage = "https://github.com/quantumlib/cirq";
-    changelog = "https://github.com/quantumlib/Cirq/releases/tag/v${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ drewrisinger fab ];
+    changelog = "https://github.com/quantumlib/Cirq/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

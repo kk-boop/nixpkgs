@@ -1,17 +1,19 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, ifaddr
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  ifaddr,
+  requests,
 }:
 
 buildPythonPackage rec {
   pname = "pywilight";
-  version = "0.0.70";
+  version = "0.0.74";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-PLahGx75oEp4NIZB9PVRdA3cLBxhQsHTsnquy7WSEC8=";
+    hash = "sha256-patCdQ7qLEfy+RpH9T/Fa8ubI7QF6OmLzFUokZc5syQ=";
   };
 
   propagatedBuildInputs = [
@@ -19,14 +21,15 @@ buildPythonPackage rec {
     requests
   ];
 
-  # no tests are present
+  # Module has no tests
   doCheck = false;
+
   pythonImportsCheck = [ "pywilight" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python API for WiLight device";
     homepage = "https://github.com/leofig-rj/pywilight";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

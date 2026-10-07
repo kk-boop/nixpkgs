@@ -1,17 +1,19 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytools
-, numpy
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytools,
+  numpy,
 }:
 
 buildPythonPackage rec {
   pname = "genpy";
-  version = "2021.1";
+  version = "2022.1";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "9bc062fa98c5c466ff464d8974be81a6bf67af9247b5e5176215ad1e81a6cdac";
+    hash = "sha256-FGZbQlUgbJjnuiDaKS/vVlraMVmFF1cAQk7S3aPWXx4=";
   };
 
   propagatedBuildInputs = [
@@ -19,10 +21,10 @@ buildPythonPackage rec {
     numpy
   ];
 
-  meta = with lib; {
+  meta = {
     description = "C/C++ source generation from an AST";
     homepage = "https://github.com/inducer/genpy";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

@@ -1,43 +1,49 @@
-{ lib
-, aiohttp
-, async-timeout
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "opensensemap-api";
-  version = "0.2.0";
-  format = "setuptools";
+  version = "0.4.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.8";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-KSukSPpSbfbEEqTq4zqqo8OT7ptdPrGy2QyQYjErQWI=";
+  src = fetchFromGitHub {
+    owner = "home-assistant-ecosystem";
+    repo = "python-opensensemap-api";
+    tag = finalAttrs.version;
+    hash = "sha256-cCvKgB2tdYZw7it8YAtZZgsQrGUQKGNLqWiERKDCMVw=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ hatchling ];
+
+  dependencies = [
     aiohttp
     async-timeout
   ];
 
-  # no tests are present
-  doCheck = false;
-
-  pythonImportsCheck = [
-    "opensensemap_api"
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "opensensemap_api" ];
+
+  meta = {
     description = "OpenSenseMap API Python client";
     longDescription = ''
       Python Client for interacting with the openSenseMap API. All
       available information from the sensor can be retrieved.
     '';
     homepage = "https://github.com/home-assistant-ecosystem/python-opensensemap-api";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/home-assistant-ecosystem/python-opensensemap-api/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

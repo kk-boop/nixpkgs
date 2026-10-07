@@ -1,106 +1,153 @@
-{ lib
-, appdirs
-, bokeh
-, buildPythonPackage
-, dask
-, entrypoints
-, fetchFromGitHub
-, fsspec
-, holoviews
-, hvplot
-, intake-parquet
-, jinja2
-, msgpack
-, msgpack-numpy
-, numpy
-, pandas
-, panel
-, pyarrow
-, pytestCheckHook
-, python-snappy
-, pythonOlder
-, pyyaml
-, requests
-, stdenv
-, tornado
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  dask,
+  entrypoints,
+  fsspec,
+  jinja2,
+  msgpack,
+  networkx,
+  pandas,
+  platformdirs,
+  pyyaml,
+
+  # optional-dependencies
+  # server:
+  msgpack-numpy,
+  python-snappy,
+  tornado,
+  # dataframe:
+  pyarrow,
+  # plot
+  hvplot,
+  bokeh,
+  panel,
+  # remote:
+  requests,
+
+  # tests
+  addBinToPathHook,
+  intake-parquet,
+  pytestCheckHook,
+  pythonAtLeast,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "intake";
-  version = "0.6.4";
-
-  disabled = pythonOlder "3.7";
+  version = "2.0.9";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = version;
-    sha256 = "194cdd6lx92zcpkn3wgm490kxvw0c58ziix8hcihsr5ayfr1wdsl";
+    owner = "intake";
+    repo = "intake";
+    tag = finalAttrs.version;
+    hash = "sha256-DiALGrJP4vLWygzZprjYCFM+TYtMS7NVM3+MTyjzcs0=";
   };
 
-  propagatedBuildInputs = [
-    appdirs
-    bokeh
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
+
+  dependencies = [
     dask
     entrypoints
     fsspec
-    holoviews
-    hvplot
     jinja2
     msgpack
-    msgpack-numpy
-    numpy
+    networkx
     pandas
-    panel
-    pyarrow
-    python-snappy
+    platformdirs
     pyyaml
-    requests
-    tornado
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    server = [
+      msgpack
+      python-snappy
+      tornado
+    ];
+    dataframe = [
+      msgpack-numpy
+      pyarrow
+    ];
+    plot = [
+      hvplot
+      bokeh
+      panel
+    ];
+    remote = [ requests ];
+  };
+
+  nativeCheckInputs = [
+    addBinToPathHook
     intake-parquet
     pytestCheckHook
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  disabledTestPaths = [
+    # Missing plusins
+    "intake/catalog/tests/test_alias.py"
+    "intake/catalog/tests/test_gui.py"
+    "intake/catalog/tests/test_local.py"
+    "intake/catalog/tests/test_reload_integration.py"
+    "intake/source/tests/test_csv.py"
+    "intake/source/tests/test_derived.py"
+    "intake/source/tests/test_npy.py"
+    "intake/source/tests/test_text.py"
+    "intake/tests/test_config.py"
+    "intake/tests/test_top_level.py"
   ];
-
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "'pytest-runner'" ""
-  '';
-
-  # test_discover requires driver_with_entrypoints-0.1.dist-info, which is not included in tarball
-  # test_filtered_compressed_cache requires calvert_uk_filter.tar.gz, which is not included in tarball
-  preCheck = ''
-    HOME=$TMPDIR
-    PATH=$out/bin:$PATH
-  '';
 
   disabledTests = [
-    # Disable tests which touch network and are broken
+    # Disable tests which touch network
+    "http"
+    "test_address_flag"
+    "test_dir"
     "test_discover"
     "test_filtered_compressed_cache"
+    "test_flatten_flag"
     "test_get_dir"
-    "test_remote_cat"
-    "http"
+    "test_pagination"
+    "test_port_flag"
+    "test_read_part_compressed"
+    "test_read_partition"
     "test_read_pattern"
     "test_remote_arr"
-    "test_flatten_flag"
+    "test_remote_cat"
+    "test_remote_env"
+    # ValueError
+    "test_datasource_python_to_dask"
+    "test_catalog_passthrough"
     # Timing-based, flaky on darwin and possibly others
-    "TestServerV1Source.test_idle_timer"
-  ] ++ lib.optionals (stdenv.isDarwin && lib.versionOlder stdenv.hostPlatform.darwinMinVersion "10.13") [
-    # Flaky with older low-res mtime on darwin < 10.13 (#143987)
-    "test_second_load_timestamp"
+    "test_idle_timer"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.12") [
+    # Require deprecated distutils
+    "test_which"
+    "test_load"
   ];
 
-  pythonImportsCheck = [
-    "intake"
-  ];
+  pythonImportsCheck = [ "intake" ];
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "Data load and catalog system";
     homepage = "https://github.com/ContinuumIO/intake";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ costrouc ];
+    changelog = "https://github.com/intake/intake/blob/${finalAttrs.src.rev}/docs/source/changelog.rst";
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

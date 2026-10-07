@@ -1,33 +1,64 @@
-{ lib, openjdk11, fetchFromGitHub, jetbrains }:
+{
+  lib,
+  callPackage,
+  fetchurl,
+  jetbrains,
+  jdk,
+  debugBuild ? false,
+  withJcef ? true,
+  wayland-scanner,
+  wayland-protocols,
+  libxkbcommon,
+  speechd-minimal,
+}:
 
-openjdk11.overrideAttrs (oldAttrs: rec {
-  pname = "jetbrains-jdk";
-  version = "11_0_11-b1504.13";
-  src = fetchFromGitHub {
-    owner = "JetBrains";
-    repo = "JetBrainsRuntime";
-    rev = "jb${version}";
-    sha256 = "1xpgsgmmj5jp5qyw98hqmik6a7z3hfwmij023ij3qqymyj3nhm2i";
-  };
-  patches = [];
-  meta = with lib; {
-    description = "An OpenJDK fork to better support Jetbrains's products.";
-    longDescription = ''
-     JetBrains Runtime is a runtime environment for running IntelliJ Platform
-     based products on Windows, Mac OS X, and Linux. JetBrains Runtime is
-     based on OpenJDK project with some modifications. These modifications
-     include: Subpixel Anti-Aliasing, enhanced font rendering on Linux, HiDPI
-     support, ligatures, some fixes for native crashes not presented in
-     official build, and other small enhancements.
+let
+  gtk-protocols =
+    let
+      rev = "refs/tags/4.22.1";
+      hash = "sha256-zCcXuiEYL2N4Q+WT96ouVDwdZVSohgU/QA2BkGlnZZ0=";
+    in
+    fetchurl {
+      # We only need the wayland protocols file
+      url = "https://raw.githubusercontent.com/GNOME/gtk/${rev}/gdk/wayland/protocol/gtk-shell.xml";
+      hash = hash;
+    };
+  # To get the new tag:
+  # git clone https://github.com/jetbrains/jetbrainsruntime
+  # cd jetbrainsruntime
+  # git tag --points-at [revision]
+  # Look for the line that starts with jbr-
+  javaVersion = "25.0.3";
+  build = "508.4";
+in
+callPackage ./common.nix
+  {
+    inherit jdk debugBuild withJcef;
+  }
+  {
+    inherit javaVersion build;
+    # run `git log -1 --pretty=%ct` in jdk repo for new value on update
+    sourceDateEpoch = 1780959777;
+    srcHash = "sha256-N+7D++Cxu0RGWChEWW8gtNz7E2I8qM2AFbXv4luAXto=";
+    jcefPackage = jetbrains.jcef;
+    extraBuildPhase = ''
+      cp -r ${gtk-protocols.out} gtk-shell.xml
 
-     JetBrains Runtime is not a certified build of OpenJDK. Please, use at
-     your own risk.
+      # JBR hardcodes the speech-dispatcher header location to
+      # /usr/include/speech-dispatcher in its mkimages scripts.
+      substituteInPlace \
+        jb/project/tools/linux/scripts/mkimages_x64.sh \
+        jb/project/tools/linux/scripts/mkimages_aarch64.sh \
+        --replace-fail \
+          "--with-speechd-include=/usr/include/speech-dispatcher" \
+          "--with-speechd-include=${lib.getDev speechd-minimal}/include/speech-dispatcher"
     '';
-    homepage = "https://confluence.jetbrains.com/display/JBR/JetBrains+Runtime";
-    inherit (openjdk11.meta) license platforms mainProgram;
-    maintainers = with maintainers; [ edwtjo petabyteboy ];
-  };
-  passthru = oldAttrs.passthru // {
-    home = "${jetbrains.jdk}/lib/openjdk";
-  };
-})
+    vendorVersionString = "nix/JBR-${javaVersion}-b${build}${if withJcef then "-jcef" else ""}";
+    extraConfigureFlags = [
+      "--with-wayland-protocols=${wayland-protocols.out}/share/wayland-protocols"
+    ];
+    extraNativeBuildInputs = [
+      wayland-scanner
+      libxkbcommon
+    ];
+  }

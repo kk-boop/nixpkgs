@@ -1,49 +1,58 @@
-{ lib
-, buildPythonPackage
-, isPy3k
-, fetchFromGitHub
-, funcy
-, pefile
-, vivisect
-, intervaltree
-, setuptools
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  funcy,
+  intervaltree,
+  pefile,
+  pytest-sugar,
+  pytestCheckHook,
+  python-flirt,
+  setuptools-scm,
+  typing-extensions,
+  vivisect,
 }:
-buildPythonPackage rec {
+
+buildPythonPackage (finalAttrs: {
   pname = "viv-utils";
-  version = "0.3.17";
-  disabled = isPy3k;
+  version = "0.8.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "williballenthin";
     repo = "viv-utils";
-    rev = "v${version}";
-    sha256 = "wZWp6PMn1to/jP6lzlY/x0IhS/0w0Ys7AdklNQ+Vmyc=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-YyD6CFA8lhc1XU7pckKv3th422ssYZkRJ/JfQD5e65c=";
   };
 
-  # argparse is provided by Python itself
-  preBuild = ''
-    sed '/"argparse",/d' -i setup.py
-  '';
+  build-system = [ setuptools-scm ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     funcy
-    pefile
-    vivisect
     intervaltree
-    setuptools
+    pefile
+    typing-extensions
+    vivisect
   ];
 
-  # no tests
-  doCheck = false;
-
-  pythonImportsCheck = [
-    "viv_utils"
+  nativeCheckInputs = [
+    pytest-sugar
+    pytestCheckHook
   ];
 
-  meta = with lib; {
+  passthru = {
+    optional-dependencies = {
+      flirt = [ python-flirt ];
+    };
+  };
+
+  pythonImportsCheck = [ "viv_utils" ];
+
+  meta = {
     description = "Utilities for working with vivisect";
     homepage = "https://github.com/williballenthin/viv-utils";
-    license = licenses.asl20;
-    maintainers = teams.determinatesystems.members;
+    changelog = "https://github.com/williballenthin/viv-utils/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

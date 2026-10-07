@@ -1,34 +1,54 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, setuptools-scm
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatch-vcs,
+  hatchling,
+  pytest-asyncio,
+  pytest-mock,
+  pytest-timeout,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "filelock";
-  version = "3.3.0";
-  format = "pyproject";
-  disabled = pythonOlder "3.6";
+  version = "3.29.7";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "8c7eab13dc442dc249e95158bcc12dec724465919bdc9831fdbf0660f03d1785";
+  src = fetchFromGitHub {
+    owner = "tox-dev";
+    repo = "filelock";
+    tag = finalAttrs.version;
+    hash = "sha256-sRJQa7vmMf9aWXT5QdYAZQHM0oIFFZM9P2tQ2x5T79Y=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
+  build-system = [
+    hatch-vcs
+    hatchling
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-mock
+    pytest-timeout
     pytestCheckHook
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "filelock" ];
+
+  disabledTestPaths = [
+    # Circular dependency with virtualenv
+    "tests/test_virtualenv.py"
+    # Very prone to timeouts on busy machines
+    "tests/test_filelock.py"
+    "tests/test_read_write.py"
+  ];
+
+  meta = {
+    changelog = "https://github.com/tox-dev/filelock/releases/tag/${finalAttrs.version}";
+    description = "Platform independent file lock for Python";
     homepage = "https://github.com/benediktschmitt/py-filelock";
-    description = "A platform independent file lock for Python";
-    license = licenses.unlicense;
-    maintainers = with maintainers; [ hyphon81 ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

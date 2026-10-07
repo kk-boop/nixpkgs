@@ -1,11 +1,17 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.services.inspircd;
 
   configFile = pkgs.writeText "inspircd.conf" cfg.config;
 
-in {
+in
+{
   meta = {
     maintainers = [ lib.maintainers.sternenseemann ];
   };
@@ -22,7 +28,7 @@ in {
         description = ''
           The InspIRCd package to use. This is mainly useful
           to specify an overridden version of the
-          <literal>pkgs.inspircd</literal> dervivation, for
+          `pkgs.inspircd` dervivation, for
           example if you want to use a more minimal InspIRCd
           distribution with less modules enabled or with
           modules enabled which can't be distributed in binary
@@ -33,12 +39,12 @@ in {
       config = lib.mkOption {
         type = lib.types.lines;
         description = ''
-          Verbatim <literal>inspircd.conf</literal> file.
+          Verbatim {file}`inspircd.conf` file.
           For a list of options, consult the
-          <link xlink:href="https://docs.inspircd.org/3/configuration/">InspIRCd documentation</link>, the
-          <link xlink:href="https://docs.inspircd.org/3/modules/">Module documentation</link>
+          [InspIRCd documentation](https://docs.inspircd.org/3/configuration/), the
+          [Module documentation](https://docs.inspircd.org/3/modules/)
           and the example configuration files distributed
-          with <literal>pkgs.inspircd.doc</literal>
+          with `pkgs.inspircd.doc`
         '';
       };
     };
@@ -47,14 +53,22 @@ in {
   config = lib.mkIf cfg.enable {
     systemd.services.inspircd = {
       description = "InspIRCd - the stable, high-performance and modular Internet Relay Chat Daemon";
+      unitConfig.Documentation = "https://docs.inspircd.org";
       wantedBy = [ "multi-user.target" ];
-      requires = [ "network.target" ];
+
+      after = [
+        "network.target"
+        "network-online.target"
+      ];
+      wants = [ "network-online.target" ];
 
       serviceConfig = {
         Type = "simple";
         ExecStart = ''
-          ${lib.getBin cfg.package}/bin/inspircd start --config ${configFile} --nofork --nopid
+          ${lib.getBin cfg.package}/bin/inspircd --config ${configFile} --nofork --nopid
         '';
+        ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+        Restart = "on-failure";
         DynamicUser = true;
       };
     };

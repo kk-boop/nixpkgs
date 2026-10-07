@@ -1,71 +1,100 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27
-, alembic
-, click
-, cloudpickle
-, requests
-, six
-, flask
-, numpy
-, pandas
-, python-dateutil
-, protobuf
-, GitPython
-, pyyaml
-, querystring_parser
-, simplejson
-, docker
-, databricks-cli
-, entrypoints
-, sqlparse
-, sqlalchemy
-, gorilla
-, gunicorn
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # dependencies
+  aiohttp,
+  alembic,
+  anyio,
+  cryptography,
+  docker,
+  flask,
+  flask-cors,
+  graphene,
+  gunicorn,
+  huey,
+  matplotlib,
+  mlflow-skinny,
+  mlflow-tracing,
+  numpy,
+  pandas,
+  pyarrow,
+  scikit-learn,
+  scipy,
+  skops,
+  sqlalchemy,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mlflow";
-  version = "1.20.2";
-  disabled = isPy27;
+  version = "3.16.1";
+  format = "wheel";
+  __structuredAttrs = true;
 
+  # We build from the PyPI wheel rather than fetchFromGitHub, because the mlflow-server
+  # JS UI is absent from GitHub but provided in the wheel.
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "b15ff0c7e5e64f864a0b40c99b9a582227315eca2065d9f831db9aeb8f24637b";
+    pname = "mlflow";
+    inherit (finalAttrs) version;
+    format = "wheel";
+    dist = "py3";
+    python = "py3";
+    hash = "sha256-5N/mnOrjHfx7hIDnb/5qfzZ1K9+sMOBY5kMK3h+1kgs=";
   };
 
-  # run into https://stackoverflow.com/questions/51203641/attributeerror-module-alembic-context-has-no-attribute-config
-  # also, tests use conda so can't run on NixOS without buildFHSUserEnv
-  doCheck = false;
+  # Nix-wrapped python populates sys.path via NIX_PYTHONPATH/site hooks,
+  # but PYTHONPATH stays unset in os.environ. mlflow spawns the server
+  # in a subprocess with a curated env, so without this patch the child
+  # interpreter cannot import uvicorn / mlflow itself.
+  postInstall = ''
+    patch -p1 -d "$out/lib/python"*/site-packages < ${./subprocess-pythonpath.patch}
+  '';
 
-  propagatedBuildInputs = [
+  dependencies = [
+    aiohttp
     alembic
-    click
-    cloudpickle
-    requests
-    six
+    anyio
+    cryptography
+    docker
     flask
+    flask-cors
+    graphene
+    gunicorn
+    huey
+    matplotlib
+    mlflow-skinny
+    mlflow-tracing
     numpy
     pandas
-    python-dateutil
-    protobuf
-    GitPython
-    pyyaml
-    querystring_parser
-    simplejson
-    docker
-    databricks-cli
-    entrypoints
-    sqlparse
+    pyarrow
+    scikit-learn
+    scipy
+    skops
     sqlalchemy
-    gorilla
-    gunicorn
   ];
 
-  meta = with lib; {
-    homepage = "https://github.com/mlflow/mlflow";
+  pythonImportsCheck = [ "mlflow" ];
+
+  # I (@GaetanLepage) gave up at enabling tests:
+  # - They require a lot of dependencies (some unpackaged);
+  # - Many errors occur at collection time;
+  # - Most (all ?) tests require internet access anyway.
+  doCheck = false;
+
+  meta = {
     description = "Open source platform for the machine learning lifecycle";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ tbenst ];
-    # missing prometheus-flask-exporter, not packaged in nixpkgs
-    broken = true; # 2020-08-15
+    mainProgram = "mlflow";
+    homepage = "https://github.com/mlflow/mlflow";
+    changelog = "https://github.com/mlflow/mlflow/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    # Build from wheel which contains pure Python and pre-built JS bundle.
+    sourceProvenance = with lib.sourceTypes; [
+      binaryBytecode
+    ];
+    maintainers = with lib.maintainers; [
+      GaetanLepage
+      gquetel
+    ];
   };
-}
+})

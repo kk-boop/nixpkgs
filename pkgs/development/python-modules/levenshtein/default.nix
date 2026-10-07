@@ -1,46 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, rapidfuzz
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  cmake,
+  cython,
+  ninja,
+  scikit-build-core,
+  rapidfuzz-cpp,
+  rapidfuzz,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "levenshtein";
-  version = "0.16.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "0.27.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "maxbachmann";
+    owner = "rapidfuzz";
     repo = "Levenshtein";
-    rev = "v${version}";
-    sha256 = "agshUVkkqogj4FbonFd/rrGisMOomS62NND66YKZvjg=";
+    tag = "v${version}";
+    hash = "sha256-iKWS7gm0t3yPgeX5N09cTa3N1C6GXvIALueO8DlfLfE=";
   };
 
+  # https://github.com/rapidfuzz/Levenshtein/pull/84
+  patches = [ ./cython-3.2-compat.patch ];
+
   postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "rapidfuzz >= 1.8.2, < 1.9" "rapidfuzz"
+    substituteInPlace pyproject.toml \
+      --replace-fail "Cython>=3.1.6,<3.2.0" Cython
   '';
 
-  propagatedBuildInputs = [
-    rapidfuzz
+  build-system = [
+    cmake
+    cython
+    ninja
+    scikit-build-core
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  dontUseCmakeConfigure = true;
 
-  pythonImportsCheck = [
-    "Levenshtein"
-  ];
+  buildInputs = [ rapidfuzz-cpp ];
 
-  meta = with lib; {
+  dependencies = [ rapidfuzz ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "Levenshtein" ];
+
+  meta = {
     description = "Functions for fast computation of Levenshtein distance and string similarity";
-    homepage = "https://github.com/maxbachmann/Levenshtein";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/rapidfuzz/Levenshtein";
+    changelog = "https://github.com/rapidfuzz/Levenshtein/blob/v${version}/HISTORY.md";
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

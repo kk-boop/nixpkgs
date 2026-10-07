@@ -1,28 +1,36 @@
-{ lib, buildPythonPackage, fetchPypi, isPy3k, six, mock, pytestCheckHook, setuptools, setuptools-scm }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools-scm,
+}:
 
 buildPythonPackage rec {
   pname = "ansi2html";
-  version = "1.6.0";
-
-  disabled = !isPy3k;
+  version = "1.9.5";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0f124ea7efcf3f24f1f9398e527e688c9ae6eab26b0b84e1299ef7f94d92c596";
+    hash = "sha256-rhfpLx1srA5n02fgf7C6iiPayPGT/F16jIpQ/l3dlaQ=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-  propagatedBuildInputs = [ six setuptools ];
+  build-system = [
+    setuptools-scm
+  ];
 
   preCheck = "export PATH=$PATH:$out/bin";
-  checkInputs = [ mock pytestCheckHook ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "ansi2html" ];
 
-  meta = with lib; {
+  meta = {
     description = "Convert text with ANSI color codes to HTML";
+    mainProgram = "ansi2html";
     homepage = "https://github.com/ralphbean/ansi2html";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ davidtwco ];
+    license = lib.licenses.lgpl3Plus;
+    maintainers = [ ];
   };
 }

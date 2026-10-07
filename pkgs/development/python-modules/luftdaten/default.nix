@@ -1,37 +1,31 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, poetry-core
-, httpx
-, pytest-asyncio
-, pytest-httpx
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  httpx,
+  pytest-asyncio,
+  pytest-httpx,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "luftdaten";
-  version = "0.7.1";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "0.7.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "home-assistant-ecosystem";
     repo = "python-luftdaten";
-    rev = version;
-    sha256 = "sha256-76Y5TJet0WtzYXuK8Og0rmpsUIlXK7b37oesh+MliU8=";
+    tag = finalAttrs.version;
+    hash = "sha256-KZ89ufU7wWPFp1zthmao/cSFbUDWlJY4iBNQ19fgIBQ=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
-    httpx
-  ];
+  dependencies = [ httpx ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-asyncio
     pytest-httpx
     pytestCheckHook
@@ -39,10 +33,14 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "luftdaten" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python API for interacting with luftdaten.info";
     homepage = "https://github.com/home-assistant-ecosystem/python-luftdaten";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda fab ];
+    changelog = "https://github.com/home-assistant-ecosystem/python-luftdaten/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      dotlambda
+      fab
+    ];
   };
-}
+})

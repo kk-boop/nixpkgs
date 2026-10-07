@@ -1,26 +1,79 @@
-{ lib, buildPythonPackage, fetchFromGitHub, django, isPy27 }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 
-buildPythonPackage rec {
-  version = "3.12.4";
+  # build-system
+  setuptools,
+
+  # dependencies
+  django,
+
+  # optional-dependencies
+  coreapi,
+  coreschema,
+  django-guardian,
+  inflection,
+  psycopg2,
+  pygments,
+  pyyaml,
+
+  # tests
+  dj-database-url,
+  pytestCheckHook,
+  pytest-django,
+  pytz,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "djangorestframework";
-  disabled = isPy27;
+  version = "3.18.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "encode";
     repo = "django-rest-framework";
-    rev = version;
-    sha256 = "sha256-FjMRfVyLmm5J9uOUTLZpO3Pvge3RoYnqIRvzMng7wZo=";
+    tag = finalAttrs.version;
+    hash = "sha256-ZOzGJOIyN6X7NxplIDUeII87IlsXViNLPeW7f4/vIfY=";
   };
 
-  # Test settings are missing
-  doCheck = false;
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ django ];
+  dependencies = [
+    django
+  ];
 
-  meta = with lib; {
+  optional-dependencies = {
+    complete = [
+      coreapi
+      coreschema
+      django-guardian
+      inflection
+      psycopg2
+      pygments
+      pyyaml
+    ];
+  };
+
+  nativeCheckInputs = [
+    dj-database-url
+    pytest-django
+    pytestCheckHook
+    pytz
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.complete;
+
+  disabledTestPaths = lib.optionals (lib.versionAtLeast django.version "6") [
+    # AssertionError: assert '�\\u0125\\u01a6.txt' == 'ÀĥƦ.txt'"
+    "tests/test_parsers.py::TestFileUploadParser::test_get_encoded_filename"
+  ];
+
+  pythonImportsCheck = [ "rest_framework" ];
+
+  meta = {
+    changelog = "https://github.com/encode/django-rest-framework/releases/tag/${finalAttrs.src.tag}";
     description = "Web APIs for Django, made easy";
     homepage = "https://www.django-rest-framework.org/";
-    maintainers = with maintainers; [ desiderius ];
-    license = licenses.bsd2;
+    license = lib.licenses.bsd2;
   };
-}
+})

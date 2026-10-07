@@ -1,40 +1,63 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, webtest
-, zope_component
-, hupper
-, pastedeploy
-, plaster
-, plaster-pastedeploy
-, repoze_lru
-, translationstring
-, venusian
-, webob
-, zope_deprecation
-, zope_interface
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  webtest,
+  zope-component,
+  hupper,
+  pastedeploy,
+  plaster,
+  plaster-pastedeploy,
+  repoze-lru,
+  setuptools_80,
+  translationstring,
+  venusian,
+  webob,
+  zope-deprecation,
+  zope-interface,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyramid";
-  version = "2.0";
+  version = "2.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "45431b387587ed0fac6213b54d6e9f0936f0cc85238a8f5af7852fc9484c5c77";
+  src = fetchFromGitHub {
+    owner = "Pylons";
+    repo = "pyramid";
+    tag = finalAttrs.version;
+    hash = "sha256-N0zH0BpS9ImSTWeADBOBSgLYI062sdLxTzwBENAawFc=";
   };
 
-  checkInputs = [ webtest zope_component ];
+  build-system = [ setuptools_80 ];
 
-  propagatedBuildInputs = [ hupper pastedeploy plaster plaster-pastedeploy repoze_lru translationstring venusian webob zope_deprecation zope_interface ];
+  dependencies = [
+    hupper
+    pastedeploy
+    plaster
+    plaster-pastedeploy
+    repoze-lru
+    translationstring
+    venusian
+    webob
+    zope-deprecation
+    zope-interface
+  ];
+
+  nativeCheckInputs = [
+    webtest
+    zope-component
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "pyramid" ];
 
-  meta = with lib; {
-    description = "The Pyramid Web Framework, a Pylons project";
+  meta = {
+    description = "Python web framework";
     homepage = "https://trypyramid.com/";
-    license = licenses.bsd0;
-    maintainers = with maintainers; [ domenkozar ];
+    changelog = "https://github.com/Pylons/pyramid/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    license = lib.licenses.bsd0;
+    maintainers = [ ];
   };
-
-}
+})

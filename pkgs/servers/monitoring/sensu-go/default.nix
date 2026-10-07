@@ -1,38 +1,52 @@
-{ buildGoModule, fetchFromGitHub, lib }:
+{
+  buildGoModule,
+  fetchFromGitHub,
+  lib,
+}:
 
 let
-  generic = { subPackages, pname, postInstall ? "", mainProgram }:
+  generic =
+    {
+      subPackages,
+      pname,
+      postInstall ? "",
+      mainProgram,
+    }:
     buildGoModule rec {
       inherit pname;
-      version = "6.4.1";
-      shortRev = "3a1ac58"; # for internal version info
+      version = "6.14.2";
+      shortRev = "591ed6e"; # for internal version info
 
       src = fetchFromGitHub {
         owner = "sensu";
         repo = "sensu-go";
         rev = "v${version}";
-        sha256 = "sha256-tVmjBfRvQQ1+VtARP1lN8Fu06tujZhZj9IpGVF0mKqA=";
+        sha256 = "sha256-DlJneEAmkWqM5SgbUvvFmiSZzapQd+IpMivlB9r47W8=";
       };
 
       inherit subPackages postInstall;
 
-      vendorSha256 = "sha256-fStGEKAR9fzA6Uom6r59jFGTBUfTTj0TzytoJWuicbU=";
+      vendorHash = "sha256-iNIpUABozQpnBUiWBrp2ii4mNRKKJtChLiHnlaEQqvU=";
 
       doCheck = false;
 
-      ldflags = let
-        versionPkg = "github.com/sensu/sensu-go/version";
-      in [
-        "-X ${versionPkg}.Version=${version}"
-        "-X ${versionPkg}.BuildSHA=${shortRev}"
-      ];
+      ldflags =
+        let
+          versionPkg = "github.com/sensu/sensu-go/version";
+        in
+        [
+          "-X ${versionPkg}.Version=${version}"
+          "-X ${versionPkg}.BuildSHA=${shortRev}"
+        ];
 
       meta = {
         inherit mainProgram;
         homepage = "https://sensu.io";
         description = "Open source monitoring tool for ephemeral infrastructure & distributed applications";
         license = lib.licenses.mit;
-        maintainers = with lib.maintainers; [ thefloweringash ];
+        maintainers = with lib.maintainers; [
+          thefloweringash
+        ];
       };
     };
 in

@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
@@ -25,8 +30,8 @@ in
       default = false;
       description = ''
         Enables reverse proxy support. This will allow Convos to automatically
-        pick up the <literal>X-Forwarded-For</literal> and
-        <literal>X-Request-Base</literal> HTTP headers set in your reverse proxy
+        pick up the `X-Forwarded-For` and
+        `X-Request-Base` HTTP headers set in your reverse proxy
         web server. Note that enabling this option without a reverse proxy in
         front will be a security issue.
       '';
@@ -36,7 +41,7 @@ in
     systemd.services.convos = {
       description = "Convos Service";
       wantedBy = [ "multi-user.target" ];
-      after = [ "networking.target" ];
+      after = [ "network.target" ];
       environment = {
         CONVOS_HOME = "%S/convos";
         CONVOS_REVERSE_PROXY = if cfg.reverseProxy then "1" else "0";
@@ -62,7 +67,10 @@ in
         LockPersonality = true;
         RestrictRealtime = true;
         RestrictNamespaces = true;
-        RestrictAddressFamilies = [ "AF_INET" "AF_INET6"];
+        RestrictAddressFamilies = [
+          "AF_INET"
+          "AF_INET6"
+        ];
         SystemCallFilter = "@system-service";
         SystemCallArchitectures = "native";
         CapabilityBoundingSet = "";

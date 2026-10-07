@@ -1,29 +1,56 @@
-{ lib, buildPythonPackage, fetchPypi, pytest, isPy3k, isPy35, async_generator }:
+{
+  lib,
+  buildPythonPackage,
+  callPackage,
+  fetchFromGitHub,
+  pythonOlder,
+  pytest,
+  setuptools-scm,
+  typing-extensions,
+}:
+
 buildPythonPackage rec {
   pname = "pytest-asyncio";
-  version = "0.15.1";
+  version = "1.4.0"; # N.B.: when updating, tests bleak and aioesphomeapi tests
+  pyproject = true;
 
-  disabled = !isPy3k;
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "2564ceb9612bbd560d19ca4b41347b54e7835c2f792c504f698e05395ed63f6f";
+  src = fetchFromGitHub {
+    owner = "pytest-dev";
+    repo = "pytest-asyncio";
+    tag = "v${version}";
+    hash = "sha256-MuTLCRHCuD9TwJkMiFIC5Xv5Xz6NL8j4JZpW8BA45SI=";
   };
 
-  buildInputs = [ pytest ]
-    ++ lib.optionals isPy35 [ async_generator ];
+  outputs = [
+    "out"
+    "testout"
+  ];
 
-  # No tests in archive
-  doCheck = false;
+  build-system = [ setuptools-scm ];
 
-  # LICENSE file is not distributed. https://github.com/pytest-dev/pytest-asyncio/issues/92
-  postPatch = ''
-    substituteInPlace setup.cfg --replace "license_file = LICENSE" ""
+  pythonRelaxDeps = [ "pytest" ];
+
+  buildInputs = [ pytest ];
+
+  dependencies = lib.optionals (pythonOlder "3.13") [
+    typing-extensions
+  ];
+
+  postInstall = ''
+    mkdir $testout
+    cp -R tests $testout/tests
   '';
 
-  meta = with lib; {
-    description = "library for testing asyncio code with pytest";
-    license = licenses.asl20;
+  doCheck = false;
+  passthru.tests.pytest = callPackage ./tests.nix { };
+
+  pythonImportsCheck = [ "pytest_asyncio" ];
+
+  meta = {
+    description = "Library for testing asyncio code with pytest";
     homepage = "https://github.com/pytest-dev/pytest-asyncio";
+    changelog = "https://github.com/pytest-dev/pytest-asyncio/blob/${src.tag}/docs/reference/changelog.rst";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

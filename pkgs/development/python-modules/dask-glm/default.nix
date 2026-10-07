@@ -1,33 +1,78 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, cloudpickle
-, dask
-, numpy, toolz # dask[array]
-, multipledispatch
-, setuptools-scm
-, scipy
-, scikit-learn
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  cloudpickle,
+  dask,
+  distributed,
+  multipledispatch,
+  numba,
+  numpy,
+  scikit-learn,
+  scipy,
+  sparse,
+
+  # tests
+  pytest-xdist,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
-  version = "0.2.0";
+buildPythonPackage (finalAttrs: {
   pname = "dask-glm";
+  version = "0.4.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "58b86cebf04fe5b9e58092e1c467e32e60d01e11b71fdc628baaa9fc6d1adee5";
+  src = fetchFromGitHub {
+    owner = "dask";
+    repo = "dask-glm";
+    tag = finalAttrs.version;
+    hash = "sha256-u3KASmBamc7qU/GxGT0QBqWJ1HDk81xI0MOoRng8BzA=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-  checkInputs = [ pytestCheckHook ];
-  propagatedBuildInputs = [ cloudpickle dask numpy toolz multipledispatch scipy scikit-learn ];
+  # The iprint parameter of `scipy.optimize.fmin_l_bfgs_b` was removed in 1.18.0
+  # https://github.com/scipy/scipy/blob/b881cb179463e85a74f3368f6242986d713adbdc/doc/source/release/1.18.0-notes.rst?plain=1#L291-L292
+  postPatch = ''
+    substituteInPlace dask_glm/algorithms.py \
+      --replace-fail "iprint=(verbose > 0) - 1," ""
+  '';
 
-  meta = with lib; {
-    homepage = "https://github.com/dask/dask-glm/";
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
+
+  dependencies = [
+    cloudpickle
+    dask
+    distributed
+    multipledispatch
+    numba
+    numpy
+    scikit-learn
+    scipy
+    sparse
+  ]
+  ++ dask.optional-dependencies.array;
+
+  nativeCheckInputs = [
+    pytest-xdist
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "dask_glm" ];
+
+  meta = {
     description = "Generalized Linear Models with Dask";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+    homepage = "https://github.com/dask/dask-glm/";
+    changelog = "https://github.com/dask/dask-glm/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

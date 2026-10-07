@@ -1,26 +1,91 @@
-{ lib, fetchPypi, buildPythonPackage, isPy3k, boost, numpy, pytestCheckHook, pytest-benchmark }:
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
 
-buildPythonPackage rec {
+  # nativeBuildInputs
+  cmake,
+
+  # build-system
+  pybind11,
+  nanobind,
+  ninja,
+  scikit-build-core,
+  setuptools-scm,
+
+  # buildInputs
+  boost,
+
+  # dependencies
+  numpy,
+
+  # tests
+  pytestCheckHook,
+  pytest-benchmark,
+  pytest-xdist,
+  cloudpickle,
+  hypothesis,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "boost-histogram";
-  version = "1.2.1";
-  disabled = !isPy3k;
+  version = "1.8.1";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    pname = "boost_histogram";
-    inherit version;
-    sha256 = "a27842b2f1cfecc509382da2b25b03056354696482b38ec3c0220af0fc9b7579";
+  src = fetchFromGitHub {
+    owner = "scikit-hep";
+    repo = "boost-histogram";
+    tag = "v${finalAttrs.version}";
+    fetchSubmodules = true;
+    hash = "sha256-pI+5KURd2YheV8TGNDxXS1QfwzSsti6h1U7E4Ds825c=";
   };
+
+  nativeBuildInputs = [ cmake ];
+
+  dontUseCmakeConfigure = true;
+
+  build-system = [
+    pybind11
+    nanobind
+    ninja
+    scikit-build-core
+    setuptools-scm
+  ];
 
   buildInputs = [ boost ];
-  propagatedBuildInputs = [ numpy ];
 
-  checkInputs = [ pytestCheckHook pytest-benchmark ];
+  dependencies = [ numpy ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-benchmark
+    pytest-xdist
+    cloudpickle
+    hypothesis
+  ];
+
+  pytestFlags = [ "--benchmark-disable" ];
+
+  disabledTests =
+    lib.optionals stdenv.hostPlatform.isDarwin [
+      # Trace/BPT trap: 5
+      "test_round_trip_3d_histogram_json"
+    ]
+    ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64) [
+      # Segfaults: boost_histogram/_internal/hist.py", line 799 in sum
+      # Fatal Python error: Segmentation fault
+      "test_numpy_conversion_4"
+    ];
+
+  pythonImportsCheck = [ "boost_histogram" ];
+
+  meta = {
     description = "Python bindings for the C++14 Boost::Histogram library";
     homepage = "https://github.com/scikit-hep/boost-histogram";
-    license = licenses.bsd3;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ veprbl ];
+    changelog = "https://github.com/scikit-hep/boost-histogram/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ veprbl ];
   };
-}
+})

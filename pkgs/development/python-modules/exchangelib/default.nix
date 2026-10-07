@@ -1,45 +1,45 @@
-{ lib
-, backports-datetime-fromisoformat
-, backports-zoneinfo
-, buildPythonPackage
-, cached-property
-, defusedxml
-, dnspython
-, fetchFromGitHub
-, flake8
-, isodate
-, lxml
-, oauthlib
-, psutil
-, pygments
-, python-dateutil
-, pythonOlder
-, pytz
-, pyyaml
-, requests
-, requests_ntlm
-, requests_oauthlib
-, requests-kerberos
-, requests-mock
-, tzdata
-, tzlocal
+{
+  lib,
+  buildPythonPackage,
+  cached-property,
+  defusedxml,
+  dnspython,
+  fetchFromGitHub,
+  isodate,
+  lxml,
+  oauthlib,
+  psutil,
+  pygments,
+  python-dateutil,
+  pytz,
+  pyyaml,
+  requests,
+  requests-ntlm,
+  requests-gssapi,
+  requests-oauthlib,
+  requests-mock,
+  setuptools,
+  tzdata,
+  tzlocal,
 }:
 
 buildPythonPackage rec {
   pname = "exchangelib";
-  version = "4.6.2";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "5.6.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ecederstrand";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1vax4xqjav6nr3kfkz390ism3cs69dxnbx6sc0f9ci4mn3rxjwdy";
+    repo = "exchangelib";
+    tag = "v${version}";
+    hash = "sha256-tmJq0AZLuOic63ziIr173lbz6sDF/u75Y2ASYnHHDTM=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "defusedxml" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     cached-property
     defusedxml
     dnspython
@@ -48,19 +48,24 @@ buildPythonPackage rec {
     oauthlib
     pygments
     requests
-    requests_ntlm
-    requests_oauthlib
-    requests-kerberos
+    requests-ntlm
+    requests-oauthlib
     tzdata
     tzlocal
-  ] ++ lib.optionals (pythonOlder "3.9") [
-    backports-zoneinfo
-  ] ++ lib.optionals (pythonOlder "3.7") [
-    backports-datetime-fromisoformat
   ];
 
-  checkInputs = [
-    flake8
+  optional-dependencies = {
+    complete = [
+      requests-gssapi
+      # requests-negotiate-sspi
+    ];
+    kerberos = [ requests-gssapi ];
+    # sspi = [
+    #   requests-negotiate-sspi
+    # ];
+  };
+
+  nativeCheckInputs = [
     psutil
     python-dateutil
     pytz
@@ -68,14 +73,12 @@ buildPythonPackage rec {
     requests-mock
   ];
 
-  pythonImportsCheck = [
-    "exchangelib"
-  ];
+  pythonImportsCheck = [ "exchangelib" ];
 
-  meta = with lib; {
+  meta = {
     description = "Client for Microsoft Exchange Web Services (EWS)";
     homepage = "https://github.com/ecederstrand/exchangelib";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ catern ];
+    changelog = "https://github.com/ecederstrand/exchangelib/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
   };
 }

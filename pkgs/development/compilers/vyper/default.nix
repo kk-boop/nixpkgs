@@ -1,55 +1,89 @@
-{ lib, buildPythonPackage, fetchPypi, writeText, asttokens
-, pycryptodome, pytest-xdist, pytest-cov, recommonmark, semantic-version, sphinx
-, sphinx_rtd_theme, pytest-runner }:
+{
+  lib,
+  lark,
+  asttokens,
+  buildPythonPackage,
+  cbor2,
+  fetchPypi,
+  git,
+  immutables,
+  importlib-metadata,
+  packaging,
+  pycryptodome,
+  recommonmark,
+  setuptools-scm,
+  sphinx,
+  sphinx-rtd-theme,
+  writeText,
+}:
 
 let
   sample-contract = writeText "example.vy" ''
     count: int128
 
-    @external
+    @deploy
     def __init__(foo: address):
         self.count = 1
   '';
-in
 
+in
 buildPythonPackage rec {
   pname = "vyper";
-  version = "0.3.0";
+  version = "0.4.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "3e50cd802696ea3f5e6ab1bf4c9a90a39c332591d416c99f3d2fa93d7d7ba394";
+    hash = "sha256-IqdXNldAHYo7xpDWXWt3QWgABxgJeMOgX5iS2zHV3PU=";
   };
 
-  nativeBuildInputs = [ pytest-runner ];
-
-  # Replace the dynamic commit hash lookup with the hash from the tag
   postPatch = ''
+    # pythonRelaxDeps doesn't work
     substituteInPlace setup.py \
-      --replace 'asttokens==' 'asttokens>=' \
-      --replace 'subprocess.check_output("git rev-parse HEAD".split())' "' '" \
-      --replace 'commithash.decode("utf-8").strip()' "'6e7dba7a8b5f29762d3470da4f44634b819c808d'"
+      --replace-fail "setuptools_scm>=7.1.0,<8.0.0" "setuptools_scm>=7.1.0"
   '';
 
+  nativeBuildInputs = [
+    # Git is used in setup.py to compute version information during building
+    # ever since https://github.com/vyperlang/vyper/pull/2816
+    git
+
+    setuptools-scm
+  ];
+
+  pythonRelaxDeps = [
+    "asttokens"
+    "packaging"
+  ];
+
   propagatedBuildInputs = [
+    lark
     asttokens
+    cbor2
+    immutables
+    importlib-metadata
+    packaging
     pycryptodome
-    semantic-version
 
     # docs
     recommonmark
     sphinx
-    sphinx_rtd_theme
+    sphinx-rtd-theme
   ];
 
   checkPhase = ''
     $out/bin/vyper "${sample-contract}"
   '';
 
-  meta = with lib; {
+  pythonImportsCheck = [
+    "vyper"
+  ];
+
+  meta = {
     description = "Pythonic Smart Contract Language for the EVM";
     homepage = "https://github.com/vyperlang/vyper";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ siraben ];
+    changelog = "https://github.com/vyperlang/vyper/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ siraben ];
   };
 }

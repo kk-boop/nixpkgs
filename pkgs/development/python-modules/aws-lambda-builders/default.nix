@@ -1,53 +1,84 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, six
-, pathlib
-, pytest
-, mock
-, parameterized
-, isPy27
-, isPy35
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  mock,
+  parameterized,
+  pip,
+  pyelftools,
+  pytestCheckHook,
+  setuptools,
+  six,
 }:
 
 buildPythonPackage rec {
   pname = "aws-lambda-builders";
-  version = "1.9.0";
+  version = "1.61.0";
+  pyproject = true;
 
-  # No tests available in PyPI tarball
   src = fetchFromGitHub {
     owner = "awslabs";
     repo = "aws-lambda-builders";
-    rev = "v${version}";
-    sha256 = "1ff1hr282snpjs5ggf7agxk5y6nr4xjdahmzq6hv56gj4lcfsq7c";
+    tag = "v${version}";
+    hash = "sha256-NdVZrc6996dlV0jSWuZH/dLQdJnXO+BQb8hk3G0oXmw=";
   };
 
-  # Package is not compatible with Python 3.5
-  disabled = isPy35;
-
-  propagatedBuildInputs = [
-    six
-  ] ++ lib.optionals isPy27 [ pathlib ];
-
-  checkInputs = [
-    pytest
-    mock
-    parameterized
-  ];
-
-  checkPhase = ''
-    export PATH=$out/bin:$PATH
-    pytest tests/functional -k 'not can_invoke_pip'
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail "version=read_version()," 'version="${version}",'
   '';
 
-  meta = with lib; {
+  build-system = [ setuptools ];
+
+  dependencies = [ six ];
+
+  nativeCheckInputs = [
+    mock
+    parameterized
+    pip
+    pyelftools
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # CLI don't work in the sandbox
+    "test_run_hello_workflow"
+    # Don't tests integrations
+    "TestCustomMakeWorkflow"
+    "TestDotnet31"
+    "TestDotnet6"
+    "TestGoWorkflow"
+    "TestJavaGradle"
+    "TestJavaMaven"
+    "TestNodejsNpmWorkflow"
+    "TestNodejsNpmWorkflowWithEsbuild"
+    "TestPipRunner"
+    "TestPythonPipWorkflow"
+    "TestRubyWorkflow"
+    "TestRustCargo"
+    "test_with_mocks"
+    # Tests which are passing locally but not on Hydra
+    "test_copy_dependencies_action_1_multiple_files"
+    "test_move_dependencies_action_1_multiple_files"
+  ];
+
+  disabledTestPaths = [
+    # Dotnet binary needed
+    "tests/integration/workflows/dotnet_clipackage/test_dotnet.py"
+  ];
+
+  pythonImportsCheck = [ "aws_lambda_builders" ];
+
+  meta = {
+    description = "Tool to compile, build and package AWS Lambda functions";
+    mainProgram = "lambda-builders";
     homepage = "https://github.com/awslabs/aws-lambda-builders";
-    description = "A tool to compile, build and package AWS Lambda functions";
+    changelog = "https://github.com/aws/aws-lambda-builders/releases/tag/${src.tag}";
     longDescription = ''
       Lambda Builders is a Python library to compile, build and package
       AWS Lambda functions for several runtimes & frameworks.
     '';
-    license = licenses.asl20;
-    maintainers = with maintainers; [ dhkl ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ dhkl ];
   };
 }

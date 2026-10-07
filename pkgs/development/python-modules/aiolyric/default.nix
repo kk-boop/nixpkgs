@@ -1,37 +1,63 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
+{
+  lib,
+  aiohttp,
+  aioresponses,
+  buildPythonPackage,
+  fetchFromGitHub,
+  packaging,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiolyric";
-  version = "1.0.8";
-  disabled = pythonOlder "3.7";
+  version = "2.1.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "timmo001";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-A4EkqSIQ5p4E4DPLYu9a/lmb1sFhwDqFLhjhZS6Zf5c=";
+    repo = "aiolyric";
+    tag = finalAttrs.version;
+    hash = "sha256-jIJTQm86PBnLwJlYalEhppU01g02wbu20kpVvP4kXz0=";
   };
 
-  propagatedBuildInputs = [ aiohttp ];
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail .dev0 ""
+  '';
 
-  checkInputs = [ pytestCheckHook ];
-
-  disabledTests = [
-    # AssertionError, https://github.com/timmo001/aiolyric/issues/5
-    "test_location"
+  build-system = [
+    setuptools
   ];
+
+  pythonRelaxDeps = [
+    "packaging"
+  ];
+
+  dependencies = [
+    aiohttp
+    packaging
+  ];
+
+  nativeCheckInputs = [
+    aioresponses
+    pytest-asyncio
+    pytestCheckHook
+  ];
+
   pythonImportsCheck = [ "aiolyric" ];
 
-  meta = with lib; {
+  disabledTestPaths = [
+    # _version file is no shipped
+    "tests/test__version.py"
+  ];
+
+  meta = {
     description = "Python module for the Honeywell Lyric Platform";
     homepage = "https://github.com/timmo001/aiolyric";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/timmo001/aiolyric/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

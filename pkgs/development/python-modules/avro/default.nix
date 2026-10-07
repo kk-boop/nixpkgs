@@ -1,30 +1,40 @@
-{ lib, buildPythonPackage, isPy3k, fetchPypi, pycodestyle, isort }:
+{
+  lib,
+  buildPythonPackage,
+  setuptools,
+  fetchPypi,
+  pytest7CheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "avro";
-  version = "1.10.2";
+  version = "1.12.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "381b990cc4c4444743c3297348ffd46e0c3a5d7a17e15b2f4a9042f6e955c31a";
+    hash = "sha256-6QDntZpHgfY9npNeiPbsUMTWC+P0rfnGO1HtOdV4/gg=";
   };
 
-  patchPhase = ''
-    # this test requires network access
-    sed -i 's/test_server_with_path/noop/' avro/test/test_ipc.py
-  '' + (lib.optionalString isPy3k ''
-    # these files require twisted, which is not python3 compatible
-    rm avro/txipc.py
-    rm avro/test/txsample*
-  '');
+  build-system = [ setuptools ];
 
-  nativeBuildInputs = [ pycodestyle ];
-  propagatedBuildInputs = [ isort ];
+  nativeCheckInputs = [ pytest7CheckHook ];
 
-  meta = with lib; {
-    description = "A serialization and RPC framework";
-    homepage = "https://pypi.python.org/pypi/avro/";
-    license = licenses.asl20;
-    maintainers = [ maintainers.zimbatm ];
+  disabledTests = [
+    # Requires network access
+    "test_server_with_path"
+    # AssertionError: 'reader type: null not compatible with writer type: int'
+    "test_schema_compatibility_type_mismatch"
+  ];
+
+  pythonImportsCheck = [ "avro" ];
+
+  meta = {
+    description = "Python serialization and RPC framework";
+    homepage = "https://github.com/apache/avro";
+    changelog = "https://github.com/apache/avro/releases/tag/release-${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ zimbatm ];
+    mainProgram = "avro";
   };
 }

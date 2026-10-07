@@ -1,52 +1,57 @@
-{ lib
-, buildPythonPackage
-, click
-, colorful
-, docopt
-, fetchFromGitHub
-, freezegun
-, humanize
-, lark-parser
-, parse-type
-, pysingleton
-, pytestCheckHook
-, pyyaml
-, tag-expressions
-, lxml
-, pytest-mock
+{
+  lib,
+  buildPythonPackage,
+  colorful,
+  docopt,
+  fetchFromGitHub,
+  freezegun,
+  humanize,
+  lxml,
+  parse-type,
+  pytest-mock,
+  pytestCheckHook,
+  pyyaml,
+  tag-expressions,
 }:
 
 buildPythonPackage rec {
   pname = "radish-bdd";
-  version = "0.13.4";
+  version = "0.18.4";
+  format = "setuptools";
 
-  # Pypi package does not have necessary test fixtures.
   src = fetchFromGitHub {
     owner = pname;
     repo = "radish";
-    rev = "v${version}";
-    sha256 = "1slfgh61648i009qj8156qipy21a6zm8qzjk00kbm5kk5z9jfryi";
+    tag = "v${version}";
+    hash = "sha256-pnZ/vqjMd1Q/wF1W6joYrIulZSXAzS2G3E5Ke5VSAQg=";
   };
 
   propagatedBuildInputs = [
-    lark-parser
-    click
     colorful
-    tag-expressions
-    parse-type
-    humanize
-    pyyaml
     docopt
-    pysingleton
+    humanize
+    lxml
+    parse-type
+    pyyaml
+    tag-expressions
   ];
 
-  checkInputs = [ freezegun lxml pytestCheckHook pytest-mock ];
-  disabledTests = [ "test_main_cli_calls" ];
+  nativeCheckInputs = [
+    freezegun
+    pytest-mock
+    pytestCheckHook
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "radish" ];
+
+  meta = {
     description = "Behaviour-Driven-Development tool for python";
-    homepage = "http://radish-bdd.io";
-    license = licenses.mit;
-    maintainers = with maintainers; [ kalbasit ];
+    homepage = "https://radish-bdd.github.io/";
+    changelog = "https://github.com/radish-bdd/radish/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      kalbasit
+      l33tname
+    ];
   };
 }

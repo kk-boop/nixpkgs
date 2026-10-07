@@ -1,19 +1,28 @@
-{ lib, fetchurl, buildDunePackage
-, astring, fmt, logs, ocaml_lwt
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  astring,
+  fmt,
+  logs,
+  lwt,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "irmin-watcher";
-  version = "0.4.1";
-
-  useDune2 = true;
+  version = "0.5.0";
 
   src = fetchurl {
-    url = "https://github.com/mirage/irmin-watcher/releases/download/${version}/irmin-watcher-${version}.tbz";
-    sha256 = "00d4ph4jbsw6adp3zqdrwi099hfcf7p1xzi0685qr7bgcmandjfv";
+    url = "https://github.com/mirage/irmin-watcher/releases/download/${finalAttrs.version}/irmin-watcher-${finalAttrs.version}.tbz";
+    hash = "sha256-vq4kwaz4QUG9x0fGEbQMAuDGjlT3/6lm8xiXTUqJmZM=";
   };
 
-  propagatedBuildInputs = [ astring fmt logs ocaml_lwt ];
+  propagatedBuildInputs = [
+    astring
+    fmt
+    logs
+    lwt
+  ];
 
   meta = {
     homepage = "https://github.com/mirage/irmin-watcher";
@@ -22,4 +31,4 @@ buildDunePackage rec {
     maintainers = [ lib.maintainers.vbgl ];
   };
 
-}
+})

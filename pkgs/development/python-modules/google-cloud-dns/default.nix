@@ -1,41 +1,54 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, google-cloud-core
-, pytestCheckHook
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-cloud-core,
+  mock,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-cloud-dns";
-  version = "0.34.0";
+  version = "0.37.2";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "bd75d6e9fd456ce643ee936a113a1ead5405704515caa679db30d7f036e447f3";
+    pname = "google_cloud_dns";
+    inherit (finalAttrs) version;
+    hash = "sha256-KVYp3g7p9VaeoyHfF6CYb0TZZ19zbWVJOgeBIc2+Mho=";
   };
 
-  propagatedBuildInputs = [ google-api-core google-cloud-core ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook ];
+  dependencies = [
+    google-api-core
+    google-cloud-core
+  ];
+
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ];
 
   preCheck = ''
-    # don#t shadow python imports
+    # don't shadow Python imports
     rm -r google
   '';
 
   disabledTests = [
-    # requires credentials
+    # Test requires credentials
     "test_quota"
   ];
 
   pythonImportsCheck = [ "google.cloud.dns" ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud DNS API client library";
-    homepage = "https://github.com/googleapis/python-dns";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://cloud.google.com/dns";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-dns-v${finalAttrs.version}/packages/google-cloud-dns/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

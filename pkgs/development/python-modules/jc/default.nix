@@ -1,38 +1,59 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, ruamel-yaml
-, xmltodict
-, pygments
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  stdenv,
+  buildPackages,
+  buildPythonPackage,
+  fetchFromGitHub,
+  installShellFiles,
+  ruamel-yaml,
+  xmltodict,
+  pygments,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "jc";
-  version = "1.17.3";
-  disabled = pythonOlder "3.6";
+  version = "1.26.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "kellyjonbrazil";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-LoefoKrYZF0REF3EEd9/rxd5VQfpU+lYX/siRlQw00o=";
+    repo = "jc";
+    tag = "v${version}";
+    hash = "sha256-y0N/8bX9huORpHmiQpOj73+UKyOE/irrVJstIodVVyU=";
   };
 
-  propagatedBuildInputs = [ ruamel-yaml xmltodict pygments ];
+  propagatedBuildInputs = [
+    ruamel-yaml
+    xmltodict
+    pygments
+  ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeBuildInputs = [ installShellFiles ];
+
+  postInstall =
+    let
+      emulator = stdenv.hostPlatform.emulator buildPackages;
+    in
+    ''
+      installShellCompletion --cmd jc \
+        --bash <(${emulator} $out/bin/jc --bash-comp) \
+        --zsh  <(${emulator} $out/bin/jc --zsh-comp)
+    '';
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "jc" ];
 
   # tests require timezone to set America/Los_Angeles
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "This tool serializes the output of popular command line tools and filetypes to structured JSON output";
     homepage = "https://github.com/kellyjonbrazil/jc";
-    license = licenses.mit;
-    maintainers = with maintainers; [ atemu ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ atemu ];
+    changelog = "https://github.com/kellyjonbrazil/jc/blob/${src.tag}/CHANGELOG";
+    mainProgram = "jc";
   };
 }

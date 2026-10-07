@@ -1,53 +1,65 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, isPy27
-, isPy3k
-, numpy
-, imagecodecs-lite
-, enum34 ? null
-, futures ? null
-, pathlib ? null
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  dask,
+  fetchPypi,
+  fsspec,
+  lxml,
+  numpy,
+  pytestCheckHook,
+  setuptools,
+  zarr,
 }:
 
 buildPythonPackage rec {
   pname = "tifffile";
-  version = "2021.8.30";
+  version = "2026.1.14";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "8760e61e30106ea0dab9ec42a238d70a3ff55dde9c54456e7b748fe717cb782d";
+    hash = "sha256-pCPFg+HuzZyiVWQtR/Rj76jX8jZaDhEOsBZ1cEk+DIw=";
   };
 
-  patches = lib.optional isPy27 ./python2-regex-compat.patch;
+  build-system = [ setuptools ];
 
-  # Missing dependencies: imagecodecs, czifile, cmapfile, oiffile, lfdfiles
-  # and test data missing from PyPI tarball
-  doCheck = false;
+  dependencies = [ numpy ];
 
-  checkInputs = [
-    pytest
+  nativeCheckInputs = [
+    dask
+    fsspec
+    lxml
+    pytestCheckHook
+    zarr
   ];
 
-  checkPhase = ''
-    pytest
-  '';
-
-  propagatedBuildInputs = [
-    numpy
-  ] ++ lib.optionals isPy3k [
-    imagecodecs-lite
-  ] ++ lib.optionals isPy27 [
-    futures
-    enum34
-    pathlib
+  disabledTests = [
+    # Test require network access
+    "test_class_omexml"
+    "test_write_ome"
+    # Test file is missing
+    "test_write_predictor"
+    "test_issue_imagej_hyperstack_arg"
+    "test_issue_description_overwrite"
+    # AssertionError
+    "test_write_bigtiff"
+    "test_write_imagej_raw"
+    # https://github.com/cgohlke/tifffile/issues/142
+    "test_func_bitorder_decode"
+    # Test file is missing
+    "test_issue_invalid_predictor"
   ];
 
-  meta = with lib; {
-    description = "Read and write image data from and to TIFF files.";
-    homepage = "https://www.lfd.uci.edu/~gohlke/";
-    maintainers = [ maintainers.lebastr ];
-    license = licenses.bsd3;
+  pythonImportsCheck = [ "tifffile" ];
+
+  # flaky, often killed due to OOM or timeout
+  env.SKIP_LARGE = "1";
+
+  meta = {
+    description = "Read and write image data from and to TIFF files";
+    homepage = "https://github.com/cgohlke/tifffile/";
+    changelog = "https://github.com/cgohlke/tifffile/blob/v${version}/CHANGES.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ lebastr ];
   };
 }

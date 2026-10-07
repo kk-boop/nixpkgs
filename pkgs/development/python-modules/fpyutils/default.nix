@@ -1,52 +1,48 @@
-{ lib
-, atomicwrites
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, requests
+{
+  lib,
+  atomicwrites,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  requests,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "fpyutils";
-  version = "2.1.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.5";
+  version = "4.0.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "frnmst";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-QO7g0wjlaboZwvA+JYL1ax7M8zzCc0hizBdaN2b1TCs=";
+    repo = "fpyutils";
+    tag = version;
+    hash = "sha256-VVR1zsejO6kHlMjqqlftDKu3/SyDzgPov9f48HYL/Bk=";
   };
+
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [
     atomicwrites
     requests
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pytestFlagsArray = [
-    "fpyutils/tests/*.py"
-  ];
+  enabledTestPaths = [ "fpyutils/tests/*.py" ];
 
   disabledTests = [
     # Don't run test which requires bash
     "test_execute_command_live_output"
   ];
 
-  pythonImportsCheck = [
-    "fpyutils"
-  ];
+  pythonImportsCheck = [ "fpyutils" ];
 
-  meta = with lib; {
+  meta = {
     description = "Collection of useful non-standard Python functions";
     homepage = "https://github.com/frnmst/fpyutils";
-    license = with licenses; [ gpl3Plus ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://blog.franco.net.eu.org/software/fpyutils-${version}/release.html";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

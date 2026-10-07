@@ -1,15 +1,21 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, docutils
-, requests
-, requests_download
-, zipfile36
-, pythonOlder
-, pytest
-, testpath
-, responses
-, flit-core
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  flit-core,
+
+  # dependencies
+  docutils,
+  pip,
+  requests,
+  tomli-w,
+
+  # tests
+  pytestCheckHook,
+  testpath,
+  responses,
 }:
 
 # Flit is actually an application to build universal wheels.
@@ -19,41 +25,47 @@
 
 buildPythonPackage rec {
   pname = "flit";
-  version = "3.2.0";
-  format = "pyproject";
+  version = "3.12.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "takluyver";
+    owner = "pypa";
     repo = "flit";
     rev = version;
-    sha256 = "sha256-zN+/oAyXBo6Ho7n/xhOQ2mjtPGKA1anCvl3sVf7t+Do=";
+    hash = "sha256-oWV+KK22+iK99iCOCKCV1OCLq2Ef1bcYRKXT5GHwiL8=";
   };
 
-  nativeBuildInputs = [
-    flit-core
-  ];
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     docutils
-    requests
-    requests_download
     flit-core
-  ] ++ lib.optionals (pythonOlder "3.6") [
-    zipfile36
+    pip
+    requests
+    tomli-w
   ];
 
-  checkInputs = [ pytest testpath responses ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    testpath
+    responses
+  ];
 
-  # Disable test that needs some ini file.
-  # Disable test that wants hg
-  checkPhase = ''
-    HOME=$(mktemp -d) pytest -k "not test_invalid_classifier and not test_build_sdist"
-  '';
+  disabledTests = [
+    # needs some ini file.
+    "test_invalid_classifier"
+    # calls pip directly. disabled for PEP 668
+    "test_install_data_dir"
+    "test_install_module_pep621"
+    "test_symlink_data_dir"
+    "test_symlink_module_pep621"
+  ];
 
-  meta = with lib; {
-    description = "A simple packaging tool for simple packages";
-    homepage = "https://github.com/takluyver/flit";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.fridh ];
+  meta = {
+    changelog = "https://github.com/pypa/flit/blob/${version}/doc/history.rst";
+    description = "Simple packaging tool for simple packages";
+    mainProgram = "flit";
+    homepage = "https://github.com/pypa/flit";
+    license = lib.licenses.bsd3;
   };
 }

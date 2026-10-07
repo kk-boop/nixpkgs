@@ -1,28 +1,49 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, google-cloud-core
-, google-api-core
-, grpc-google-iam-v1
-, proto-plus
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-cloud-core,
+  grpc-google-iam-v1,
+  proto-plus,
+  protobuf,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-cloud-resource-manager";
-  version = "1.3.2";
+  version = "1.18.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "b99e11360668ed0c034c8cf3a34caf6fd4a52efaf62d54dd85407c3ad20b715c";
+    pname = "google_cloud_resource_manager";
+    inherit (finalAttrs) version;
+    hash = "sha256-22ifgAoUxm0EEZan+7i7iq6NyH8owpKeEBpex2axVRI=";
   };
 
-  propagatedBuildInputs = [ google-api-core google-cloud-core grpc-google-iam-v1 proto-plus ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook ];
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
 
-  # prevent google directory from shadowing google imports
+  dependencies = [
+    google-api-core
+    google-cloud-core
+    grpc-google-iam-v1
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
+  ];
+
+  # Prevent google directory from shadowing google imports
   preCheck = ''
     rm -r google
   '';
@@ -32,10 +53,11 @@ buildPythonPackage rec {
     "google.cloud.resourcemanager_v3"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Resource Manager API client library";
-    homepage = "https://github.com/googleapis/python-resource-manager";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-resource-manager";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-resource-manager-v${finalAttrs.version}/packages/google-cloud-resource-manager/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

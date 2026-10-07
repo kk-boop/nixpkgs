@@ -1,35 +1,40 @@
-{ lib
-, buildPythonPackage
-, cython
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  cython,
+  expandvars,
+  fetchFromGitHub,
+  pep517,
+  pytestCheckHook,
+  setuptools,
+  wheel,
 }:
 
 buildPythonPackage rec {
   pname = "frozenlist";
-  version = "1.2.0";
-  disabled = pythonOlder "3.6";
+  version = "1.8.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "aio-libs";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-rTbekdceC5QK0aiySi/4QUwaEoDfTlLrx2t6Kb9bH7U=";
+    repo = "frozenlist";
+    tag = "v${version}";
+    hash = "sha256-vkZ60qI0yQ82QSLQkBDzLnikTBQhUUuAzV+YsorrM2Q=";
   };
 
-  nativeBuildInputs = [
-    cython
-  ];
-
-  checkInputs = [
-    pytestCheckHook
-  ];
-
   postPatch = ''
-    substituteInPlace pytest.ini \
-      --replace "--cov=frozenlist" ""
+    rm pytest.ini
   '';
+
+  nativeBuildInputs = [
+    expandvars
+    cython
+    pep517
+    setuptools
+    wheel
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   preBuild = ''
     cython frozenlist/_frozenlist.pyx
@@ -37,10 +42,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "frozenlist" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for list-like structure";
     homepage = "https://github.com/aio-libs/frozenlist";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/aio-libs/frozenlist/blob/${src.tag}/CHANGES.rst";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

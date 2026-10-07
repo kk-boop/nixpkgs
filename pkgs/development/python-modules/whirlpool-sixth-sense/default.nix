@@ -1,36 +1,46 @@
-{ lib
-, aioconsole
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pytest-asyncio
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, websockets
+{
+  lib,
+  aioconsole,
+  aiohttp,
+  aiointercept,
+  aioresponses,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pyprojectVersionPatchHook,
+  pytest-asyncio,
+  pytest-mock,
+  pytestCheckHook,
+  setuptools,
+  websockets,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "whirlpool-sixth-sense";
-  version = "unstable-2021-08-22";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "1.4.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "abmantis";
-    repo = pname;
-    rev = "ca336173d3b5d9a13e7e4b0fa7ca998a9b71d729";
-    sha256 = "0b7bqg4h9q9rk3hv2im903xn7jgfyf36kcv31v96ap75yrvip6wa";
+    repo = "whirlpool-sixth-sense";
+    tag = finalAttrs.version;
+    hash = "sha256-2AF48T/yl5jKlvb8sSwiiAEDi2WSrDHB7bs+AbNt6A8=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
+
+  dependencies = [
     aioconsole
     aiohttp
+    async-timeout
     websockets
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    aioresponses
+    aiointercept
     pytest-asyncio
     pytest-mock
     pytestCheckHook
@@ -38,10 +48,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "whirlpool" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for Whirlpool 6th Sense appliances";
     homepage = "https://github.com/abmantis/whirlpool-sixth-sense/";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/abmantis/whirlpool-sixth-sense/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

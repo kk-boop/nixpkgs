@@ -1,13 +1,21 @@
 {
-  mkDerivation, lib,
+  mkDerivation,
+  cmake,
   extra-cmake-modules,
-  qtbase, qttools
+  qtbase,
+  qttools,
 }:
 
 mkDerivation {
-  name = "kitemviews";
-  nativeBuildInputs = [ extra-cmake-modules ];
+  pname = "kitemviews";
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+  ];
   buildInputs = [ qttools ];
   propagatedBuildInputs = [ qtbase ];
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 }

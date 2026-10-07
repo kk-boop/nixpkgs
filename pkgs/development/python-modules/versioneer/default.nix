@@ -1,29 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "versioneer";
-  version = "0.21";
-  disabled = pythonOlder "3.6";
+  version = "0.29";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "64f2dbcbbed15f9a6da2b85f643997db729cf496cafdb97670fb2fa73a7d8e20";
+  src = fetchFromGitHub {
+    owner = "python-versioneer";
+    repo = "python-versioneer";
+    tag = version;
+    hash = "sha256-3b7Wfhd24Vym5XCeN/M1832Q1VzvlWi3quTRaZrID2s=";
   };
 
-  # Couldn't get tests to work because, for instance, they used virtualenv and
-  # pip.
+  nativeBuildInputs = [ setuptools ];
+
+  # Couldn't get tests to work because, for instance, they used virtualenv and pip
   doCheck = false;
 
   pythonImportsCheck = [ "versioneer" ];
 
-  meta = with lib; {
+  meta = {
     description = "Version-string management for VCS-controlled trees";
-    homepage = "https://github.com/warner/python-versioneer";
-    license = licenses.publicDomain;
-    maintainers = with maintainers; [ jluttine ];
+    mainProgram = "versioneer";
+    homepage = "https://github.com/python-versioneer/python-versioneer";
+    changelog = "https://github.com/python-versioneer/python-versioneer/blob/${version}/NEWS.md";
+    license = lib.licenses.publicDomain;
+    maintainers = with lib.maintainers; [ jluttine ];
   };
 }

@@ -1,32 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, google-cloud-testutils
-, libcst
-, proto-plus
-, pytestCheckHook
-, pytest-asyncio
-, pytz
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-cloud-testutils,
+  mock,
+  proto-plus,
+  protobuf,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-dlp";
-  version = "3.4.0";
+  version = "3.39.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "0b249fa87deb57f5c7107a7d5d303673590a6524a7f113fc95f87493f3328606";
+    pname = "google_cloud_dlp";
+    inherit version;
+    hash = "sha256-dabUewER8SFoc4QYyGy1V71IqxYpzUsnNyRNUfgZH04=";
   };
 
-  propagatedBuildInputs = [ google-api-core libcst proto-plus pytz ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ google-cloud-testutils mock pytestCheckHook pytest-asyncio ];
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
+
+  dependencies = [
+    google-api-core
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  nativeCheckInputs = [
+    google-cloud-testutils
+    mock
+    pytestCheckHook
+    pytest-asyncio
+  ];
 
   disabledTests = [
-    # requires credentials
+    # Tests require credentials
     "test_inspect_content"
+    "test_list_dlp_jobs"
   ];
 
   pythonImportsCheck = [
@@ -34,10 +54,11 @@ buildPythonPackage rec {
     "google.cloud.dlp_v2"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Cloud Data Loss Prevention (DLP) API API client library";
-    homepage = "https://github.com/googleapis/python-dlp";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-dlp";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-dlp-v${version}/packages/google-cloud-dlp/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

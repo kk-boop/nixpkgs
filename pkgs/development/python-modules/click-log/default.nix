@@ -1,20 +1,37 @@
-{ lib, buildPythonPackage, fetchPypi, click }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  click,
+  pytestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "click-log";
-  version = "0.3.2";
+  version = "0.4.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "16fd1ca3fc6b16c98cea63acf1ab474ea8e676849dc669d86afafb0ed7003124";
+    pname = "click-log";
+    inherit (finalAttrs) version;
+    hash = "sha256-OXD4VwrFRJEje82z2KtePu9sBX3yn4w9EVGlGpwjuXU=";
   };
 
-  propagatedBuildInputs = [ click ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  dependencies = [ click ];
+
+  pythonImportsCheck = [ "click_log" ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     homepage = "https://github.com/click-contrib/click-log/";
     description = "Logging integration for Click";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

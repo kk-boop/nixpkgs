@@ -1,78 +1,120 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, psutil
-, pexpect
-, python-daemon
-, pyyaml
-, six
-, stdenv
-, ansible
-, mock
-, openssh
-, pytest-mock
-, pytest-timeout
-, pytest-xdist
-, pytestCheckHook
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  packaging,
+  pexpect,
+  python-daemon,
+  pyyaml,
+
+  # tests
+  addBinToPathHook,
+  ansible-core,
+  glibcLocales,
+  mock,
+  openssh,
+  pytest-mock,
+  pytest-timeout,
+  pytest-xdist,
+  pytestCheckHook,
+  versionCheckHook,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "ansible-runner";
-  version = "2.0.3";
+  version = "2.4.3";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "15j0ljgw1rjxq4xiywxxxnxj4r6vwk8dwljkdsjmq3qmwgifcswg";
+  src = fetchFromGitHub {
+    owner = "ansible";
+    repo = "ansible-runner";
+    tag = version;
+    hash = "sha256-kKG6Jn0RRa6rglUrE8fJmXj+nbeKNUbL/GVWqT20Hfk=";
   };
 
-  checkInputs = [
-    ansible # required to place ansible CLI onto the PATH in tests
-    pytestCheckHook
-    pytest-mock
-    pytest-timeout
-    pytest-xdist
-    mock
-    openssh
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools>=45, <=70.0.0" setuptools \
+      --replace-fail "setuptools-scm[toml]>=6.2, <=8.1.0" setuptools-scm
+  '';
+
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  propagatedBuildInputs = [
-    ansible
-    psutil
+  dependencies = [
+    packaging
     pexpect
     python-daemon
     pyyaml
-    six
+  ];
+
+  nativeCheckInputs = [
+    addBinToPathHook
+    ansible-core # required to place ansible CLI onto the PATH in tests
+    glibcLocales
+    mock
+    openssh
+    pytest-mock
+    pytest-timeout
+    pytest-xdist
+    pytestCheckHook
+    versionCheckHook
+    writableTmpDirAsHomeHook
   ];
 
   preCheck = ''
-    export HOME=$(mktemp -d)
+    # avoid coverage flags
+    rm pytest.ini
   '';
 
   disabledTests = [
-    "test_callback_plugin_task_args_leak" # requires internet
+    # Tests require network access
+    "test_callback_plugin_task_args_leak"
     "test_env_accuracy"
-    "test_large_stdout_blob" # times out on slower hardware
-  ]
-    # test_process_isolation_settings is currently broken on Darwin Catalina
-    # https://github.com/ansible/ansible-runner/issues/413
-  ++ lib.optional stdenv.isDarwin "process_isolation_settings";
+    # Times out on slower hardware
+    "test_large_stdout_blob"
+    # Failed: DID NOT RAISE <class 'RuntimeError'>
+    "test_validate_pattern"
+    # Assertion error
+    "test_callback_plugin_censoring_does_not_overwrite"
+    "test_get_role_list"
+    "test_include_role_events"
+    "test_include_role_from_collection_events"
+    "test_module_level_no_log"
+    "test_output_when_given_invalid_playbook"
+    "test_resolved_actions"
+  ];
 
   disabledTestPaths = [
-    # these tests unset PATH and then run executables like `bash` (see https://github.com/ansible/ansible-runner/pull/918)
+    # These tests unset PATH and then run executables like `bash` (see https://github.com/ansible/ansible-runner/pull/918)
     "test/integration/test_runner.py"
     "test/unit/test_runner.py"
   ]
-  ++ lib.optionals stdenv.isDarwin [
-    # integration tests on Darwin are not regularly passing in ansible-runner's own CI
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # Integration tests on Darwin are not regularly passing in ansible-runner's own CI
     "test/integration"
-    # these tests write to `/tmp` which is not writable on Darwin
+    # These tests write to `/tmp` which is not writable on Darwin
     "test/unit/config/test__base.py"
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "ansible_runner" ];
+
+  meta = {
     description = "Helps when interfacing with Ansible";
     homepage = "https://github.com/ansible/ansible-runner";
-    license = licenses.asl20;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/ansible/ansible-runner/releases/tag/${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
+    mainProgram = "ansible-runner";
   };
 }

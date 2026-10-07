@@ -1,82 +1,82 @@
-{ lib
-, fetchFromGitHub
-, pythonOlder
-, buildPythonPackage
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  setuptools,
 
-# propagated
-, django
-, hiredis
-, lz4
-, msgpack
-, redis
+  # propagated
+  django,
+  lz4,
+  msgpack,
+  pyzstd,
+  redis,
 
-# testing
-, pkgs
-, pytest-django
-, pytest-mock
-, pytestCheckHook
+  # testing
+  pytest-cov-stub,
+  pytest-django,
+  pytest-mock,
+  pytest-xdist,
+  pytest8_3CheckHook,
+  redisTestHook,
 }:
 
-let
+buildPythonPackage (finalAttrs: {
   pname = "django-redis";
-  version = "5.1.0";
-in
-buildPythonPackage {
-  inherit pname version;
-  format = "setuptools";
-  disabled = pythonOlder "3.6";
+  version = "7.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jazzband";
     repo = "django-redis";
-    rev = version;
-    sha256 = "sha256-S94qH2W5e65yzGfPxpwBUKhvvVS0Uc/zSyo66bnvzf4=";
+    tag = finalAttrs.version;
+    hash = "sha256-4YNhNsa0J1tTtaeJTHnwT8WwYs6QQuxnjVl1mAYNePI=";
   };
 
-  postPatch = ''
-    sed -i '/-cov/d' setup.cfg
-  '';
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     django
-    hiredis
-    lz4
-    msgpack
     redis
   ];
 
-  pythonImportsCheck = [
-    "django_redis"
-  ];
+  optional-dependencies = {
+    hiredis = [ redis ] ++ redis.optional-dependencies.hiredis;
+    lz4 = [ lz4 ];
+    msgpack = [ msgpack ];
+    pyzstd = [ pyzstd ];
+  };
 
-  DJANGO_SETTINGS_MODULE = "tests.settings.sqlite";
+  pythonImportsCheck = [ "django_redis" ];
 
   preCheck = ''
-    ${pkgs.redis}/bin/redis-server &
+    export DJANGO_SETTINGS_MODULE=tests.settings.sqlite
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytest-django
     pytest-mock
-    pytestCheckHook
-  ];
+    pytest-xdist
+    pytest8_3CheckHook
+    redisTestHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  # https://github.com/jazzband/django-redis/issues/777
+  dontUsePytestXdist = true;
 
   disabledTests = [
-    # ModuleNotFoundError: No module named 'test_cache_options'
-    "test_custom_key_function"
-    # ModuleNotFoundError: No module named 'test_client'
-    "test_delete_pattern_calls_get_client_given_no_client"
-    "test_delete_pattern_calls_make_pattern"
-    "test_delete_pattern_calls_scan_iter_with_count_if_itersize_given"
-    "test_delete_pattern_calls_scan_iter_with_count_if_itersize_given"
-    "test_delete_pattern_calls_scan_iter"
-    "test_delete_pattern_calls_delete_for_given_keys"
+    # AttributeError: <asgiref.local._CVar object at 0x7ffff57ed950> object has no attribute 'default'
+    "test_delete_pattern_with_settings_default_scan_count"
   ];
 
-  meta = with lib; {
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
     description = "Full featured redis cache backend for Django";
     homepage = "https://github.com/jazzband/django-redis";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ hexa ];
+    changelog = "https://github.com/jazzband/django-redis/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ hexa ];
   };
-}
+})

@@ -1,30 +1,48 @@
-{ lib
-, argcomplete
-, buildPythonPackage
-, fetchFromGitHub
-, mock
-, httpx
-, pytestCheckHook
-, pythonOlder
-, requests
-, responses
-, urllib3
-, typing-extensions
+{
+  lib,
+  argcomplete,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch2,
+  httpx,
+  mock,
+  pytestCheckHook,
+  requests,
+  responses,
+  setuptools,
+  typing-extensions,
+  urllib3,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "amcrest";
-  version = "1.9.3";
-  disabled = pythonOlder "3.6";
+  version = "1.9.9";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "tchellomello";
     repo = "python-amcrest";
-    rev = version;
-    sha256 = "0f9l8xbn40xwx2zzssx5qmkpmv82j6syj8ncnmm6z9dc5wpr6sw7";
+    tag = finalAttrs.version;
+    hash = "sha256-UPxs/sL8ZpUf29fpQFnLY4tV7qSQIxm0UVSl6Pm1dAY=";
   };
 
-  propagatedBuildInputs = [
+  patches = [
+    (fetchpatch2 {
+      # https://github.com/tchellomello/python-amcrest/pull/240
+      name = "distutils-str2bool.patch";
+      url = "https://github.com/tchellomello/python-amcrest/commit/9cced67d643da6c33d92e85dde22e01b44fb0936.patch";
+      hash = "sha256-i9UeYo43Eiwz06KfWyVQUPTLCJLmMjjNcjA7ZQcPIqQ=";
+    })
+  ];
+
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail 'version="1.9.10",' 'version="${finalAttrs.version}",'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     argcomplete
     httpx
     requests
@@ -32,7 +50,7 @@ buildPythonPackage rec {
     typing-extensions
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     mock
     pytestCheckHook
     responses
@@ -40,10 +58,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "amcrest" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for Amcrest and Dahua Cameras";
     homepage = "https://github.com/tchellomello/python-amcrest";
-    license = with licenses; [ gpl2Only ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/tchellomello/python-amcrest/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,29 +1,48 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, pyparsing
-, amply
+{
+  lib,
+  cbc,
+  amply,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pyparsing,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
-  pname = "PuLP";
-  version = "2.6.0";
+  pname = "pulp";
+  version = "3.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "4b4f7e1e954453e1b233720be23aea2f10ff068a835ac10c090a93d8e2eb2e8d";
+  src = fetchFromGitHub {
+    owner = "coin-or";
+    repo = "pulp";
+    tag = version;
+    hash = "sha256-b9qTJqSC8G3jxcqS4mkQ1gOLLab+YzYaNClRwD6I/hk=";
   };
 
-  propagatedBuildInputs = [ pyparsing amply ];
+  patches = [ ./cbc_path_fixes.patch ];
 
-  # only one test that requires an extra
-  doCheck = false;
+  postPatch = ''
+    substituteInPlace pulp/apis/coin_api.py --subst-var-by "cbc" "${lib.getExe' cbc "cbc"}"
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    amply
+    pyparsing
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
   pythonImportsCheck = [ "pulp" ];
 
-  meta = with lib; {
+  meta = {
+    description = "Module to generate MPS or LP files";
+    mainProgram = "pulptest";
     homepage = "https://github.com/coin-or/pulp";
-    description = "PuLP is an LP modeler written in python";
-    maintainers = with maintainers; [ teto ];
-    license = licenses.mit;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ teto ];
   };
 }

@@ -1,30 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "venstarcolortouch";
-  version = "0.15";
+  version = "0.22";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-7JUqXHk/yL+/EvfQoGLaKmPPy4DkljT9olqK0a/Nmkk=";
+    pname = "venstarcolortouch";
+    inherit (finalAttrs) version;
+    hash = "sha256-R9BJmZcseYlFLcoDUxfH3M0FO5GVsDtw7smK2dmLlNo=";
   };
 
-  propagatedBuildInputs = [
-    requests
-  ];
+  build-system = [ setuptools ];
+
+  dependencies = [ requests ];
 
   # Project has no tests
   doCheck = false;
+
   pythonImportsCheck = [ "venstarcolortouch" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python interface for Venstar ColorTouch thermostats Resources";
     homepage = "https://github.com/hpeyerl/venstar_colortouch";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

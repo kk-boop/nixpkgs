@@ -1,32 +1,31 @@
-{ buildPythonPackage
-, fetchPypi
-, lib
-
-# pythonPackages
-, pyjwt
-, requests
+{
+  lib,
+  cryptography,
+  buildPythonPackage,
+  fetchPypi,
+  pyjwt,
+  requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "msal";
-  version = "1.16.0";
+  version = "1.37.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "240fb04dba46a27fd6a3178db8334412d0d02e0be85166f9e05bb45d03399084";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-GxZyoz7kZ8HXCzQbsWyv1RuzyBcUepW5MmN5SwOXG+w=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    cryptography
     pyjwt
     requests
-  ];
-
-  # we already have cryptography included, version bounds are causing issues
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "PyJWT[crypto]>=1.0.0,<3" "PyJWT" \
-      --replace "cryptography>=0.6,<38" "cryptography"
-  '';
+  ]
+  ++ pyjwt.optional-dependencies.crypto;
 
   # Tests assume Network Connectivity:
   # https://github.com/AzureAD/microsoft-authentication-library-for-python/blob/e2958961e8ec16d0af4199f60c36c3f913497e48/tests/test_authority.py#L73
@@ -34,10 +33,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "msal" ];
 
-  meta = with lib; {
-    description = "The Microsoft Authentication Library (MSAL) for Python library enables your app to access the Microsoft Cloud by supporting authentication of users with Microsoft Azure Active Directory accounts (AAD) and Microsoft Accounts (MSA) using industry standard OAuth2 and OpenID Connect";
+  meta = {
+    description = "Library to access the Microsoft Cloud by supporting authentication of users with Microsoft Azure Active Directory accounts (AAD) and Microsoft Accounts (MSA) using industry standard OAuth2 and OpenID Connect";
     homepage = "https://github.com/AzureAD/microsoft-authentication-library-for-python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ kamadorueda ];
+    changelog = "https://github.com/AzureAD/microsoft-authentication-library-for-python/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ kamadorueda ];
   };
-}
+})

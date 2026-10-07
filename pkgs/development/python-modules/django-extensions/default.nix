@@ -1,63 +1,79 @@
-{ lib, buildPythonPackage, fetchFromGitHub, pythonOlder, django
-, factory_boy
-, glibcLocales
-, mock
-, pygments
-, pytest
-, pytest-cov
-, pytest-django
-, python-dateutil
-, shortuuid
-, six
-, tox
-, typing ? null
-, vobject
-, werkzeug
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  aiosmtpd,
+  django,
+
+  # tests
+  factory-boy,
+  mock,
+  pip,
+  postgresql,
+  pygments,
+  pytestCheckHook,
+  pytest-cov-stub,
+  pytest-django,
+  shortuuid,
+  vobject,
+  werkzeug,
 }:
 
 buildPythonPackage rec {
   pname = "django-extensions";
-  version = "3.1.3";
+  version = "4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = version;
-    sha256 = "03mhikhh49z8bxajbjf1j790b9c9vl4zf4f86iwz7g0zrd7jqlvm";
+    owner = "django-extensions";
+    repo = "django-extensions";
+    tag = version;
+    hash = "sha256-WgO/bDe4anQCc1q2Gdq3W70yDqDgmsvn39Qf9ZNVXuE=";
   };
 
-  LC_ALL = "en_US.UTF-8";
+  patches = lib.optionals (lib.versionAtLeast django.version "6.0") [
+    # Fix some tests when run with Django 6
+    # see https://github.com/django-extensions/django-extensions/pull/1979
+    ./django_6-compat.diff
+  ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiosmtpd
+    django
+  ];
+
   __darwinAllowLocalNetworking = true;
 
-  propagatedBuildInputs = [ six ]
-    ++ lib.optional (pythonOlder "3.5") typing;
-
-  checkInputs = [
-    django
-    factory_boy
-    glibcLocales
+  nativeCheckInputs = [
+    factory-boy
     mock
+    pip
+    postgresql
     pygments # not explicitly declared in setup.py, but some tests require it
-    pytest
-    pytest-cov
+    pytest-cov-stub
     pytest-django
-    python-dateutil
+    pytestCheckHook
     shortuuid
-    tox
     vobject
     werkzeug
   ];
 
-  # remove tests that need network access
-  checkPhase = ''
-    rm tests/management/commands/test_pipchecker.py
-    DJANGO_SETTINGS_MODULE=tests.testapp.settings \
-      pytest django_extensions tests
-  '';
+  disabledTestPaths = [
+    # https://github.com/django-extensions/django-extensions/issues/1871
+    "tests/test_dumpscript.py"
+  ];
 
-  meta = with lib; {
-    description = "A collection of custom extensions for the Django Framework";
+  meta = {
+    changelog = "https://github.com/django-extensions/django-extensions/releases/tag/${src.tag}";
+    description = "Collection of custom extensions for the Django Framework";
     homepage = "https://github.com/django-extensions/django-extensions";
-    license = licenses.mit;
+    license = lib.licenses.mit;
   };
 }

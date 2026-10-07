@@ -1,35 +1,37 @@
-{ lib
-, buildPythonPackage
-, isPy27
-, fetchPypi
-, substituteAll
-, pkgs
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  replaceVars,
+  pkgs,
+  hatchling,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "libevdev";
-  version = "0.9";
-  disabled = isPy27;
+  version = "0.13.1";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "17agnigmzscmdjqmrylg1lza03hwjhgxbpf4l705s6i7p7ndaqrs";
+    hash = "sha256-3DNpzRQBdnueyxEXzWtz+rqQOOO9nhaVpxCp6dlBXo0=";
   };
 
   patches = [
-    (substituteAll {
-      src = ./fix-paths.patch;
+    (replaceVars ./fix-paths.patch {
       libevdev = lib.getLib pkgs.libevdev;
     })
   ];
 
-  checkInputs = [ pytestCheckHook ];
+  build-system = [ hatchling ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Python wrapper around the libevdev C library";
     homepage = "https://gitlab.freedesktop.org/libevdev/python-libevdev";
-    license = licenses.mit;
-    maintainers = with maintainers; [ nickhu ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ nickhu ];
   };
 }

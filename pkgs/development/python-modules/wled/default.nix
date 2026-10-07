@@ -1,62 +1,84 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, aiohttp
-, awesomeversion
-, backoff
-, cachetools
-, poetry-core
-, yarl
-, aresponses
-, pytest-asyncio
-, pytestCheckHook
+{
+  lib,
+  aiohttp,
+  aioresponses,
+  awesomeversion,
+  buildPythonPackage,
+  fetchFromGitHub,
+  mashumaro,
+  orjson,
+  poetry-core,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-xdist,
+  pytestCheckHook,
+  python-backoff,
+  syrupy,
+  typer,
+  yarl,
+  zeroconf,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "wled";
-  version = "0.10.2";
-  disabled = pythonOlder "3.8";
-  format = "pyproject";
+  version = "0.23.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "frenck";
     repo = "python-wled";
-    rev = "v${version}";
-    sha256 = "sha256-tqR/edkBFseldSXGoekfRmw//h6Z/Xcg1W0HXJvLhtk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-1JLW3wze4W3Uva9xIeSAmYw8f9tDfGxe9rueixVedms=";
   };
-
-  nativeBuildInputs = [
-    poetry-core
-  ];
-
-  propagatedBuildInputs = [
-    aiohttp
-    awesomeversion
-    backoff
-    cachetools
-    yarl
-  ];
-
-  checkInputs = [
-    aresponses
-    pytest-asyncio
-    pytestCheckHook
-  ];
 
   postPatch = ''
     # Upstream doesn't set a version for the pyproject.toml
     substituteInPlace pyproject.toml \
-      --replace "0.0.0" "${version}" \
-      --replace "--cov" ""
+      --replace-fail "0.0.0" "${finalAttrs.version}"
   '';
+
+  build-system = [ poetry-core ];
+
+  dependencies = [
+    aiohttp
+    awesomeversion
+    mashumaro
+    orjson
+    python-backoff
+    yarl
+  ];
+
+  optional-dependencies = {
+    cli = [
+      typer
+      zeroconf
+    ];
+  };
+
+  nativeCheckInputs = [
+    aioresponses
+    pytest-asyncio
+    pytest-cov-stub
+    pytest-xdist
+    pytestCheckHook
+    syrupy
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  disabledTests = [
+    # wled release table rendering is inconsistent
+    "test_releases_command"
+    # outdated snapshots
+    "test_device_version_fixture"
+  ];
 
   pythonImportsCheck = [ "wled" ];
 
-  meta = with lib; {
+  meta = {
     description = "Asynchronous Python client for WLED";
     homepage = "https://github.com/frenck/python-wled";
-    license = licenses.mit;
-    maintainers = with maintainers; [ hexa ];
+    changelog = "https://github.com/frenck/python-wled/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hexa ];
   };
-}
+})

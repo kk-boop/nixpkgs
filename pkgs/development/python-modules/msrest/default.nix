@@ -1,53 +1,98 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, isPy3k
-, requests
-, requests_oauthlib
-, isodate
-, certifi
-, enum34 ? null
-, typing
-, aiohttp
-, aiodns
-, pytest
-, httpretty
-, mock
-, futures ? null
-, trio
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonAtLeast,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  aiodns,
+  aiohttp,
+  azure-core,
+  certifi,
+  isodate,
+  requests,
+  requests-oauthlib,
+
+  # tests
+  pytestCheckHook,
+  pytest-aiohttp,
+  httpretty,
+  trio,
 }:
 
-buildPythonPackage rec {
-  version = "0.6.21";
+buildPythonPackage {
   pname = "msrest";
+  version = "0.7.1";
+  pyproject = true;
 
-  # no tests in PyPI tarball
-  # see https://github.com/Azure/msrest-for-python/pull/152
   src = fetchFromGitHub {
     owner = "Azure";
     repo = "msrest-for-python";
-    rev = "v${version}";
-    sha256 = "sha256-IlBwlVQ/v+vJmCWNbFZKGL6a9K09z4AYrPm3kwaA/nI=";
+    # no tag for 0.7.1 see:
+    # https://github.com/Azure/msrest-for-python/issues/254
+    rev = "2d8fd04f68a124d0f3df7b81584accc3270b1afc";
+    hash = "sha256-1EXXXflhDeU+erdI+NsWxSX76ooDTl3+MyQwRzm2xV0=";
   };
 
-  propagatedBuildInputs = [
-    requests requests_oauthlib isodate certifi
-  ] ++ lib.optionals (!isPy3k) [ enum34 typing ]
-    ++ lib.optionals isPy3k [ aiohttp aiodns ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytest httpretty ]
-    ++ lib.optionals (!isPy3k) [ mock futures ]
-    ++ lib.optional isPy3k trio;
+  dependencies = [
+    aiodns
+    aiohttp
+    azure-core
+    certifi
+    isodate
+    requests
+    requests-oauthlib
+  ];
 
-  # Deselected tests require network access
-  checkPhase = ''
-    pytest tests/ -k "not test_conf_async_trio_requests"
-  '';
+  nativeCheckInputs = [
+    httpretty
+    pytest-aiohttp
+    pytestCheckHook
+    trio
+  ];
 
-  meta = with lib; {
-    description = "The runtime library 'msrest' for AutoRest generated Python clients.";
+  disabledTests = [
+    # Test require network access
+    "test_basic_aiohttp"
+    "test_basic_aiohttp"
+    "test_basic_async_requests"
+    "test_basic_async_requests"
+    "test_conf_async_requests"
+    "test_conf_async_requests"
+    "test_conf_async_trio_requests"
+  ]
+  ++ lib.optionals (pythonAtLeast "3.12") [
+    # See https://github.com/Azure/msrest-for-python/issues/261
+    # Upstream ignores the following patch that should fix it:
+    # https://github.com/Azure/msrest-for-python/pull/262
+    # And it doesn't apply anymore.
+    "test_apikey_auth"
+    "test_cs_auth"
+    "test_eventgrid_auth"
+    "test_eventgrid_domain_auth"
+  ];
+
+  disabledTestPaths = [
+    # 2 AssertionErrors... See:
+    # https://github.com/Azure/msrest-for-python/issues/267
+    "tests/asynctests/test_async_client.py::TestServiceClient::test_client_send"
+    "tests/test_client.py::TestServiceClient::test_client_send"
+  ];
+
+  pythonImportsCheck = [ "msrest" ];
+
+  meta = {
+    description = "Runtime library for AutoRest generated Python clients";
     homepage = "https://github.com/Azure/msrest-for-python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ bendlas jonringer maxwilson ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      bendlas
+      maxwilson
+    ];
   };
 }

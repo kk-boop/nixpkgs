@@ -1,32 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pyvex
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pyvex,
+  setuptools,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "ailment";
-  version = "9.0.10730";
-  disabled = pythonOlder "3.6";
+  version = "9.2.158";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "angr";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-lmtxCl9QiVVd6cQ8jFMDpJg7rC99Htac0q5VFp7LVyk=";
+    repo = "ailment";
+    tag = "v${version}";
+    hash = "sha256-WnDtJaEpka6IhYOfOb2DZY0Hd8ghIn8mY5AuF/JktLg=";
   };
 
-  propagatedBuildInputs = [ pyvex ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    pyvex
+    typing-extensions
+  ];
 
   # Tests depend on angr (possibly a circular dependency)
   doCheck = false;
-  #pythonImportsCheck = [ "ailment" ];
 
-  meta = with lib; {
-    description = "The angr Intermediate Language";
+  pythonImportsCheck = [ "ailment" ];
+
+  meta = {
+    description = "Angr Intermediate Language";
     homepage = "https://github.com/angr/ailment";
-    license = with licenses; [ bsd2 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

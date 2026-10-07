@@ -1,25 +1,44 @@
-{ lib, buildPythonPackage, fetchPypi, googleapis-common-protos, protobuf }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  googleapis-common-protos,
+  protobuf,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "google-cloud-audit-log";
-  version = "0.2.0";
+  version = "0.6.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "d0852f525ad65705f9fbff6288be4493e1449a7906fb5e01bd71c8d1e424d1fc";
+    pname = "google_cloud_audit_log";
+    inherit version;
+    hash = "sha256-SrpytF3BU0TaGy2JgTIAUP45z+gEMvOOcxiqLkd8W/I=";
   };
 
-  propagatedBuildInputs = [ googleapis-common-protos protobuf ];
+  build-system = [ setuptools ];
 
-  # tests are a bit wonky to setup and are not very deep either
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
+
+  dependencies = [
+    googleapis-common-protos
+    protobuf
+  ];
+
+  # Tests are a bit wonky to setup and are not very deep either
   doCheck = false;
 
   pythonImportsCheck = [ "google.cloud.audit" ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Audit Protos";
-    homepage = "https://github.com/googleapis/python-audit-log";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-audit-log";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-audit-log-v${version}/packages/google-cloud-audit-log/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

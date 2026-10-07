@@ -1,40 +1,76 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, docutils
-, aiobotocore
-, fsspec
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  aiobotocore,
+  aiohttp,
+  fsspec,
+
+  # tests
+  flask,
+  flask-cors,
+  moto,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "s3fs";
-  version = "2021.10.1";
+  version = "2026.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-STriUFPlJiVSokep8cOiyPvNIPWQf85jp0kSa6WP4F4=";
+  src = fetchFromGitHub {
+    owner = "fsspec";
+    repo = "s3fs";
+    tag = version;
+    hash = "sha256-CWZHu9PXW/YZosCVtnCJ4T6eQCmrdFcP0vkoGr+RAhM=";
   };
 
-  buildInputs = [
-    docutils
+  build-system = [
+    setuptools
   ];
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "fsspec" ];
+
+  dependencies = [
     aiobotocore
     fsspec
+    aiohttp
   ];
 
-  # Depends on `moto` which has a long dependency chain with exact
-  # version requirements that can't be made to work with current
-  # pythonPackages.
-  doCheck = false;
+  optional-dependencies = {
+    awscli = aiobotocore.optional-dependencies.awscli;
+    boto3 = aiobotocore.optional-dependencies.boto3;
+  };
 
   pythonImportsCheck = [ "s3fs" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/dask/s3fs/";
-    description = "A Pythonic file interface for S3";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ teh ];
+  nativeCheckInputs = [
+    flask
+    flask-cors
+    moto
+    pytest-asyncio
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # require network access
+    "test_async_close"
+    "test_session_close"
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
+    description = "Pythonic file interface for S3";
+    homepage = "https://github.com/fsspec/s3fs";
+    changelog = "https://github.com/fsspec/s3fs/blob/${src.tag}/docs/source/changelog.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ teh ];
   };
 }

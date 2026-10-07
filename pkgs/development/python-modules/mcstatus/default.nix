@@ -1,47 +1,69 @@
-{ lib
-, asyncio-dgram
-, buildPythonPackage
-, click
-, dnspython
-, fetchFromGitHub
-, mock
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, six
+{
+  lib,
+  asyncio-dgram,
+  buildPythonPackage,
+  dnspython,
+  fetchFromGitHub,
+  hatchling,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-rerunfailures,
+  pytestCheckHook,
+  typing-extensions,
+  uv-dynamic-versioning,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "mcstatus";
-  version = "6.5.0";
-  disabled = pythonOlder "3.6";
+  version = "14.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "Dinnerbone";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "00xi3452lap4zx38msx89vvhrzkzb2dvwis1fcmx24qngj9g3yfr";
+    owner = "py-mine";
+    repo = "mcstatus";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-dcN9Uj/f482ui90RDcWgjdEawkfLWpxR2O69ZxPEq40=";
   };
 
-  propagatedBuildInputs = [
-    asyncio-dgram
-    click
-    dnspython
-    six
+  build-system = [
+    hatchling
+    uv-dynamic-versioning
   ];
 
-  checkInputs = [
-    mock
+  dependencies = [
+    asyncio-dgram
+    dnspython
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
     pytest-asyncio
+    pytest-cov-stub
+    pytest-rerunfailures
+    pytest-cov-stub
     pytestCheckHook
+    typing-extensions
   ];
 
   pythonImportsCheck = [ "mcstatus" ];
 
-  meta = with lib; {
+  disabledTests = [
+    # DNS features are limited in the sandbox
+    "test_resolve_localhost"
+    "test_async_resolve_localhost"
+    "test_java_server_with_query_port"
+  ];
+
+  meta = {
     description = "Python library for checking the status of Minecraft servers";
-    homepage = "https://github.com/Dinnerbone/mcstatus";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/py-mine/mcstatus";
+    changelog = "https://github.com/py-mine/mcstatus/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      fab
+      PerchunPak
+    ];
+    mainProgram = "mcstatus";
   };
-}
+})

@@ -1,41 +1,38 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, ninja
-, pkg-config
-, vala
-, libgee
-, elementary-settings-daemon
-, gnome-settings-daemon
-, granite
-, gtk3
-, glib
-, dbus
-, polkit
-, switchboard
-, wingpanel-indicator-power
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  libadwaita,
+  libgee,
+  gettext,
+  gnome-settings-daemon,
+  granite7,
+  gtk4,
+  glib,
+  dbus,
+  polkit,
+  switchboard,
+  wingpanel-indicator-power,
 }:
 
 stdenv.mkDerivation rec {
   pname = "switchboard-plug-power";
-  version = "2.6.0";
+  version = "8.1.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
-    rev = version;
-    sha256 = "006h8mrhmdrbd83vhdyahgrfk9wh6j9kjincpp7dz7sl8fsyhmcr";
-  };
-
-  passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    repo = "settings-power";
+    tag = version;
+    hash = "sha256-JfOLGDS2/Qa6RmEfiDBZfeT+dM4NN4N2NoXRNJ4Q+Es=";
   };
 
   nativeBuildInputs = [
+    gettext # msgfmt
     meson
     ninja
     pkg-config
@@ -44,22 +41,26 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     dbus
-    elementary-settings-daemon
     gnome-settings-daemon
     glib
-    granite
-    gtk3
+    granite7
+    gtk4
+    libadwaita
     libgee
     polkit
     switchboard
     wingpanel-indicator-power # settings schema
   ];
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Switchboard Power Plug";
-    homepage = "https://github.com/elementary/switchboard-plug-power";
-    license = licenses.gpl2Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    homepage = "https://github.com/elementary/settings-power";
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

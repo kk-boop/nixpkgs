@@ -1,27 +1,45 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, six
+{
+  lib,
+  attrs,
+  buildPythonPackage,
+  deprecated,
+  fetchFromGitHub,
+  hatchling,
+  pytest-mock,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "headerparser";
-  version = "0.4.0";
+  version = "0.5.2";
+  pyproject = true;
 
-  src = fetchPypi{
-    inherit pname;
-    inherit version;
-    sha256 = "b8ceae4c5e6133fda666d022684e93f9b3d45815c2c7881018123c71ff28c5cc";
+  src = fetchFromGitHub {
+    owner = "jwodder";
+    repo = "headerparser";
+    tag = "v${version}";
+    hash = "sha256-fn9Nlazte6r5JMmp9ynq0qmkLEoJGv8witgZlD7zJNM=";
   };
 
-  buildInputs = [
-    six
+  build-system = [ hatchling ];
+
+  dependencies = [
+    attrs
+    deprecated
   ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    pytest-mock
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "headerparser" ];
+
+  meta = {
+    description = "Module to parse key-value pairs in the style of RFC 822 (e-mail) headers";
     homepage = "https://github.com/jwodder/headerparser";
-    description = "argparse for mail-style headers";
-    license = with licenses; [ mit ];
+    changelog = "https://github.com/wheelodex/headerparser/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ ayazhafiz ];
   };
 }

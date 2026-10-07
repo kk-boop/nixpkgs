@@ -1,12 +1,25 @@
 {
   mkDerivation,
-  extra-cmake-modules, gettext, python3,
-  qtbase, qtdeclarative, qtscript,
+  cmake,
+  extra-cmake-modules,
+  gettext,
+  python3,
+  qtdeclarative,
+  qtscript,
 }:
 
 mkDerivation {
-  name = "ki18n";
-  nativeBuildInputs = [ extra-cmake-modules ];
-  propagatedNativeBuildInputs = [ gettext python3 ];
-  buildInputs = [ qtdeclarative qtscript ];
+  pname = "ki18n";
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+  ];
+  propagatedNativeBuildInputs = [
+    gettext
+    python3
+  ];
+  buildInputs = [
+    qtdeclarative
+    qtscript
+  ];
 }

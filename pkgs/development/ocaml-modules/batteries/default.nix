@@ -1,28 +1,41 @@
-{ stdenv, lib, fetchurl, ocaml, findlib, ocamlbuild, qtest, num
-, doCheck ? lib.versionAtLeast ocaml.version "4.08" && !stdenv.isAarch64
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  ounit,
+  qtest,
+  qcheck,
+  num,
+  camlp-streams,
+  doCheck ? true,
 }:
 
-let version = "3.3.0"; in
+buildDunePackage (finalAttrs: {
+  pname = "batteries";
+  version = "3.11.0";
 
-stdenv.mkDerivation {
-  name = "ocaml${ocaml.version}-batteries-${version}";
-
-  src = fetchurl {
-    url = "https://github.com/ocaml-batteries-team/batteries-included/releases/download/v${version}/batteries-${version}.tar.gz";
-    sha256 = "002pqkcg18zx59hsf172wg6s7lwsiagp5sfvf5yssp7xxal5jdgx";
+  src = fetchFromGitHub {
+    owner = "ocaml-batteries-team";
+    repo = "batteries-included";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-RFozhk/kGgBg/2WnTYCNwi+kZwJ+l5o7z0YVons5yyw=";
   };
 
-  buildInputs = [ ocaml findlib ocamlbuild ];
-  checkInputs = [ qtest ];
-  propagatedBuildInputs = [ num ];
+  nativeCheckInputs = [ qtest ];
+  checkInputs = [
+    ounit
+    qcheck
+  ];
+  propagatedBuildInputs = [
+    camlp-streams
+    num
+  ];
 
   inherit doCheck;
   checkTarget = "test";
 
-  createFindlibDestdir = true;
-
   meta = {
-    homepage = "http://batteries.forge.ocamlcore.org/";
+    homepage = "https://ocaml-batteries-team.github.io/batteries-included/hdoc2/";
     description = "OCaml Batteries Included";
     longDescription = ''
       A community-driven effort to standardize on an consistent, documented,
@@ -30,9 +43,5 @@ stdenv.mkDerivation {
       language.
     '';
     license = lib.licenses.lgpl21Plus;
-    platforms = ocaml.meta.platforms or [];
-    maintainers = [
-      lib.maintainers.maggesi
-    ];
   };
-}
+})

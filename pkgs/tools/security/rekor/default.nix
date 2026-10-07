@@ -1,33 +1,79 @@
-{ lib, buildGoModule, fetchFromGitHub }:
+{
+  lib,
+  stdenv,
+  buildGoModule,
+  fetchFromGitHub,
+  installShellFiles,
+}:
 
 let
-  generic = { pname, packageToBuild, description }:
+  generic =
+    {
+      pname,
+      packageToBuild,
+      description,
+    }:
     buildGoModule rec {
       inherit pname;
-      version = "0.3.0";
+      version = "1.5.4";
 
       src = fetchFromGitHub {
         owner = "sigstore";
         repo = "rekor";
         rev = "v${version}";
-        sha256 = "sha256-FaVZm9C1pewJCZlYgNyD/ZYr/UIRvhqVTUhFTmysxeg=";
+        hash = "sha256-fF48pfbQAHk81aJ4zXDpkY7u5zFmgpr/Fg44kvlmtng=";
+        # populate values that require us to use git. By doing this in postFetch we
+        # can delete .git afterwards and maintain better reproducibility of the src.
+        leaveDotGit = true;
+        postFetch = ''
+          cd "$out"
+          git rev-parse HEAD > $out/COMMIT
+          # '0000-00-00T00:00:00Z'
+          date -u -d "@$(git log -1 --pretty=%ct)" "+'%Y-%m-%dT%H:%M:%SZ'" > $out/SOURCE_DATE_EPOCH
+          find "$out" -name .git -print0 | xargs -0 rm -rf
+        '';
       };
 
-      vendorSha256 = "sha256-EBKj/+ruE88qvlbOme4GBfAqt3/1jHcqhY0IHxh6Y5U=";
+      vendorHash = "sha256-XN+wyWDPep8bdvPMsQFv6I/ULf4cE2/t2NfEFyzE+aE=";
+
+      nativeBuildInputs = [ installShellFiles ];
 
       subPackages = [ packageToBuild ];
 
-      ldflags = [ "-s" "-w" "-X github.com/sigstore/rekor/${packageToBuild}/app.gitVersion=v${version}" ];
+      ldflags = [
+        "-s"
+        "-w"
+        "-X sigs.k8s.io/release-utils/version.gitVersion=v${version}"
+        "-X sigs.k8s.io/release-utils/version.gitTreeState=clean"
+      ];
 
-      meta = with lib; {
+      # ldflags based on metadata from git and source
+      preBuild = ''
+        ldflags+=" -X sigs.k8s.io/release-utils/version.gitCommit=$(cat COMMIT)"
+        ldflags+=" -X sigs.k8s.io/release-utils/version.buildDate=$(cat SOURCE_DATE_EPOCH)"
+      '';
+
+      postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+        installShellCompletion --cmd ${pname} \
+          --bash <($out/bin/${pname} completion bash) \
+          --fish <($out/bin/${pname} completion fish) \
+          --zsh <($out/bin/${pname} completion zsh)
+      '';
+
+      meta = {
         inherit description;
         homepage = "https://github.com/sigstore/rekor";
         changelog = "https://github.com/sigstore/rekor/releases/tag/v${version}";
-        license = licenses.asl20;
-        maintainers = with maintainers; [ lesuisse jk ];
+        license = lib.licenses.asl20;
+        maintainers = with lib.maintainers; [
+          lesuisse
+          jk
+          developer-guy
+        ];
       };
     };
-in {
+in
+{
   rekor-cli = generic {
     pname = "rekor-cli";
     packageToBuild = "cmd/rekor-cli";

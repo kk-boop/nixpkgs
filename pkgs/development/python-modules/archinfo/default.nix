@@ -1,32 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, nose
+{
+  lib,
+  backports-strenum,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "archinfo";
-  version = "9.0.10730";
+  version = "9.2.154";
+  pyproject = true;
+
+  disabled = pythonOlder "3.12";
 
   src = fetchFromGitHub {
     owner = "angr";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-z48nlPqbKiJkF1sAufUfUSfGLjKhTRaGq5t5nbsbsh8=";
+    repo = "archinfo";
+    tag = "v${version}";
+    hash = "sha256-Vks7Rjd8x2zeHnJPs0laH56S4b8pnR1cK82SpK+XOgE=";
   };
 
-  checkInputs = [
-    nose
-    pytestCheckHook
-  ];
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "archinfo" ];
 
-  meta = with lib; {
+  meta = {
     description = "Classes with architecture-specific information";
     homepage = "https://github.com/angr/archinfo";
-    license = with licenses; [ bsd2 ];
-    maintainers = [ maintainers.fab ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

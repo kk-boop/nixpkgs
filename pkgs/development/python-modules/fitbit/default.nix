@@ -1,41 +1,50 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, coverage
-, python-dateutil
-, freezegun
-, mock
-, requests-mock
-, requests_oauthlib
-, sphinx
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  freezegun,
+  mock,
+  pytestCheckHook,
+  python-dateutil,
+  requests-mock,
+  requests-oauthlib,
 }:
 
 buildPythonPackage rec {
   pname = "fitbit";
   version = "0.3.1";
+  format = "setuptools";
 
-  checkInputs = [ coverage freezegun mock requests-mock sphinx ];
-  propagatedBuildInputs = [ python-dateutil requests_oauthlib ];
-
-  # The source package on PyPi is missing files required for unit testing.
-  # https://github.com/orcasgit/python-fitbit/issues/148
   src = fetchFromGitHub {
-    rev = version;
     owner = "orcasgit";
     repo = "python-fitbit";
-    sha256 = "1w2lpgf6bs5nbnmslppaf4lbhr9cj6grg0a525xv41jip7iy3vfn";
+    rev = version;
+    hash = "sha256-1u3h47lRBrJ7EUWBl5+RLGW4KHHqXqqrXbboZdy7VPA=";
   };
 
   postPatch = ''
-    substituteInPlace requirements/test.txt \
-      --replace 'Sphinx>=1.2,<1.4' 'Sphinx' \
-      --replace 'coverage>=3.7,<4.0' 'coverage'
+    substituteInPlace fitbit_tests/test_api.py \
+      --replace-fail assertRaisesRegexp assertRaisesRegex
   '';
 
-  meta = with lib; {
+  propagatedBuildInputs = [
+    python-dateutil
+    requests-oauthlib
+  ];
+
+  nativeCheckInputs = [
+    freezegun
+    mock
+    pytestCheckHook
+    requests-mock
+  ];
+
+  pythonImportsCheck = [ "fitbit" ];
+
+  meta = {
     description = "Fitbit API Python Client Implementation";
-    license = licenses.asl20;
     homepage = "https://github.com/orcasgit/python-fitbit";
-    maintainers = with maintainers; [ delroth ];
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

@@ -1,57 +1,53 @@
-{ lib
-, stdenv
-, fetchPypi
-, buildPythonPackage
-, isPy3k
-, jaraco_functools
-, jaraco_text
-, more-itertools
-, portend
-, pyopenssl
-, pytestCheckHook
-, pytest-cov
-, pytest-mock
-, requests
-, requests-toolbelt
-, requests-unixsocket
-, setuptools-scm
-, setuptools-scm-git-archive
-, six
-, trustme
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  jaraco-functools,
+  jaraco-text,
+  more-itertools,
+  portend,
+  pypytools,
+  pytest-mock,
+  pytestCheckHook,
+  requests,
+  requests-toolbelt,
+  requests-unixsocket,
+  setuptools,
+  setuptools-scm,
+  six,
 }:
 
 buildPythonPackage rec {
   pname = "cheroot";
-  version = "8.5.2";
-
-  disabled = !isPy3k;
+  version = "11.1.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "f137d03fd5155b1364bea557a7c98168665c239f6c8cedd8f80e81cdfac01567";
+    hash = "sha256-v7cMSWY/Y7BEDytU28aw0WUOVt/k4mQfWbLG9ye0Sso=";
   };
 
-  nativeBuildInputs = [ setuptools-scm setuptools-scm-git-archive ];
+  nativeBuildInputs = [
+    setuptools
+    setuptools-scm
+  ];
 
-  propagatedBuildInputs = [
-    # install_requires
-    jaraco_functools
-
+  dependencies = [
+    jaraco-functools
     more-itertools
     six
   ];
 
-  checkInputs = [
-    jaraco_text
+  nativeCheckInputs = [
+    jaraco-text
     portend
-    pyopenssl
-    pytestCheckHook
-    pytest-cov
+    pypytools
     pytest-mock
+    pytestCheckHook
     requests
     requests-toolbelt
     requests-unixsocket
-    trustme
   ];
 
   # Disable doctest plugin because times out
@@ -68,23 +64,31 @@ buildPythonPackage rec {
   disabledTests = [
     "tls" # touches network
     "peercreds_unix_sock" # test urls no longer allowed
-  ] ++ lib.optionals stdenv.isDarwin [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
     "http_over_https_error"
     "bind_addr_unix"
+    "test_ssl_env"
   ];
 
   disabledTestPaths = [
     # avoid attempting to use 3 packages not available on nixpkgs
     # (jaraco.apt, jaraco.context, yg.lockfile)
     "cheroot/test/test_wsgi.py"
+    # requires pyopenssl
+    "cheroot/test/test_ssl.py"
   ];
+
+  pythonImportsCheck = [ "cheroot" ];
 
   # Some of the tests use localhost networking.
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
+  meta = {
     description = "High-performance, pure-Python HTTP";
+    mainProgram = "cheroot";
     homepage = "https://github.com/cherrypy/cheroot";
-    license = licenses.mit;
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

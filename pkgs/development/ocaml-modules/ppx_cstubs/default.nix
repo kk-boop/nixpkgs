@@ -1,47 +1,65 @@
-{ lib
-, fetchFromGitHub
-, buildDunePackage
-, bigarray-compat
-, containers
-, cppo
-, ctypes
-, integers
-, num
-, ppxlib
-, re
+{
+  lib,
+  ocaml,
+  fetchFromGitHub,
+  buildDunePackage,
+  bigarray-compat,
+  containers,
+  cppo,
+  ctypes,
+  integers,
+  num,
+  ppxlib,
+  re,
+  findlib,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "ppx_cstubs";
-  version = "0.6.1.2";
+  version = "0.7.0";
 
-  minimalOCamlVersion = "4.08";
-
-  useDune2 = true;
+  env =
+    # Fix build with gcc15
+    lib.optionalAttrs
+      (
+        lib.versionAtLeast ocaml.version "4.10" && lib.versionOlder ocaml.version "4.14"
+        || lib.versions.majorMinor ocaml.version == "5.0"
+      )
+      {
+        NIX_CFLAGS_COMPILE = "-std=gnu11";
+      };
 
   src = fetchFromGitHub {
     owner = "fdopen";
     repo = "ppx_cstubs";
-    rev = version;
-    sha256 = "15cjb9ygnvp2kv85rrb7ncz7yalifyl7wd2hp2cl8r1qrpgi1d0w";
+    rev = finalAttrs.version;
+    hash = "sha256-qMmwRWCIfNyhCQYPKLiufnb57sTR3P+WInOqtPDywFs=";
   };
+
+  patches = [ ./ppxlib.patch ];
+
+  nativeBuildInputs = [ cppo ];
 
   buildInputs = [
     bigarray-compat
     containers
-    cppo
-    ctypes
+    findlib
     integers
     num
     ppxlib
     re
   ];
 
-  meta = with lib; {
+  propagatedBuildInputs = [
+    ctypes
+  ];
+
+  meta = {
     homepage = "https://github.com/fdopen/ppx_cstubs";
-    changelog = "https://github.com/fdopen/ppx_cstubs/raw/${version}/CHANGES.md";
+    changelog = "https://github.com/fdopen/ppx_cstubs/raw/${finalAttrs.version}/CHANGES.md";
     description = "Preprocessor for easier stub generation with ocaml-ctypes";
-    license = licenses.lgpl21Plus;
-    maintainers = [ maintainers.osener ];
+    license = lib.licenses.lgpl21Plus;
+    maintainers = [ lib.maintainers.osener ];
+    broken = lib.versionAtLeast ocaml.version "5.2";
   };
-}
+})

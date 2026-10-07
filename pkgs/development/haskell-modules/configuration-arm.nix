@@ -1,8 +1,8 @@
 # ARM-SPECIFIC OVERRIDES FOR THE HASKELL PACKAGE SET IN NIXPKGS
 #
-# This extension is applied to all haskell package sets in nixpkgs
-# if `stdenv.hostPlatform.isAarch32 || stdenv.hostPlatform.isAarch64`
-# to apply arm specific workarounds or fixes.
+# This extension is applied to all haskell package sets in nixpkgs if
+# `stdenv.hostPlatform.isAarch` to apply arm specific workarounds or
+# fixes.
 #
 # The file is split into three parts:
 #
@@ -27,7 +27,8 @@ in
 
 with haskellLib;
 
-self: super: {
+self: super:
+{
   # COMMON ARM OVERRIDES
 
   # moved here from configuration-common.nix, no reason given.
@@ -37,7 +38,19 @@ self: super: {
   # Similar to https://ghc.haskell.org/trac/ghc/ticket/13062
   happy = dontCheck super.happy;
 
-} // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
+  # add arm specific library
+  wiringPi = overrideCabal (
+    {
+      librarySystemDepends ? [ ],
+      ...
+    }:
+    {
+      librarySystemDepends = librarySystemDepends ++ [ pkgs.wiringpi ];
+    }
+  ) super.wiringPi;
+
+}
+// lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch64 {
   # AARCH64-SPECIFIC OVERRIDES
 
   # Doctests fail on aarch64 due to a GHCi linking bug
@@ -61,8 +74,6 @@ self: super: {
   headroom = dontCheck super.headroom;
   hgeometry = dontCheck super.hgeometry;
   hhp = dontCheck super.hhp;
-  hint = dontCheck super.hint;
-  hls-splice-plugin = dontCheck super.hls-splice-plugin;
   hsakamai = dontCheck super.hsakamai;
   hsemail-ns = dontCheck super.hsemail-ns;
   html-validator-cli = dontCheck super.html-validator-cli;
@@ -91,17 +102,6 @@ self: super: {
   xml-html-qq = dontCheck super.xml-html-qq;
   yaml-combinators = dontCheck super.yaml-combinators;
   yesod-paginator = dontCheck super.yesod-paginator;
-  hls-pragmas-plugin = dontCheck super.hls-pragmas-plugin;
-  hls-call-hierarchy-plugin = dontCheck super.hls-call-hierarchy-plugin;
-  hls-module-name-plugin = dontCheck super.hls-module-name-plugin;
-  hls-brittany-plugin = dontCheck super.hls-brittany-plugin;
-
-  # Similar RTS issue in test suite:
-  # rts/linker/elf_reloc_aarch64.c:98: encodeAddendAarch64: Assertion `isInt64(21+12, addend)' failed.
-  hls-hlint-plugin = dontCheck super.hls-hlint-plugin;
-  hls-ormolu-plugin = dontCheck super.hls-ormolu-plugin;
-  hls-haddock-comments-plugin = dontCheck super.hls-haddock-comments-plugin;
-
 
   # https://github.com/ekmett/half/issues/35
   half = dontCheck super.half;
@@ -109,7 +109,34 @@ self: super: {
   # We disable profiling on aarch64, so tests naturally fail
   ghc-prof = dontCheck super.ghc-prof;
 
-} // lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch32 {
+  # Similar RTS issue in test suite:
+  # rts/linker/elf_reloc_aarch64.c:98: encodeAddendAarch64: Assertion `isInt64(21+12, addend)' failed.
+  # These still fail sporadically on ghc 9.2
+}
+// lib.optionalAttrs pkgs.stdenv.hostPlatform.isAarch32 {
   # AARCH32-SPECIFIC OVERRIDES
 
+  # KAT/ECB/D2 test segfaults on armv7l
+  # https://github.com/haskell-crypto/cryptonite/issues/367 krank:ignore-line
+  cryptonite = dontCheck super.cryptonite;
+}
+// lib.optionalAttrs (with pkgs.stdenv.hostPlatform; isAarch && isAndroid) {
+  # android is not currently allowed as 'supported-platforms' by hackage2nix
+  android-activity = unmarkBroken super.android-activity;
+}
+// lib.optionalAttrs (with pkgs.stdenv.hostPlatform; !isDarwin) {
+  # 2026-01-09: RNG tests that need rng-instruction support fail on NixOS's
+  #             aarch64-linux build infrastructure
+  botan-low = overrideCabal (drv: {
+    testFlags =
+      drv.testFlags or [ ]
+      ++ (lib.concatMap (x: [ "--skip" ] ++ [ x ]) [
+        # botan-low-rng-tests
+        "/rdrand/rngInit/"
+        "/rdrand/rngGet/"
+        "/rdrand/rngReseed/"
+        "/rdrand/rngReseedFromRNGCtx/"
+        "/rdrand/rngAddEntropy/"
+      ]);
+  }) super.botan-low;
 }

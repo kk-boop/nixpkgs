@@ -1,50 +1,74 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonAtLeast
-, numpy
-, matplotlib
-, pillow
-, setuptools
-, pyproj
-, pyshp
-, six
-, pkgs
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  basemap-data,
+  cython,
+  geos,
+  numpy,
+  matplotlib,
+  pillow,
+  pyproj,
+  pyshp,
+  python,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "basemap";
-  version = "1.2.1";
+  version = "2.0.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "matplotlib";
     repo = "basemap";
-    rev = "v${version}rel";
-    sha256 = "13lw1iwa8hadpvqdgb06nh881l8c17awzvvwbfwblvb9q9s0lnzp";
+    tag = "v${version}";
+    hash = "sha256-1T1FTcR99KbpqiYzrd2r5h1wTcygBEU7BLZXZ8uMthU=";
   };
 
-  propagatedBuildInputs = [ numpy matplotlib pillow pyproj pyshp six ];
-  buildInputs = [ setuptools pkgs.geos ];
+  nativeBuildInputs = [
+    cython
+    geos
+    setuptools
+  ];
+
+  pythonRelaxDeps = true;
+
+  propagatedBuildInputs = [
+    basemap-data
+    numpy
+    matplotlib
+    pillow # undocumented optional dependency
+    pyproj
+    pyshp
+  ];
 
   # Standard configurePhase from `buildPythonPackage` seems to break the setup.py script
-  configurePhase = ''
-    export GEOS_DIR=${pkgs.geos}
+  preBuild = ''
+    export GEOS_DIR=${geos}
   '';
 
-  # The 'check' target is not supported by the `setup.py` script.
-  # TODO : do the post install checks (`cd examples && ${python.interpreter} run_all.py`)
+  # test have various problems including requiring internet connection, permissions issues, problems with latest version of pillow
   doCheck = false;
 
-  meta = with lib; {
+  checkPhase = ''
+    cd ../../examples
+    export HOME=$TEMPDIR
+    ${python.interpreter} run_all.py
+  '';
+
+  meta = {
     homepage = "https://matplotlib.org/basemap/";
     description = "Plot data on map projections with matplotlib";
     longDescription = ''
       An add-on toolkit for matplotlib that lets you plot data on map projections with
       coastlines, lakes, rivers and political boundaries. See
-      http://matplotlib.github.com/basemap/users/examples.html for examples of what it can do.
+      https://matplotlib.org/basemap/stable/users/examples.html for examples of what it can do.
     '';
-    license = with licenses; [ mit gpl2 ];
-    broken = pythonAtLeast "3.9";
+    teams = [ lib.teams.geospatial ];
+    license = with lib.licenses; [
+      mit
+      lgpl21
+    ];
   };
-
 }

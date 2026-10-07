@@ -1,38 +1,88 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, packaging
-, pytest
-, nose
-, numpy
-, h5py
-, pydicom
-, scipy
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  hatch-vcs,
+  hatchling,
+
+  # dependencies
+  numpy,
+  packaging,
+  importlib-resources,
+  typing-extensions,
+
+  # optional-dependencies
+  backports-zstd,
+  indexed-gzip,
+  matplotlib,
+  pydicom,
+  pillow,
+  h5py,
+  scipy,
+
+  addBinToPathHook,
+  gitMinimal,
+  pytest-doctestplus,
+  pytest-httpserver,
+  pytest-xdist,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "nibabel";
-  version = "3.2.1";
-  disabled = isPy27;
+  version = "5.4.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "4d2ff9426b740011a1c916b54fc25da9348282e727eaa2ea163f42e00f1fc29e";
+  src = fetchFromGitHub {
+    owner = "nipy";
+    repo = "nibabel";
+    tag = finalAttrs.version;
+    hash = "sha256-QzkmSI0JGdIXLc3XSPZrGrBYSq98tLFrozNNopR/ytg=";
   };
 
-  propagatedBuildInputs = [ numpy scipy h5py packaging pydicom ];
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
 
-  checkInputs = [ nose pytest ];
+  dependencies = [
+    numpy
+    packaging
+  ]
+  ++ lib.optionals (pythonOlder "3.12") [ importlib-resources ]
+  ++ lib.optionals (pythonOlder "3.13") [ typing-extensions ];
 
-  checkPhase = ''
-    pytest
-  '';
+  optional-dependencies = lib.fix (self: {
+    all = self.dicomfs ++ self.indexed_gzip ++ self.minc2 ++ self.spm ++ self.zstd;
+    dicom = [ pydicom ];
+    dicomfs = [ pillow ] ++ self.dicom;
+    indexed_gzip = [ indexed-gzip ];
+    minc2 = [ h5py ];
+    spm = [ scipy ];
+    viewers = [ matplotlib ];
+    zstd = lib.optionals (pythonOlder "3.14") [ backports-zstd ];
+  });
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    addBinToPathHook
+    gitMinimal
+    pytest-doctestplus
+    pytest-httpserver
+    pytest-xdist
+    pytestCheckHook
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.all;
+
+  pythonImportsCheck = [ "nibabel" ];
+
+  meta = {
     homepage = "https://nipy.org/nibabel";
+    changelog = "https://github.com/nipy/nibabel/blob/${finalAttrs.version}/Changelog";
     description = "Access a multitude of neuroimaging data formats";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ashgillman ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ ashgillman ];
   };
-}
+})

@@ -1,43 +1,63 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, pyutilib
-, appdirs
-, ply
-, six
-, nose
+{
+  lib,
+  buildPythonPackage,
+  cython,
+  fetchFromGitHub,
+  parameterized,
+  ply,
+  pybind11,
+  pytestCheckHook,
+  setuptools,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "pyomo";
-  version = "5.6.1";
-  disabled = isPy27; # unable to import pyutilib.th
+  version = "6.10.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    pname = "Pyomo";
-    inherit version;
-    sha256 = "449be9a4c9b3caee7c89dbe5f0e4e5ad0eaeef8be110a860641cd249986e362c";
+  src = fetchFromGitHub {
+    repo = "pyomo";
+    owner = "pyomo";
+    tag = version;
+    hash = "sha256-+LMjvUFGlRsWl8TaGC4ist63Gzwi+xfpeAnNY8Fws/M=";
   };
 
-  checkInputs = [ nose ];
-  propagatedBuildInputs = [
-    pyutilib
-    appdirs
-    ply
-    six
+  build-system = [
+    cython
+    pybind11
+    setuptools
   ];
 
-  checkPhase = ''
-    rm pyomo/bilevel/tests/test_blp.py \
-       pyomo/version/tests/test_installer.py
-    nosetests
-  '';
+  dependencies = [ ply ];
 
-  meta = with lib; {
-    description = "Pyomo: Python Optimization Modeling Objects";
-    homepage = "http://pyomo.org";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+  nativeCheckInputs = [
+    parameterized
+    pytestCheckHook
+    writableTmpDirAsHomeHook
+  ];
+
+  pythonImportsCheck = [ "pyomo" ];
+
+  disabledTestPaths = [
+    # Don't test the documentation and the examples
+    "doc/"
+    "examples/"
+    # Tests don't work properly in the sandbox
+    "pyomo/environ/tests/test_environ.py"
+  ];
+
+  disabledTests = [
+    # Test requires lsb_release
+    "test_get_os_version"
+  ];
+
+  meta = {
+    description = "Python Optimization Modeling Objects";
+    homepage = "http://www.pyomo.org/";
+    changelog = "https://github.com/Pyomo/pyomo/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
+    mainProgram = "pyomo";
   };
 }

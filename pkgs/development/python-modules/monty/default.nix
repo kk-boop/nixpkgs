@@ -1,57 +1,108 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, msgpack
-, pytestCheckHook
-, numpy
-, pandas
-, pydantic
-, pymongo
-, ruamel-yaml
-, tqdm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  numpy,
+  ruamel-yaml,
+
+  # optional-dependencies
+  invoke,
+  ipython,
+  msgpack,
+  myst-parser,
+  orjson,
+  pandas,
+  pint,
+  pydantic,
+  pymongo,
+  requests,
+  roman-numerals,
+  sphinx,
+  sphinx-markdown-builder,
+  sphinx-rtd-theme,
+  torch,
+  tqdm,
+
+  # tests
+  pytestCheckHook,
+  pytest-benchmark,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "monty";
-  version = "2021.12.1";
-  disabled = pythonOlder "3.5"; # uses type annotations
+  version = "2026.7.16";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
-    owner = "materialsvirtuallab";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0zcbdh7pqv4dq3fan0zh912w9bvmf2p0zj1fhp0ayhdsc50cwldh";
+    owner = "materialyzeai";
+    repo = "monty";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-x5FNw7E3rtrgCWVhMsBpnO+uwu+mB3ELNFdd33+uFds=";
   };
 
-  postPatch = ''
-    substituteInPlace tests/test_os.py \
-      --replace 'self.assertEqual("/usr/bin/find", which("/usr/bin/find"))' '#'
-  '';
-
-  propagatedBuildInputs = [
-    ruamel-yaml
-    tqdm
-    msgpack
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  dependencies = [
     numpy
-    pandas
-    pydantic
-    pymongo
+    ruamel-yaml
   ];
 
-  meta = with lib; {
+  optional-dependencies = rec {
+    dev = [ ipython ];
+    docs = [
+      sphinx
+      sphinx-rtd-theme
+      requests
+      invoke
+      myst-parser
+      sphinx-markdown-builder
+      roman-numerals
+    ];
+    json = [
+      orjson
+      pandas
+      pint
+      pydantic
+      pymongo
+      torch
+    ];
+    multiprocessing = [ tqdm ];
+    optional = dev ++ json ++ multiprocessing ++ serialization;
+    serialization = [ msgpack ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-benchmark
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.optional;
+
+  pythonImportsCheck = [ "monty" ];
+
+  meta = {
     description = "Serves as a complement to the Python standard library by providing a suite of tools to solve many common problems";
     longDescription = "
       Monty implements supplementary useful functions for Python that are not part of the
       standard library. Examples include useful utilities like transparent support for zipped files, useful design
       patterns such as singleton and cached_class, and many more.
     ";
-    homepage = "https://github.com/materialsvirtuallab/monty";
-    license = licenses.mit;
-    maintainers = with maintainers; [ psyanticy ];
+    homepage = "https://github.com/materialyzeai/monty";
+    changelog = "https://github.com/materialyzeai/monty/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      psyanticy
+      berquist
+    ];
   };
-}
+})

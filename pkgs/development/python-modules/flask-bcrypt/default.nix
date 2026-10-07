@@ -1,35 +1,44 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, flask
-, bcrypt
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flask,
+  bcrypt,
+  unittestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "flask-bcrypt";
-  version = "0.7.1";
+  version = "1.0.1";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "maxcountryman";
-    repo = pname;
+    repo = "flask-bcrypt";
     rev = version;
-    sha256 = "0036gag3nj7fzib23lbbpwhlrn1s0kkrfwk5pd90y4cjcfqh8z9x";
+    hash = "sha256-WlIholi/nzq6Ikc0LS6FhG0Q5Kz0kvvAlA2YJ7EksZ4=";
   };
+
+  postPatch = ''
+    # Backport fix for test_long_password from upstream PR: https://github.com/maxcountryman/flask-bcrypt/pull/96
+    substituteInPlace test_bcrypt.py \
+      --replace-fail "self.assertTrue(self.bcrypt.check_password_hash(pw_hash, 'A' * 80))" \
+                     "self.assertTrue(self.bcrypt.check_password_hash(pw_hash, 'A' * 72))"
+  '';
 
   propagatedBuildInputs = [
     flask
     bcrypt
   ];
 
-  checkPhase = ''
-    ${python.interpreter} test_bcrypt.py
-  '';
+  nativeCheckInputs = [ unittestCheckHook ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "flask_bcrypt" ];
+
+  meta = {
     description = "Brcrypt hashing for Flask";
     homepage = "https://github.com/maxcountryman/flask-bcrypt";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.costrouc ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

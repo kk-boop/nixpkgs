@@ -1,33 +1,36 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, python
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "chess";
-  version = "1.7.0";
-
-  disabled = pythonOlder "3.7";
+  version = "1.11.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "niklasf";
     repo = "python-${pname}";
-    rev = "v${version}";
-    sha256 = "0f2q9sif1rqjlgzkf7dnxrclmw8v84hzyrnq21g8k1cwqj5fx9j2";
+    tag = "v${version}";
+    hash = "sha256-8LOp4HQI9UOdaj4/jwd79ftdnaO4HtzMVf1cwcYFCiA=";
   };
+
+  build-system = [ setuptools ];
 
   pythonImportsCheck = [ "chess" ];
 
-  checkPhase = ''
-    ${python.interpreter} ./test.py -v
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    description = "A chess library for Python, with move generation, move validation, and support for common formats";
+  enabledTestPaths = [ "test.py" ];
+
+  meta = {
+    description = "Chess library with move generation, move validation, and support for common formats";
     homepage = "https://github.com/niklasf/python-chess";
-    maintainers = with maintainers; [ smancill ];
-    license = licenses.gpl3Plus;
+    changelog = "https://github.com/niklasf/python-chess/blob/${src.tag}/CHANGELOG.rst";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ smancill ];
   };
 }

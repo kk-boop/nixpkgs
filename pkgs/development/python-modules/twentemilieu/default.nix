@@ -1,55 +1,67 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, poetry-core
-, aiohttp
-, yarl
-, aresponses
-, pytest-asyncio
-, pytestCheckHook
+{
+  lib,
+  aiohttp,
+  aioresponses,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytestCheckHook,
+  rich,
+  syrupy,
+  typer,
+  yarl,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "twentemilieu";
-  version = "0.5.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "3.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "frenck";
     repo = "python-twentemilieu";
-    rev = "v${version}";
-    sha256 = "sha256-7HQ0+h8oiyY+TacQdX84K0r994rH0AMZAvZz8PUvQl0=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-RSUKluCE66oA0QbPlJ3niIuewvBxPmj18ZCUBNCFr4o=";
   };
 
   postPatch = ''
+    # Upstream is creating GitHub releases without version
     substituteInPlace pyproject.toml \
-      --replace "--cov" ""
+      --replace '"0.0.0"' '"${finalAttrs.version}"'
   '';
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
     yarl
   ];
 
-  checkInputs = [
-    aresponses
+  optional-dependencies = {
+    cli = [
+      rich
+      typer
+    ];
+  };
+
+  nativeCheckInputs = [
+    aioresponses
     pytest-asyncio
+    pytest-cov-stub
     pytestCheckHook
-  ];
+    syrupy
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "twentemilieu" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python client for Twente Milieu";
     homepage = "https://github.com/frenck/python-twentemilieu";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/frenck/python-twentemilieu/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

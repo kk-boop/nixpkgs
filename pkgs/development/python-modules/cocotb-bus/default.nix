@@ -1,21 +1,20 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "cocotb-bus";
-  version = "0.2.0";
+  version = "unstable-2025-11-03";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "3afe3abe73464269247263e44f39d59c1258f227298be4118377a8e8c09d7dc1";
+  src = fetchFromGitHub {
+    owner = "cocotb";
+    repo = "cocotb-bus";
+    rev = "f72b989bde036e677d5e9ebab3a6a21bdfe43d09";
+    hash = "sha256-4j63kOjBd+iLA2EYqLTM0oKzKksOjH2UqNgDNFvWgYw=";
   };
-
-  postPatch = ''
-    # remove circular dependency cocotb from setup.py
-    substituteInPlace setup.py --replace '"cocotb>=1.5.0.dev,<2.0"' ""
-  '';
 
   # tests require cocotb, disable for now to avoid circular dependency
   doCheck = false;
@@ -25,10 +24,10 @@ buildPythonPackage rec {
   #   make test
   # '';
 
-  meta = with lib; {
+  meta = {
     description = "Pre-packaged testbenching tools and reusable bus interfaces for cocotb";
     homepage = "https://github.com/cocotb/cocotb-bus";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ prusnak ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ oskarwires ];
   };
 }

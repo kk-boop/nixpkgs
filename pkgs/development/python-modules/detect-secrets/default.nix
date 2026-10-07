@@ -1,69 +1,91 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, gibberish-detector
-, isPy27
-, mock
-, pkgs
-, pyahocorasick
-, pytestCheckHook
-, pyyaml
-, requests
-, responses
-, unidiff
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  gibberish-detector,
+  mock,
+  pkgs,
+  pyahocorasick,
+  pytest7CheckHook,
+  pyyaml,
+  requests,
+  responses,
+  setuptools,
+  unidiff,
+  writableTmpDirAsHomeHook,
+  withGibberish ? true,
+  withWordList ? true,
 }:
 
 buildPythonPackage rec {
   pname = "detect-secrets";
-  version = "1.1.0";
-  disabled = isPy27;
+  version = "1.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Yelp";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-dG2YaWXAMINxBGKNMlVfGTR9QHdnepiZmN+G88X4Wak=";
+    repo = "detect-secrets";
+    tag = "v${version}";
+    hash = "sha256-pNLAZUJhjZ3b01XaltJUJ9O7Blv6/pHQrRvURe7MJ5A=";
     leaveDotGit = true;
   };
 
-  propagatedBuildInputs = [
-    gibberish-detector
-    pyyaml
-    pyahocorasick
-    requests
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [
+    pyyaml
+    requests
+  ]
+  ++ lib.optionals withGibberish optional-dependencies.gibberish
+  ++ lib.optionals withWordList optional-dependencies.word_list;
+
+  optional-dependencies = {
+    gibberish = [
+      gibberish-detector
+    ];
+    word_list = [
+      pyahocorasick
+    ];
+  };
+
+  nativeCheckInputs = [
     mock
-    pytestCheckHook
+    pytest7CheckHook
     responses
     unidiff
     pkgs.gitMinimal
+    writableTmpDirAsHomeHook
   ];
-
-  preCheck = ''
-    export HOME=$(mktemp -d);
-  '';
 
   disabledTests = [
     # Tests are failing for various reasons. Needs to be adjusted with the next update
     "test_basic"
     "test_handles_each_path_separately"
     "test_handles_multiple_directories"
-    "test_load_and_output"
     "test_make_decisions"
-    "test_restores_line_numbers"
     "test_saves_to_baseline"
-    "test_scan_all_files"
     "test_start_halfway"
+  ]
+  ++ lib.optionals (!withGibberish) [
+    "test_load_and_output"
+    "test_quit_if_baseline_is_changed_but_not_staged"
   ];
+
+  disabledTestPaths =
+    lib.optionals (!withGibberish) [
+      "tests/filters/gibberish_filter_test.py"
+    ]
+    ++ lib.optionals (!withWordList) [
+      "tests/filters/wordlist_filter_test.py"
+    ];
 
   pythonImportsCheck = [ "detect_secrets" ];
 
-  meta = with lib; {
-    description = "An enterprise friendly way of detecting and preventing secrets in code";
+  meta = {
+    description = "Enterprise friendly way of detecting and preventing secrets in code";
     homepage = "https://github.com/Yelp/detect-secrets";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ marsam ];
+    changelog = "https://github.com/Yelp/detect-secrets/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

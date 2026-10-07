@@ -1,22 +1,31 @@
-{ lib, fetchurl, buildDunePackage, cppo, easy-format, biniou }:
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  seq,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "yojson";
-  version = "1.7.0";
-  useDune2 = true;
+  version = "3.0.0";
 
   src = fetchurl {
-    url = "https://github.com/ocaml-community/yojson/releases/download/${version}/yojson-${version}.tbz";
-    sha256 = "1iich6323npvvs8r50lkr4pxxqm9mf6w67cnid7jg1j1g5gwcvv5";
+    url = "https://github.com/ocaml-community/yojson/releases/download/${finalAttrs.version}/yojson-${finalAttrs.version}.tbz";
+    hash =
+      {
+        "3.0.0" = "sha256-mUFNp2CbkqAkdO9LSezaFe3Iy7pSKTQbEk5+RpXDlhA=";
+        "2.2.2" = "sha256-mr+tjJp51HI60vZEjmacHmjb/IfMVKG3wGSwyQkSxZU=";
+      }
+      ."${finalAttrs.version}";
   };
 
-  nativeBuildInputs = [ cppo ];
-  propagatedBuildInputs = [ easy-format biniou ];
+  propagatedBuildInputs = lib.optional (!lib.versionAtLeast finalAttrs.version "3.0.0") seq;
 
-  meta = with lib; {
-    description = "An optimized parsing and printing library for the JSON format";
-    homepage = "https://github.com/ocaml-community/${pname}";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.vbgl ];
+  meta = {
+    description = "Optimized parsing and printing library for the JSON format";
+    homepage = "https://github.com/ocaml-community/yojson";
+    license = lib.licenses.bsd3;
+    maintainers = [ lib.maintainers.vbgl ];
+    mainProgram = "ydump";
   };
-}
+})

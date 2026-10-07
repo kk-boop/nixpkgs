@@ -1,31 +1,27 @@
-{ lib, buildDunePackage, fetchurl
-, alcotest
-, astring, fmt
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  alcotest,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "domain-name";
-  version = "0.3.0";
-
-  useDune2 = true;
+  version = "0.5.0";
 
   src = fetchurl {
-    url = "https://github.com/hannesm/domain-name/releases/download/v${version}/domain-name-v${version}.tbz";
-    sha256 = "12kc9p2a2fi1ipc2hyhbzivxpph3npglxwdgvhd6v20rqqdyvnad";
+    url = "https://github.com/hannesm/domain-name/releases/download/v${finalAttrs.version}/domain-name-${finalAttrs.version}.tbz";
+    hash = "sha256-nseuLCJ3LBULhM+j8h2b8l+uFKeW8x4g31LYb0ZJnYk=";
   };
 
-  minimumOCamlVersion = "4.03";
-
-  checkInputs = [ alcotest ];
-
-  propagatedBuildInputs = [ astring fmt ];
-
   doCheck = true;
+  checkInputs = [ alcotest ];
 
   meta = {
     homepage = "https://github.com/hannesm/domain-name";
+    changelog = "https://github.com/hannesm/domain-name/blob/v${finalAttrs.version}/CHANGES.md";
     description = "RFC 1035 Internet domain names";
     license = lib.licenses.isc;
     maintainers = [ lib.maintainers.vbgl ];
   };
-}
+})

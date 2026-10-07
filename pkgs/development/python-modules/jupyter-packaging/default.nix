@@ -1,27 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, deprecation
-, pythonOlder
-, packaging
-, pytestCheckHook
-, tomlkit
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  fetchpatch,
+  deprecation,
+  hatchling,
+  packaging,
+  pytestCheckHook,
+  pytest-timeout,
+  setuptools,
+  tomlkit,
 }:
 
 buildPythonPackage rec {
   pname = "jupyter-packaging";
-  version = "0.10.2";
-  disabled = pythonOlder "3.7";
+  version = "0.12.3";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "jupyter_packaging";
     inherit version;
-    sha256 = "sha256-iEX0ht1IwWYM+tGOUJHRwDVA6y6fvzzs8h7LIrabh3A=";
+    hash = "sha256-nZsrY7l//WeovFORwypCG8QVsmSjLJnk2NjdMdqunPQ=";
   };
 
-  propagatedBuildInputs = [ deprecation packaging tomlkit ];
+  patches = [
+    (fetchpatch {
+      name = "setuptools-68-test-compatibility.patch";
+      url = "https://github.com/jupyter/jupyter-packaging/commit/e963fb27aa3b58cd70c5ca61ebe68c222d803b7e.patch";
+      hash = "sha256-NlO07wBCutAJ1DgoT+rQFkuC9Y+DyF1YFlTwWpwsJzo=";
+    })
+  ];
 
-  checkInputs = [ pytestCheckHook ];
+  build-system = [ hatchling ];
+
+  dependencies = [
+    deprecation
+    packaging
+    setuptools
+    tomlkit
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-timeout
+  ];
+
+  pytestFlags = [
+    "-Wignore::DeprecationWarning"
+    # The 'wheel' package is no longer the canonical location of the 'bdist_wheel' command, and will be removed in a future release. Please update to setuptools v70.1 or later which contains an integrated version of this command.
+    "-Wignore::FutureWarning"
+  ];
 
   preCheck = ''
     export HOME=$(mktemp -d)
@@ -31,7 +59,7 @@ buildPythonPackage rec {
     # disable tests depending on network connection
     "test_develop"
     "test_install"
-    # Avoid unmainted "mocker" fixture library, and calls to dependent "build" module
+    # Avoid unmaintained "mocker" fixture library, and calls to dependent "build" module
     "test_build"
     "test_npm_build"
     "test_create_cmdclass"
@@ -40,10 +68,9 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "jupyter_packaging" ];
 
-  meta = with lib; {
+  meta = {
     description = "Jupyter Packaging Utilities";
     homepage = "https://github.com/jupyter/jupyter-packaging";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.elohmeier ];
+    license = lib.licenses.bsd3;
   };
 }

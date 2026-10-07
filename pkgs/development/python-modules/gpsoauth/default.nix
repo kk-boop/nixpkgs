@@ -1,41 +1,42 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, cffi
-, cryptography
-, enum34
-, idna
-, ipaddress
-, ndg-httpsclient
-, pyopenssl
-, pyasn1
-, pycparser
-, pycryptodomex
-, requests
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  poetry-core,
+  pycryptodomex,
+  requests,
 }:
 
 buildPythonPackage rec {
-  version = "1.0.0";
   pname = "gpsoauth";
+  version = "2.0.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1c4d6a980625b8ab6f6f1cf3e30d9b10a6c61ababb2b60bfe4870649e9c82be0";
+    hash = "sha256-njt2WmpOA2TewbxBV70+1+XsMGZYnihdC0aYaRCqa9I=";
   };
 
-  propagatedBuildInputs = [ cffi cryptography enum34 idna ipaddress ndg-httpsclient pyopenssl pyasn1 pycparser pycryptodomex requests six ];
+  nativeBuildInputs = [
+    poetry-core
+  ];
 
-  # no tests executed
+  propagatedBuildInputs = [
+    pycryptodomex
+    requests
+  ];
+
+  pythonRelaxDeps = [ "urllib3" ];
+
+  # upstream tests are not very comprehensive
   doCheck = false;
 
   pythonImportsCheck = [ "gpsoauth" ];
 
-  meta = with lib; {
-    description = "A python client library for Google Play Services OAuth";
+  meta = {
+    description = "Library for Google Play Services OAuth";
     homepage = "https://github.com/simon-weber/gpsoauth";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jgillich ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ jgillich ];
   };
-
 }

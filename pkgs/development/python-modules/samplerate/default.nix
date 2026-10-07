@@ -1,36 +1,81 @@
-{ lib
-, buildPythonPackage
-, numpy
-, pkgs
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cmake,
+  setuptools,
+  setuptools-scm,
+  pybind11,
+
+  # dependencies
+  cffi,
+  numpy,
+
+  # native dependencies
+  libsamplerate,
+
+  # tests
+  pytestCheckHook,
+  pythonAtLeast,
 }:
 
-buildPythonPackage {
-  pname = "scikits.samplerate";
-  version = "0.3.3";
+buildPythonPackage (finalAttrs: {
+  pname = "samplerate";
+  version = "0.2.4";
+  pyproject = true;
 
-  src = pkgs.fetchgit {
-    url = "https://github.com/cournape/samplerate";
-    rev = "a536c97eb2d6195b5f266ea3cc3a35364c4c2210";
-    sha256 = "0mgic7bs5zv5ji05vr527jlxxlb70f9dg93hy1lzyz2plm1kf7gg";
+  src = fetchFromGitHub {
+    owner = "tuxu";
+    repo = "python-samplerate";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-wetpPAoCenzOo6pD3+F0YNb/fc1BvaeKiw325C19rS0=";
   };
 
-  buildInputs =  [ pkgs.libsamplerate ];
-  propagatedBuildInputs = [ numpy ];
-
-  preConfigure = ''
-     cat > site.cfg << END
-     [samplerate]
-     library_dirs=${pkgs.libsamplerate.out}/lib
-     include_dirs=${pkgs.libsamplerate.dev}/include
-     END
+  # unvendor pybind11, libsamplerate
+  postPatch = ''
+    rm -r external
+    substituteInPlace CMakeLists.txt \
+      --replace-fail "add_subdirectory(external)" "find_package(pybind11 REQUIRED)"
   '';
 
-  doCheck = false;
+  build-system = [
+    cmake
+    setuptools
+    setuptools-scm
+    pybind11
+  ];
 
-  meta = with lib; {
-    homepage = "https://github.com/cournape/samplerate";
-    description = "High quality sampling rate convertion from audio data in numpy arrays";
-    license = licenses.gpl2;
+  dontUseCmakeConfigure = true;
+
+  buildInputs = [ libsamplerate ];
+
+  dependencies = [
+    cffi
+    numpy
+  ];
+
+  pythonImportsCheck = [ "samplerate" ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  preCheck = ''
+    rm -rf samplerate
+  '';
+
+  disabledTests = lib.optionals (pythonAtLeast "3.14") [
+    # ValueError: cannot resize an array that references or is referenced
+    "test_callback_with_2x"
+    "test_process"
+    "test_resize"
+  ];
+
+  meta = {
+    description = "Python bindings for libsamplerate based on CFFI and NumPy";
+    homepage = "https://github.com/tuxu/python-samplerate";
+    changelog = "https://github.com/tuxu/python-samplerate/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ hexa ];
   };
-
-}
+})

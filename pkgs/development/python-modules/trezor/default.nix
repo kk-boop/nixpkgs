@@ -1,75 +1,97 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchPypi
-, isPy3k
-, installShellFiles
-, attrs
-, click
-, construct
-, ecdsa
-, hidapi
-, libusb1
-, mnemonic
-, pillow
-, protobuf
-, pyblake2
-, requests
-, rlp
-, shamir-mnemonic
-, typing-extensions
-, trezor-udev-rules
-, pytestCheckHook
+{
+  stdenv,
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  flit-core,
+  pytestCheckHook,
+  pytest-random-order,
+  # dependencies
+  click,
+  construct,
+  construct-classes,
+  cryptography,
+  keyring,
+  libusb1,
+  mnemonic,
+  noiseprotocol,
+  platformdirs,
+  requests,
+  shamir-mnemonic,
+  slip10,
+  typing-extensions,
+  # optional-dependencies
+  bleak,
+  pillow,
+  hidapi,
+  web3,
+  pyqt5,
 }:
 
 buildPythonPackage rec {
   pname = "trezor";
-  version = "0.12.4";
-
-  disabled = !isPy3k;
+  version = "0.20.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "3e180d9f9f8b69176b5ef36311b6161f5b793b538eb2dfd4babbb4d3fb1e374e";
+    hash = "sha256-CrPOu0T+y1Mrd9WitAG1AYeh1wtyUabMLfVJTlL/31c=";
   };
 
-  nativeBuildInputs = [ installShellFiles ];
+  build-system = [ flit-core ];
 
-  propagatedBuildInputs = [
-    attrs
+  dependencies = [
     click
     construct
-    ecdsa
-    hidapi
+    construct-classes
+    cryptography
+    keyring
     libusb1
     mnemonic
-    pillow
-    protobuf
-    pyblake2
+    noiseprotocol
+    platformdirs
     requests
-    rlp
     shamir-mnemonic
+    slip10
     typing-extensions
-  ] ++ lib.optionals stdenv.isLinux [
-    trezor-udev-rules
   ];
 
-  checkInputs = [ pytestCheckHook ];
+  optional-dependencies = {
+    ble = [ bleak ];
+    extra = [ pillow ];
+    hidapi = [ hidapi ];
+    ethereum = [ web3 ];
+    qt-widgets = [ pyqt5 ];
+    # stellar = [ stellar-sdk ]; # missing in nixpkgs
+    full = lib.flatten (lib.attrValues (lib.removeAttrs optional-dependencies [ "full" ]));
+  };
 
-  postFixup = ''
-    mkdir completions
-    _TREZORCTL_COMPLETE=source_bash $out/bin/trezorctl > completions/trezorctl || true
-    _TREZORCTL_COMPLETE=source_zsh $out/bin/trezorctl > completions/_trezorctl || true
-    _TREZORCTL_COMPLETE=source_fish $out/bin/trezorctl > completions/trezorctl.fish || true
-    installShellCompletion --bash completions/trezorctl
-    installShellCompletion --zsh completions/_trezorctl
-    installShellCompletion --fish completions/trezorctl.fish
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-random-order
+  ];
+
+  disabledTestPaths = [
+    "tests/test_stellar.py" # requires stellar-sdk
+    "tests/test_firmware.py" # requires network downloads
+  ];
+
+  pythonImportsCheck = [ "trezorlib" ];
+
+  postCheck = ''
+    $out/bin/trezorctl --version
   '';
 
-  meta = with lib; {
+  meta = {
     description = "Python library for communicating with Trezor Hardware Wallet";
+    mainProgram = "trezorctl";
     homepage = "https://github.com/trezor/trezor-firmware/tree/master/python";
-    license = licenses.gpl3;
-    maintainers = with maintainers; [ np prusnak mmahut _1000101 ];
+    changelog = "https://github.com/trezor/trezor-firmware/blob/python/v${version}/python/CHANGELOG.md";
+    license = lib.licenses.lgpl3Only;
+    maintainers = with lib.maintainers; [
+      np
+      prusnak
+      mmahut
+    ];
   };
 }

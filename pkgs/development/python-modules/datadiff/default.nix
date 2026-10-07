@@ -1,25 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  pytestCheckHook,
+  six,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "datadiff";
-  version = "1.1.6";
+  version = "2.2.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    extension = "zip";
-    sha256 = "f1402701063998f6a70609789aae8dc05703f3ad0a34882f6199653654c55543";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-fOcN/uqMM/HYjbRrDv/ukFzDa023Ofa7BwqC3omB0ws=";
   };
 
-  buildInputs = [ nose ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "DataDiff";
+  nativeCheckInputs = [
+    pytestCheckHook
+    six
+  ];
+
+  pythonImportsCheck = [ "datadiff" ];
+
+  disabledTests = [
+    # slice is an hashable type in recent python versions
+    "test_unhashable_type"
+  ];
+
+  meta = {
+    description = "Library to provide human-readable diffs of Python data structures";
     homepage = "https://sourceforge.net/projects/datadiff/";
-    license = licenses.asl20;
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-
-}
+})

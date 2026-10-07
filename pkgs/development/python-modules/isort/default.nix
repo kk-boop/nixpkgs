@@ -1,28 +1,33 @@
-{ lib, buildPythonPackage, fetchFromGitHub
-, colorama
-, hypothesis
-, poetry-core
-, pylama
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  colorama,
+  hatchling,
+  hatch-vcs,
+  hypothesis,
+  pylama,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "isort";
-  version = "5.9.3";
-  format = "pyproject";
+  version = "8.0.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "PyCQA";
     repo = "isort";
-    rev = version;
-    sha256 = "sha256-JbRZ/3Xz35tGoCNnQesR08Sjoz3yimxZyxhhOXGvmXw=";
+    tag = version;
+    hash = "sha256-adEAWbRY+bCji4TfnS8W5p5KvuSjmLQrqhi+n8mSQPA=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
+  build-system = [
+    hatchling
+    hatch-vcs
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     colorama
     hypothesis
     pylama
@@ -44,14 +49,15 @@ buildPythonPackage rec {
     export PATH=$PATH:$out/bin
   '';
 
-  pytestFlagsArray = [
-    "--ignore=tests/benchmark/" # requires pytest-benchmark
-    "--ignore=tests/integration/" # pulls in 10 other packages
-    "--ignore=tests/unit/profiles/test_black.py" # causes infinite recursion to include black
+  disabledTestPaths = [
+    "tests/benchmark/" # requires pytest-benchmark
+    "tests/integration/" # pulls in 10 other packages
+    "tests/unit/profiles/test_black.py" # causes infinite recursion to include black
   ];
 
   disabledTests = [
     "test_run" # doesn't like paths in /build
+    "test_fuzz_show_unified_diff" # flakey
     "test_pyi_formatting_issue_942"
     "test_requirements_finder"
     "test_pipfile_finder"
@@ -67,12 +73,15 @@ buildPythonPackage rec {
     "test_value_assignment_list"
     # profiles not available
     "test_isort_supports_shared_profiles_issue_970"
+    # https://github.com/PyCQA/isort/issues/2234
+    "test_isort_should_warn_on_empty_custom_config_issue_1433"
   ];
 
-  meta = with lib; {
-    description = "A Python utility / library to sort Python imports";
+  meta = {
+    description = "Python utility / library to sort Python imports";
     homepage = "https://github.com/PyCQA/isort";
-    license = licenses.mit;
-    maintainers = with maintainers; [ couchemar ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ couchemar ];
+    mainProgram = "isort";
   };
 }

@@ -1,26 +1,63 @@
-{ lib, fetchurl, buildPythonPackage, numpy, scikit-learn, setuptools-scm, cython, pytest }:
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  numpy,
+  scikit-learn,
+  scipy,
+  pybind11,
+  setuptools,
+  setuptools-scm,
+  cython,
+  pytestCheckHook,
+  stdenv, # for meta.broken
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hmmlearn";
-  version = "0.2.6";
+  version = "0.3.3";
+  pyproject = true;
 
-  src = fetchurl {
-    url = "mirror://pypi/h/hmmlearn/${pname}-${version}.tar.gz";
-    sha256 = "2a289cf28b31be59fa8ba5d3253d4a2a992401d45a8cdc221ae484fbf390c0d7";
+  src = fetchPypi {
+    inherit (finalAttrs) pname version;
+    hash = "sha256-HTxdxMUlfgwjjcH+U4dwC4y5h+q4CO2z4Mc4KfHMROw=";
   };
 
-  buildInputs = [ setuptools-scm cython ];
-  propagatedBuildInputs = [ numpy scikit-learn ];
-  checkInputs = [ pytest ];
+  build-system = [
+    setuptools
+    setuptools-scm
+    cython
+    pybind11
+  ];
 
-  checkPhase = ''
-    pytest --pyargs hmmlearn
+  dependencies = [
+    numpy
+    scikit-learn
+    scipy
+  ];
+
+  postPatch = ''
+    substituteInPlace src/hmmlearn/utils.py \
+      --replace-fail \
+        'a_sum.shape = shape' \
+        'a_sum = np.reshape(a_sum, shape, copy=False)'
   '';
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "hmmlearn" ];
+
+  pytestFlags = [
+    "--pyargs"
+    "hmmlearn"
+  ];
+
+  meta = {
     description = "Hidden Markov Models in Python with scikit-learn like API";
-    homepage    = "https://github.com/hmmlearn/hmmlearn";
-    license     = licenses.bsd3;
-    maintainers = with maintainers; [ abbradar ];
+    homepage = "https://github.com/hmmlearn/hmmlearn";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
+    # last successful hydra build on darwin was in 2025
+    broken = stdenv.hostPlatform.isDarwin;
   };
-}
+})

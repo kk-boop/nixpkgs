@@ -1,21 +1,38 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  unittestCheckHook,
+  setuptools,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "unidiff";
-  version = "0.7.0";
+  version = "1.0.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "91bb13b4969514a400679d9ae5e29a6ffad85346087677f8b5e2e036af817447";
+    inherit (finalAttrs) pname version;
+    sha256 = "sha256-Xl1c+rLcmL6Bm3R0erfZ9a+GlTaeyHELk/mrDwrmpEk=";
   };
+
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ unittestCheckHook ];
+
+  unittestFlagsArray = [
+    "-s"
+    "tests"
+  ];
 
   pythonImportsCheck = [ "unidiff" ];
 
-  meta = with lib; {
+  meta = {
     description = "Unified diff python parsing/metadata extraction library";
+    mainProgram = "unidiff";
     homepage = "https://github.com/matiasb/python-unidiff";
-    changelog = "https://github.com/matiasb/python-unidiff/raw/v${version}/HISTORY";
-    license = licenses.mit;
-    maintainers = [ maintainers.marsam ];
+    changelog = "https://github.com/matiasb/python-unidiff/raw/v${finalAttrs.version}/HISTORY";
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.pbsds ];
   };
-}
+})

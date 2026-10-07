@@ -1,24 +1,48 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 # openafsMod, openafsBin, mkCellServDB
 with import ./lib.nix { inherit config lib pkgs; };
 
 let
-  inherit (lib) getBin literalExpression mkOption mkIf optionalString singleton types;
+  inherit (lib)
+    getBin
+    literalExpression
+    mkOption
+    mkIf
+    optionalString
+    singleton
+    types
+    ;
 
   cfg = config.services.openafsClient;
 
-  cellServDB = pkgs.fetchurl {
-    url = "http://dl.central.org/dl/cellservdb/CellServDB.2018-05-14";
-    sha256 = "1wmjn6mmyy2r8p10nlbdzs4nrqxy8a9pjyrdciy5nmppg4053rk2";
-  };
+  clientServDB = pkgs.writeText "client-cellServDB-${cfg.cellName}" (mkCellServDB cfg.cellServDB);
 
-  clientServDB = pkgs.writeText "client-cellServDB-${cfg.cellName}" (mkCellServDB cfg.cellName cfg.cellServDB);
+  cellServDB =
+    let
+      localCells = builtins.attrNames cfg.cellServDB;
+      localCellsRegex = lib.concatMapStringsSep "\\|" (lib.replaceStrings [ "." ] [ "\\." ]) localCells;
+      sedExpr = '':x /^>\(${localCellsRegex}\) / { n; :y /^>/! { n; by }; bx }; p'';
+      globalCommand =
+        if cfg.cellServDB != { } then
+          "sed -n -e ${lib.escapeShellArg sedExpr} ${cfg.globalCellServDBFile}"
+        else
+          "cat ${cfg.globalCellServDBFile}";
+    in
+    pkgs.runCommand "CellServDB" { preferLocalBuild = true; } ''
+      ${lib.optionalString (cfg.globalCellServDBFile != null) "${globalCommand} > $out"}
+      cat ${clientServDB} >> $out
+    '';
 
   afsConfig = pkgs.runCommand "afsconfig" { preferLocalBuild = true; } ''
     mkdir -p $out
     echo ${cfg.cellName} > $out/ThisCell
-    cat ${cellServDB} ${clientServDB} > $out/CellServDB
+    cp ${cellServDB} $out/CellServDB
     echo "${cfg.mountPoint}:${cfg.cache.directory}:${toString cfg.cache.blocks}" > $out/cacheinfo
   '';
 
@@ -49,18 +73,38 @@ in
         example = "grand.central.org";
       };
 
+      globalCellServDBFile = mkOption {
+        default = pkgs.openafs.cellservdb;
+        defaultText = literalExpression "pkgs.openafs.cellservdb";
+        type = types.nullOr types.pathInStore;
+        description = ''
+          Global CellServDB file to be deployed. Set to `null` to only deploy the
+          cells in `cellServDB`. Any cells defined in `cellServDB` will override
+          cells in the global file.
+        '';
+        example = lib.literalExpression "./CellServDB";
+      };
+
       cellServDB = mkOption {
-        default = [];
-        type = with types; listOf (submodule { options = cellServDBConfig; });
+        default = { };
+        type = cellServDBType cfg.cellName;
         description = ''
           This cell's database server records, added to the global
-          CellServDB. See CellServDB(5) man page for syntax. Ignored when
-          <literal>afsdb</literal> is set to <literal>true</literal>.
+          CellServDB. See {manpage}`CellServDB(5)` man page for syntax. Ignored when
+          `afsdb` is set to `true`.
         '';
-        example = [
-          { ip = "1.2.3.4"; dnsname = "first.afsdb.server.dns.fqdn.org"; }
-          { ip = "2.3.4.5"; dnsname = "second.afsdb.server.dns.fqdn.org"; }
-        ];
+        example = {
+          "dns.fqdn.org" = [
+            {
+              ip = "1.2.3.4";
+              dnsname = "first.afsdb.server.dns.fqdn.org";
+            }
+            {
+              ip = "2.3.4.5";
+              dnsname = "second.afsdb.server.dns.fqdn.org";
+            }
+          ];
+        };
       };
 
       cache = {
@@ -75,7 +119,7 @@ in
           type = types.ints.between 0 30;
           description = ''
             Size of each cache chunk given in powers of
-            2. <literal>0</literal> resets the chunk size to its default
+            2. `0` resets the chunk size to its default
             values (13 (8 KB) for memcache, 18-20 (256 KB to 1 MB) for
             diskcache). Maximum value is 30. Important performance
             parameter. Set to higher values when dealing with large files.
@@ -118,8 +162,8 @@ in
         default = false;
         type = types.bool;
         description = ''
-          Return fake data on stat() calls. If <literal>true</literal>,
-          always do so. If <literal>false</literal>, only do so for
+          Return fake data on stat() calls. If `true`,
+          always do so. If `false`, only do so for
           cross-cell mounts (as these are potentially expensive).
         '';
       };
@@ -128,8 +172,8 @@ in
         default = "compat";
         type = types.strMatching "compat|md5";
         description = ''
-          Inode calculation method. <literal>compat</literal> is
-          computationally less expensive, but <literal>md5</literal> greatly
+          Inode calculation method. `compat` is
+          computationally less expensive, but `md5` greatly
           reduces the likelihood of inode collisions in larger scenarios
           involving multiple cells mounted into one AFS space.
         '';
@@ -140,7 +184,7 @@ in
         type = types.str;
         description = ''
           Mountpoint of the AFS file tree, conventionally
-          <literal>/afs</literal>. When set to a different value, only
+          `/afs`. When set to a different value, only
           cross-cells that use the same value can be accessed.
         '';
       };
@@ -171,7 +215,7 @@ in
         type = types.bool;
         description = ''
           Start up in disconnected mode.  You need to execute
-          <literal>fs disco online</literal> (as root) to switch to
+          `fs disco online` (as root) to switch to
           connected mode. Useful for roaming devices.
         '';
       };
@@ -179,16 +223,17 @@ in
     };
   };
 
-
   ###### implementation
 
   config = mkIf cfg.enable {
 
     assertions = [
-      { assertion = cfg.afsdb || cfg.cellServDB != [];
+      {
+        assertion = cfg.afsdb || cfg.cellServDB != [ ];
         message = "You should specify all cell-local database servers in config.services.openafsClient.cellServDB or set config.services.openafsClient.afsdb.";
       }
-      { assertion = cfg.cellName != "";
+      {
+        assertion = cfg.cellName != "";
         message = "You must specify the local cell name in config.services.openafsClient.cellName.";
       }
     ];
@@ -197,9 +242,7 @@ in
 
     environment.etc = {
       clientCellServDB = {
-        source = pkgs.runCommand "CellServDB" { preferLocalBuild = true; } ''
-          cat ${cellServDB} ${clientServDB} > $out
-        '';
+        source = cellServDB;
         target = "openafs/CellServDB";
         mode = "0644";
       };
@@ -215,8 +258,11 @@ in
     systemd.services.afsd = {
       description = "AFS client";
       wantedBy = [ "multi-user.target" ];
-      after = singleton (if cfg.startDisconnected then  "network.target" else "network-online.target");
-      serviceConfig = { RemainAfterExit = true; };
+      wants = lib.optional (!cfg.startDisconnected) "network-online.target";
+      after = singleton (if cfg.startDisconnected then "network.target" else "network-online.target");
+      serviceConfig = {
+        RemainAfterExit = true;
+      };
       restartIfChanged = false;
 
       preStart = ''

@@ -1,32 +1,62 @@
-{ lib, stdenv, fetchFromGitLab, ocaml, findlib, ocf, ptime,
-  uutf, uri, ppx_blob, xtmpl, ocaml_lwt, higlo, omd
+{
+  lib,
+  buildDunePackage,
+  fetchFromGitLab,
+  fmt,
+  lwt_ppx,
+  menhir,
+  ocf_ppx,
+  ppx_blob,
+  xtmpl_ppx,
+  dune-build-info,
+  dune-site,
+  higlo,
+  logs,
+  lwt,
+  ocf,
+  ptime,
+  uri,
+  uutf,
+  xtmpl,
 }:
 
-stdenv.mkDerivation rec {
+buildDunePackage rec {
   pname = "stog";
-  version = "0.18.0";
+  version = "1.1.0";
+  minimalOCamlVersion = "4.13";
   src = fetchFromGitLab {
     domain = "framagit.org";
     owner = "zoggy";
     repo = "stog";
-    rev = version;
-    sha256 = "154gl3ljxqlw8wz1vmsyv8180igrl5bjq0wir7ybrnzq2cdflkv0";
+    tag = version;
+    hash = "sha256-seaVco5AoOxjEuw8zYsrA25vcyo1Un3eUJUU9FT57WU=";
   };
 
-  buildInputs = [ ocaml uutf ];
-  propagatedBuildInputs = [ findlib omd ppx_blob ocf ptime uri xtmpl ocaml_lwt higlo ];
+  nativeBuildInputs = [ menhir ];
+  buildInputs = [
+    lwt_ppx
+    ocf_ppx
+    ppx_blob
+    xtmpl_ppx
+  ];
+  propagatedBuildInputs = [
+    dune-build-info
+    dune-site
+    fmt
+    higlo
+    logs
+    lwt
+    ocf
+    ptime
+    uri
+    uutf
+    xtmpl
+  ];
 
-  createFindlibDestdir = true;
-
-  patches = [ ./install.patch ./uri.patch ];
-
-  meta = with lib; {
+  meta = {
     description = "XML documents and web site compiler";
     homepage = "https://www.good-eris.net/stog";
-    license = licenses.lgpl3;
-    platforms = ocaml.meta.platforms or [];
-    maintainers = with maintainers; [ regnat ];
+    license = lib.licenses.lgpl3;
+    maintainers = with lib.maintainers; [ regnat ];
   };
 }
-
-

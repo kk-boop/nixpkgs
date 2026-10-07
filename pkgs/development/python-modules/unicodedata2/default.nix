@@ -1,23 +1,32 @@
-{ lib, buildPythonPackage, fetchFromGitHub, pytest }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "unicodedata2";
-  version = "13.0.0-2";
+  version = "17.0.1";
+  pyproject = true;
 
-  src = fetchFromGitHub {
-    owner  = "mikekap";
-    repo   = pname;
-    rev    = version;
-    sha256 = "0p9brbiwyg98q52y0gfyps52xv57fwqfpq0mn18p1xc1imip3h2b";
+  src = fetchPypi {
+    inherit (finalAttrs) version pname;
+    sha256 = "sha256-15lD0VP19r++P1Wl7GEZhRhL2jf87bPsx1Mi2CrmrTs=";
   };
 
-  checkInputs = [ pytest ];
-  checkPhase = "pytest tests";
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "unicodedata2" ];
+
+  meta = {
     description = "Backport and updates for the unicodedata module";
     homepage = "https://github.com/mikekap/unicodedata2";
-    license = licenses.asl20;
-    maintainers = [ maintainers.sternenseemann ];
+    changelog = "https://github.com/fonttools/unicodedata2/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ sternenseemann ];
   };
-}
+})

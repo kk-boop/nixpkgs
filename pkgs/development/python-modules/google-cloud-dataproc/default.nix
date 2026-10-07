@@ -1,29 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, mock
-, libcst
-, proto-plus
-, pytestCheckHook
-, pytest-asyncio
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  grpc-google-iam-v1,
+  mock,
+  libcst,
+  proto-plus,
+  protobuf,
+  pytestCheckHook,
+  pytest-asyncio,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-dataproc";
-  version = "3.1.1";
+  version = "5.24.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "e012d76aa32b918c71392c11e1c727328c1570364f8d8e0676e52bc64c57a7af";
+    pname = "google_cloud_dataproc";
+    inherit version;
+    hash = "sha256-yKIv5tswCOc1uPzce2ARf2JD2Q4O2RDWMNFQTOXAvbQ=";
   };
 
-  propagatedBuildInputs = [ google-api-core libcst proto-plus ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook pytest-asyncio ];
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
+
+  dependencies = [
+    google-api-core
+    grpc-google-iam-v1
+    libcst
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+    pytest-asyncio
+  ];
 
   disabledTests = [
-    # requires credentials
+    # Test requires credentials
     "test_list_clusters"
   ];
 
@@ -32,10 +55,11 @@ buildPythonPackage rec {
     "google.cloud.dataproc_v1"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Dataproc API client library";
-    homepage = "https://github.com/googleapis/python-dataproc";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-dataproc";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-dataproc-v${version}/packages/google-cloud-dataproc/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

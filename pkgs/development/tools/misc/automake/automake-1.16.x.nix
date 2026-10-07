@@ -1,23 +1,31 @@
-{ lib, stdenv, fetchurl, perl, autoconf }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  perl,
+  autoconf,
+  updateAutotoolsGnuConfigScriptsHook,
+}:
 
-stdenv.mkDerivation rec {
-  # When updating, beware of https://github.com/NixOS/nixpkgs/pull/131928#issuecomment-896614165
+stdenv.mkDerivation (finalAttrs: {
   pname = "automake";
-  version = "1.16.3";
+  version = "1.16.5";
 
   src = fetchurl {
-    url = "mirror://gnu/automake/automake-${version}.tar.xz";
-    sha256 = "0fmz2fhmzcpacnprl5msphvaflwiy0hvpgmqlgfny72ddijzfazz";
+    url = "mirror://gnu/automake/automake-${finalAttrs.version}.tar.xz";
+    hash = "sha256-8B1YzW2dd/vcqetLvV6tGYgij9tz1veiAfX41rEYtGk=";
   };
 
-  nativeBuildInputs = [ autoconf perl ];
+  strictDeps = true;
+  nativeBuildInputs = [
+    updateAutotoolsGnuConfigScriptsHook
+    autoconf
+    perl
+  ];
   buildInputs = [ autoconf ];
 
   setupHook = ./setup-hook.sh;
 
-  # Disable indented log output from Make, otherwise "make.test" will
-  # fail.
-  preCheck = "unset NIX_INDENT_MAKE";
   doCheck = false; # takes _a lot_ of time, fails 3 out of 2698 tests, all seem to be related to paths
   doInstallCheck = false; # runs the same thing, fails the same tests
 
@@ -28,16 +36,18 @@ stdenv.mkDerivation rec {
   # "fixed" path in generated files!
   dontPatchShebangs = true;
 
-  meta = with lib; {
+  __structuredAttrs = true;
+
+  meta = {
     branch = "1.16";
     homepage = "https://www.gnu.org/software/automake/";
     description = "GNU standard-compliant makefile generator";
-    license = licenses.gpl2Plus;
+    license = lib.licenses.gpl2Plus;
     longDescription = ''
       GNU Automake is a tool for automatically generating
       `Makefile.in' files compliant with the GNU Coding
       Standards.  Automake requires the use of Autoconf.
     '';
-    platforms = platforms.all;
+    platforms = lib.platforms.all;
   };
-}
+})

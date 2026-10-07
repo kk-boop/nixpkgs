@@ -1,28 +1,80 @@
-{ lib, buildPythonPackage, fetchFromGitHub, pyperclip }:
+{
+  lib,
+  allpairspy,
+  approval-utilities,
+  beautifulsoup4,
+  buildPythonPackage,
+  empty-files,
+  fetchFromGitHub,
+  mock,
+  numpy,
+  pyperclip,
+  pytest,
+  pytest-asyncio,
+  pytestCheckHook,
+  pyyaml,
+  setuptools,
+  testfixtures,
+  typing-extensions,
+}:
 
 buildPythonPackage rec {
-  version = "0.2.6";
   pname = "approvaltests";
+  version = "18.0.1";
+  pyproject = true;
 
-  # no tests included in PyPI tarball
   src = fetchFromGitHub {
     owner = "approvals";
     repo = "ApprovalTests.Python";
-    rev = version;
-    sha256 = "1k1bj8q1qm89a8xm4az6qk4qswwmgxw5jpdjcxmf93zh5hrcy9h9";
+    tag = "v${version}";
+    hash = "sha256-2lz3TMI4/QoNVfnZga5Ro9rheixFpVJfNbvVLy0lnLA=";
   };
 
-  propagatedBuildInputs = [ pyperclip ];
-
   postPatch = ''
-    substituteInPlace setup.py \
-      --replace "pyperclip==1.5.27" "pyperclip>=1.5.27"
+    test -f setup.py || mv setup/setup.approvaltests.py setup.py
+
+    python3 setup/set_version.py '${version}'
+
+    patchShebangs internal_documentation/scripts
   '';
 
-  meta = with lib; {
+  build-system = [ setuptools ];
+
+  dependencies = [
+    allpairspy
+    approval-utilities
+    beautifulsoup4
+    empty-files
+    mock
+    pyperclip
+    pytest
+    testfixtures
+    typing-extensions
+  ];
+
+  nativeCheckInputs = [
+    numpy
+    pytest-asyncio
+    pytestCheckHook
+    pyyaml
+  ];
+
+  disabledTests = [
+    "test_warnings"
+    # test runs another python interpreter, ignoring $PYTHONPATH
+    "test_command_line_verify"
+  ];
+
+  pythonImportsCheck = [
+    "approvaltests.approvals"
+    "approvaltests.reporters.generic_diff_reporter_factory"
+  ];
+
+  meta = {
     description = "Assertion/verification library to aid testing";
     homepage = "https://github.com/approvals/ApprovalTests.Python";
-    license = licenses.asl20;
-    maintainers = [ maintainers.marsam ];
+    changelog = "https://github.com/approvals/ApprovalTests.Python/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

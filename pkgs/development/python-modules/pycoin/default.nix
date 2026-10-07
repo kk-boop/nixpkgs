@@ -1,18 +1,21 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, gnupg
-, setuptools
-, pytestCheckHook
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  gnupg,
+  setuptools,
+  pytestCheckHook,
+  stdenv, # for meta.broken
 }:
 
 buildPythonPackage rec {
   pname = "pycoin";
-  version = "0.91.20210515";
+  version = "0.92.20241201";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d2231a8d11b2524c26472d08cf1b76569849ab44507495d0510165ae0af4858e";
+    hash = "sha256-bpN74YFXPM8Cs1BkhEvsRt4TA4a0Xz3xltMHSox5BRI=";
   };
 
   propagatedBuildInputs = [ setuptools ];
@@ -21,9 +24,7 @@ buildPythonPackage rec {
     substituteInPlace ./pycoin/cmds/tx.py --replace '"gpg"' '"${gnupg}/bin/gpg"'
   '';
 
-  checkInputs = [ pytestCheckHook ];
-
-  dontUseSetuptoolsCheck = true;
+  nativeCheckInputs = [ pytestCheckHook ];
 
   # Disable tests depending on online services
   disabledTests = [
@@ -33,10 +34,12 @@ buildPythonPackage rec {
     "test_tx_with_gpg"
   ];
 
-  meta = with lib; {
+  meta = {
+    # last successful hydra build on darwin was in 2021
+    broken = stdenv.hostPlatform.isDarwin;
     description = "Utilities for Bitcoin and altcoin addresses and transaction manipulation";
     homepage = "https://github.com/richardkiss/pycoin";
-    license = licenses.mit;
-    maintainers = with maintainers; [ nyanloutre ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ nyanloutre ];
   };
 }

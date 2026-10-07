@@ -1,32 +1,29 @@
-{ lib
-, buildPythonPackage
-, callPackage
-, fetchFromGitHub
-, asgiref
-, click
-, colorama
-, h11
-, httptools
-, python-dotenv
-, pyyaml
-, typing-extensions
-, uvloop
-, watchgod
-, websockets
-, wsproto
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  callPackage,
+  fetchFromGitHub,
+  click,
+  h11,
+  httptools,
+  python-dotenv,
+  pyyaml,
+  uvloop,
+  watchfiles,
+  websockets,
+  hatchling,
 }:
 
 buildPythonPackage rec {
   pname = "uvicorn";
-  version = "0.14.0";
-  disabled = pythonOlder "3.6";
+  version = "0.51.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "encode";
-    repo = pname;
-    rev = version;
-    sha256 = "164x92k3rs47ihkmwq5av396576dxp4rzv6557pwgc1ign2ikqy1";
+    repo = "uvicorn";
+    tag = version;
+    hash = "sha256-VX5X2BY8eZc93r3zfJFhtz1vuXHvaqWB5rTj7zddSzU=";
   };
 
   outputs = [
@@ -34,20 +31,20 @@ buildPythonPackage rec {
     "testsout"
   ];
 
-  propagatedBuildInputs = [
-    asgiref
+  build-system = [ hatchling ];
+
+  dependencies = [
     click
-    colorama
     h11
+  ];
+
+  optional-dependencies.standard = [
     httptools
     python-dotenv
     pyyaml
     uvloop
-    watchgod
+    watchfiles
     websockets
-    wsproto
-  ] ++ lib.optionals (pythonOlder "3.8") [
-    typing-extensions
   ];
 
   postInstall = ''
@@ -55,9 +52,7 @@ buildPythonPackage rec {
     cp -R tests $testsout/tests
   '';
 
-  pythonImportsCheck = [
-    "uvicorn"
-  ];
+  pythonImportsCheck = [ "uvicorn" ];
 
   # check in passthru.tests.pytest to escape infinite recursion with httpx/httpcore
   doCheck = false;
@@ -66,10 +61,12 @@ buildPythonPackage rec {
     pytest = callPackage ./tests.nix { };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://www.uvicorn.org/";
-    description = "The lightning-fast ASGI server";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ wd15 ];
+    changelog = "https://github.com/Kludex/uvicorn/blob/${src.tag}/docs/release-notes.md";
+    description = "Lightning-fast ASGI server";
+    mainProgram = "uvicorn";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ wd15 ];
   };
 }

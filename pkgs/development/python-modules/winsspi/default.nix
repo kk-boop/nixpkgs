@@ -1,27 +1,36 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, minikerberos
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  minikerberos,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "winsspi";
-  version = "0.0.9";
+  version = "0.0.11";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "1q8hr8l8d9jxyp55qsrlkyhdhqjc0n18ajzms7hf1xkhdl7rrbd2";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-AXC6SJ+iWPGqTmdgoWKEbD8tDUUcg2aD609hO2bdQfM=";
   };
-  propagatedBuildInputs = [ minikerberos ];
 
-  # Project doesn't have tests
+  build-system = [ setuptools ];
+
+  dependencies = [ minikerberos ];
+
+  # Module doesn't have tests
   doCheck = false;
+
   pythonImportsCheck = [ "winsspi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module for ACL/ACE/Security descriptor manipulation";
     homepage = "https://github.com/skelsec/winsspi";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

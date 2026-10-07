@@ -1,34 +1,58 @@
-{ lib, buildPythonPackage, fetchFromGitHub, isPy3k
-, mock
-, pytest
-, snowballstemmer
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch2,
+  poetry-core,
+  snowballstemmer,
+  tomli,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "pydocstyle";
-  version = "5.0.2";
-  disabled = !isPy3k;
+  version = "6.3.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "PyCQA";
-    repo = pname;
-    rev = version;
-    sha256 = "03z8miyppm2xncrc9yjilwl7z5c5cpv51zha580v64p8sb2l0j7j";
+    repo = "pydocstyle";
+    tag = version;
+    hash = "sha256-MjRrnWu18f75OjsYIlOLJK437X3eXnlW8WkkX7vdS6k=";
   };
+
+  patches = [
+    # https://github.com/PyCQA/pydocstyle/pull/656
+    (fetchpatch2 {
+      name = "python312-compat.patch";
+      url = "https://github.com/PyCQA/pydocstyle/commit/306c7c8f2d863bdc098a65d2dadbd4703b9b16d5.patch";
+      hash = "sha256-bqnoLz1owzDpFqlZn8z4Z+RzKCYBsI0PqqeOtjLxnMo=";
+    })
+  ];
+
+  nativeBuildInputs = [ poetry-core ];
+
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace 'version = "0.0.0-dev"' 'version = "${version}"'
+  '';
 
   propagatedBuildInputs = [ snowballstemmer ];
 
-  checkInputs = [ pytest mock ];
+  optional-dependencies.toml = [ tomli ];
 
-  checkPhase = ''
-    # test_integration.py installs packages via pip
-    py.test --cache-clear -vv src/tests -k "not test_integration"
-  '';
+  nativeCheckInputs = [ pytestCheckHook ] ++ optional-dependencies.toml;
 
-  meta = with lib; {
+  disabledTestPaths = [
+    "src/tests/test_integration.py" # runs pip install
+  ];
+
+  meta = {
     description = "Python docstring style checker";
-    homepage = "https://github.com/PyCQA/pydocstyle/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dzabraev ];
+    mainProgram = "pydocstyle";
+    homepage = "https://github.com/PyCQA/pydocstyle";
+    changelog = "https://github.com/PyCQA/pydocstyle/blob/${version}/docs/release_notes.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dzabraev ];
   };
 }

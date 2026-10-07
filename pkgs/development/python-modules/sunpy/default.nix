@@ -1,116 +1,229 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, asdf
-, astropy
-, setuptools-scm
-, astropy-helpers
-, astropy-extension-helpers
-, beautifulsoup4
-, drms
-, glymur
-, h5netcdf
-, hypothesis
-, matplotlib
-, numpy
-, pandas
-, parfive
-, pytestCheckHook
-, pytest-astropy
-, pytest-mock
-, python-dateutil
-, scikitimage
-, scipy
-, sqlalchemy
-, towncrier
-, tqdm
-, zeep
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  extension-helpers,
+  numpy,
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  astropy,
+  fsspec,
+  packaging,
+  parfive,
+  pyerfa,
+  requests,
+
+  # optional-dependencies
+  # asdf
+  asdf,
+  asdf-astropy,
+  # dask
+  dask,
+  # image
+  scipy,
+  # jpeg
+  glymur,
+  lxml,
+  # jupyter
+  itables,
+  ipywidgets,
+  # map
+  contourpy,
+  matplotlib,
+  reproject,
+  # net
+  beautifulsoup4,
+  drms,
+  python-dateutil,
+  tqdm,
+  zeep,
+  # opencv
+  opencv-python,
+  # scikit-image
+  scikit-image,
+  # timeseries
+  h5netcdf,
+  h5py,
+  pandas,
+
+  # tests
+  hypothesis,
+  pytest-astropy,
+  pytest-mock,
+  pytestCheckHook,
+  responses,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sunpy";
-  version = "3.1.2";
-  disabled = pythonOlder "3.6";
+  version = "8.0.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "5eeb479c3f2424bf46355165249a1caa849872f8bee525349c4dca4d15b271fd";
+  src = fetchFromGitHub {
+    owner = "sunpy";
+    repo = "sunpy";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-VR0FvIkskjL1rvc0xOp+DSS+ocTJAAk4NYkO8+kpqmA=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
-    astropy-extension-helpers
-  ];
-
-  propagatedBuildInputs = [
+  build-system = [
+    extension-helpers
     numpy
-    scipy
-    matplotlib
-    pandas
-    astropy
-    astropy-helpers
-    h5netcdf
-    parfive
-    sqlalchemy
-    scikitimage
-    towncrier
-    glymur
-    beautifulsoup4
-    drms
-    python-dateutil
-    zeep
-    tqdm
-    asdf
+    setuptools
+    setuptools-scm # Technically needs setuptools-scm[toml], but that's our default.
   ];
 
-  checkInputs = [
+  dependencies = [
+    astropy
+    fsspec
+    numpy
+    packaging
+    parfive
+    pyerfa
+    requests
+  ]
+  ++ parfive.optional-dependencies.ftp;
+
+  optional-dependencies = lib.fix (self: {
+    asdf = [
+      asdf
+      asdf-astropy
+    ];
+    dask = [ dask ] ++ dask.optional-dependencies.array;
+    image = [ scipy ];
+    jpeg2000 = [
+      glymur
+      lxml
+    ];
+    jupyter = [
+      itables
+      ipywidgets
+    ];
+    map = [
+      contourpy
+      matplotlib
+      # mpl-animators
+      reproject
+      scipy
+    ];
+    net = [
+      beautifulsoup4
+      drms
+      python-dateutil
+      tqdm
+      zeep
+    ];
+    opencv = [ opencv-python ];
+    scikit-image = [ scikit-image ];
+    # spice = [ spiceypy ];
+    timeseries = [
+      # cdflib
+      h5netcdf
+      h5py
+      matplotlib
+      pandas
+    ];
+    visualization = [
+      matplotlib
+      # mpl-animators
+    ];
+
+    # We can't use `with` here because "map" would still be the builtin, and
+    # we can't below because scikit-image would still be this package's argument.
+    core = lib.concatLists [
+      self.image
+      self.map
+      self.net
+      self.timeseries
+      self.visualization
+    ];
+    all = lib.concatLists [
+      self.core
+      self.asdf
+      self.jpeg2000
+      self.opencv
+      # optional-dependencies.spice
+      self.scikit-image
+    ];
+  });
+
+  nativeCheckInputs = [
     hypothesis
-    pytestCheckHook
     pytest-astropy
     pytest-mock
-  ];
-
-  # darwin has write permission issues
-  doCheck = stdenv.isLinux;
-
-  preCheck = ''
-    export HOME=$(mktemp -d)
-  '';
+    pytestCheckHook
+    responses
+    writableTmpDirAsHomeHook
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.all;
 
   disabledTests = [
-    "rst"
+    "rst" # Docs
+    "test_print_params" # Needs to be online
+    "test_find_dependencies" # Needs cdflib
+    # Needs mpl-animators
+    "sunpy.coordinates.utils.GreatArc"
+    "test_cutout_not_on_disk_when_tracking"
+    "test_expand_list_generator_map"
+    "test_great_arc_different_observer"
+    "test_great_arc_points_differentiates"
+    "test_great_arc_wrongly_formatted_points"
+    "test_main_exclude_remote_data"
+    "test_main_include_remote_data"
+    "test_main_nonexisting_module"
+    "test_main_only_remote_data"
+    "test_main_stdlib_module"
+    "test_main_submodule_map"
+    "test_tai_seconds"
+    "test_utime"
+
+    # AssertionError: assert 2 == 1
+    # where 2 = len(WarningsChecker(record=True))
+    "test_sunpy_warnings_logging"
   ];
 
   disabledTestPaths = [
-    "sunpy/io/special/asdf/schemas/sunpy.org/sunpy/coordinates/frames/helioprojective-1.0.0.yaml"
-    "sunpy/io/special/asdf/schemas/sunpy.org/sunpy/coordinates/frames/heliocentric-1.0.0.yaml"
-    # requires mpl-animators package
-    "sunpy/map/tests/test_compositemap.py"
-    "sunpy/map/tests/test_mapbase.py"
-    "sunpy/map/tests/test_mapsequence.py"
-    "sunpy/map/tests/test_plotting.py"
-    "sunpy/map/tests/test_reproject_to.py"
-    "sunpy/net/tests/test_helioviewer.py"
-    "sunpy/timeseries/tests/test_timeseriesbase.py"
-    "sunpy/visualization/animator/tests/test_basefuncanimator.py"
-    "sunpy/visualization/animator/tests/test_mapsequenceanimator.py"
-    "sunpy/visualization/animator/tests/test_wcs.py"
-    "sunpy/visualization/colormaps/tests/test_cm.py"
-    # requires cdflib package
-    "sunpy/timeseries/tests/test_timeseries_factory.py"
+    # Tests are very slow
+    "sunpy/net/tests/test_fido.py"
+    "sunpy/net/tests/test_scraper.py"
+    # asdf.extensions plugin issue
+    "sunpy/io/special/asdf/resources/manifests/*.yaml"
+    "sunpy/io/special/asdf/resources/schemas/"
+    # Requires mpl-animators
+    "sunpy/coordinates/tests/test_wcs_utils.py"
+    "sunpy/image/tests/test_resample.py"
+    "sunpy/image/tests/test_transform.py"
+    "sunpy/io/special/asdf/tests/test_genericmap.py"
+    "sunpy/map"
+    "sunpy/net/jsoc/tests/test_jsoc.py"
+    "sunpy/physics/differential_rotation.py"
+    "sunpy/physics/tests/test_differential_rotation.py"
+    "sunpy/net/soar/tests/test_sunpy_soar.py"
+    "sunpy/visualization"
+
+    # Requires cdflib
+    "sunpy/io/tests/test_cdf.py"
+    "sunpy/timeseries"
+    # Requires jplephem
+    "sunpy/io/special/asdf/tests/test_coordinate_frames.py"
+    # Requires spiceypy
+    "sunpy/coordinates/tests/test_spice.py"
   ];
 
-  pytestFlagsArray = [
-    "--deselect=sunpy/tests/tests/test_self_test.py::test_main_nonexisting_module"
-    "--deselect=sunpy/tests/tests/test_self_test.py::test_main_stdlib_module"
-  ];
+  pythonImportsCheck = [ "sunpy" ];
 
-  meta = with lib; {
-    description = "SunPy: Python for Solar Physics";
+  meta = {
+    description = "Python for Solar Physics";
     homepage = "https://sunpy.org";
-    license = licenses.bsd2;
-    maintainers = [ maintainers.costrouc ];
+    downloadPage = "https://github.com/sunpy/sunpy";
+    changelog = "https://docs.sunpy.org/en/stable/whatsnew/changelog.html";
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

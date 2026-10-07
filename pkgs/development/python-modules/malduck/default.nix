@@ -1,33 +1,45 @@
-{ lib
-, buildPythonPackage
-, capstone
-, click
-, cryptography
-, fetchFromGitHub
-, pefile
-, pycryptodomex
-, pyelftools
-, pythonOlder
-, typing-extensions
-, yara-python
+{
+  lib,
+  buildPythonPackage,
+  capstone,
+  click,
+  cryptography,
+  dnfile,
+  fetchFromGitHub,
+  pefile,
+  pycryptodomex,
+  pyelftools,
+  pythonAtLeast,
+  setuptools,
+  pytestCheckHook,
+  typing-extensions,
+  yara-python,
 }:
 
 buildPythonPackage rec {
   pname = "malduck";
-  version = "4.1.0";
-  disabled = pythonOlder "3.7";
+  version = "4.4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "CERT-Polska";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "04d8bhzax9ynbl83hif9i8gcs29zrvcay2r6n7mcxiixlxcqciak";
+    repo = "malduck";
+    tag = "v${version}";
+    hash = "sha256-Btx0HxiZWrb0TDpBokQGtBE2EDK0htONe/DwqlPgAd4=";
   };
 
-  propagatedBuildInputs = [
+  patches = lib.optionals (pythonAtLeast "3.14") [
+    # python 3.14 ctypes rejects `_pack_` without `_layout_ = "ms"`.
+    ./python-3.14-ctypes-layout.patch
+  ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     capstone
     click
     cryptography
+    dnfile
     pefile
     pycryptodomex
     pyelftools
@@ -35,20 +47,16 @@ buildPythonPackage rec {
     yara-python
   ];
 
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "pefile==2019.4.18" "pefile"
-  '';
-
-  # Project has no tests. They will come with the next release
-  doCheck = false;
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "malduck" ];
 
-  meta = with lib; {
+  meta = {
     description = "Helper for malware analysis";
     homepage = "https://github.com/CERT-Polska/malduck";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/CERT-Polska/malduck/releases/tag/v${version}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "malduck";
   };
 }

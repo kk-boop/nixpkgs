@@ -1,40 +1,49 @@
-{ lib
-, buildPythonPackage
-, fetchpatch
-, cython
-, numpy
-, pytestCheckHook
-, scipy
-, scikit-learn
-, fetchPypi
-, joblib
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  cython,
+  numpy,
+  scipy,
+  scikit-learn,
+  joblib,
+  six,
+
+  # test
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "hdbscan";
-  version = "0.8.27";
+  version = "0.8.41";
+  format = "setuptools";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "e3a418d0d36874f7b6a1bf0b7461f3857fc13a525fd48ba34caed2fe8973aa26";
+  src = fetchFromGitHub {
+    owner = "scikit-learn-contrib";
+    repo = "hdbscan";
+    tag = "release-${version}";
+    hash = "sha256-4uwWoNkrdLB2KzDAksPupdgkIFBgTahzravOtu1WYws=";
   };
-  patches = [
-    # This patch fixes compatibility with numpy 1.20. It will be in the next release
-    # after 0.8.27
-    (fetchpatch {
-      url = "https://github.com/scikit-learn-contrib/hdbscan/commit/5b67a4fba39c5aebe8187a6a418da677f89a63e0.patch";
-      sha256 = "07d7jdwk0b8kgaqkifd529sarji01j1jiih7cfccc5kxmlb5py9h";
-    })
+
+  pythonRemoveDeps = [ "cython" ];
+
+  nativeBuildInputs = [
+    cython
+    joblib
+    numpy
+    scikit-learn
+    scipy
+    six
   ];
 
-  nativeBuildInputs = [ cython ];
-  propagatedBuildInputs = [ numpy scipy scikit-learn joblib six ];
   preCheck = ''
     cd hdbscan/tests
     rm __init__.py
   '';
-  checkInputs = [ pytestCheckHook ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
   disabledTests = [
     # known flaky tests: https://github.com/scikit-learn-contrib/hdbscan/issues/420
     "test_mem_vec_diff_clusters"
@@ -42,14 +51,25 @@ buildPythonPackage rec {
     "test_approx_predict_diff_clusters"
     # another flaky test https://github.com/scikit-learn-contrib/hdbscan/issues/421
     "test_hdbscan_boruvka_balltree_matches"
+    # more flaky tests https://github.com/scikit-learn-contrib/hdbscan/issues/570
+    "test_hdbscan_boruvka_balltree"
+    "test_hdbscan_best_balltree_metric"
+    # "got an unexpected keyword argument"
+    "test_hdbscan_badargs"
+  ];
+
+  disabledTestPaths = [
+    # joblib.externals.loky.process_executor.BrokenProcessPool:
+    "test_branches.py"
   ];
 
   pythonImportsCheck = [ "hdbscan" ];
 
-  meta = with lib; {
+  meta = {
     description = "Hierarchical Density-Based Spatial Clustering of Applications with Noise, a clustering algorithm with a scikit-learn compatible API";
-    homepage =  "https://github.com/scikit-learn-contrib/hdbscan";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ ixxie ];
+    homepage = "https://github.com/scikit-learn-contrib/hdbscan";
+    changelog = "https://github.com/scikit-learn-contrib/hdbscan/releases/tag/release-${version}";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

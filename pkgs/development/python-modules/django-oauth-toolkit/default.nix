@@ -1,27 +1,72 @@
-{ lib, buildPythonPackage, fetchFromGitHub
-, django, requests, oauthlib
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+
+  # propagates
+  django,
+  jwcrypto,
+  oauthlib,
+  requests,
+  urllib3,
+
+  # tests
+  django-ninja,
+  djangorestframework,
+  pytest-cov-stub,
+  pytest-django_4_12,
+  pytest-mock,
+  pytest-xdist,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "django-oauth-toolkit";
-  version = "1.2.0";
+  version = "3.4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jazzband";
-    repo = pname;
-    rev = version;
-    sha256 = "1zbksxrcxlqnapmlvx4rgvpqc4plgnq0xnf45cjwzwi1626zs8g6";
+    repo = "django-oauth-toolkit";
+    tag = finalAttrs.version;
+    hash = "sha256-UsnfGOyVk5w0grG6cTgMmfo+HyrZtsER338YobLyk08=";
   };
 
-  propagatedBuildInputs = [ django requests oauthlib ];
+  build-system = [ setuptools ];
 
-  # django.core.exceptions.ImproperlyConfigured: Requested setting OAUTH2_PROVIDER, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings
-  doCheck = false;
+  dependencies = [
+    django
+    jwcrypto
+    oauthlib
+    requests
+    urllib3
+  ];
 
-  meta = with lib; {
+  preCheck = ''
+    export DJANGO_SETTINGS_MODULE=tests.settings
+  '';
+
+  nativeCheckInputs = [
+    django-ninja
+    djangorestframework
+    pytest-cov-stub
+    pytest-django_4_12
+    pytest-mock
+    pytest-xdist
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # Failed to get a valid response from authentication server. Status code: 404, Reason: Not Found.
+    "test_response_when_auth_server_response_return_404"
+  ];
+
+  meta = {
     description = "OAuth2 goodies for the Djangonauts";
     homepage = "https://github.com/jazzband/django-oauth-toolkit";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ mmai ];
+    changelog = "https://github.com/jazzband/django-oauth-toolkit/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

@@ -1,33 +1,31 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "parameter-expansion-patched";
-  version = "0.2.1b4";
-
-  disabled = pythonOlder "3.6";
+  version = "0.3.1";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1vhshscjifi78qapzwn29gln6p8jhyc7cccszl8ai2jamhcph5zs";
+    hash = "sha256-/128ifveWC8zNlYtGWtxB3HpK6p7bVk1ahSwhaC2dAs=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeBuildInputs = [ setuptools-scm ];
 
-  pythonImportsCheck = [
-    "parameter_expansion"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "parameter_expansion" ];
+
+  meta = {
     description = "POSIX parameter expansion in Python";
-    homepage = "https://github.com/nexB/commoncode";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/nexB/parameter_expansion_patched";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

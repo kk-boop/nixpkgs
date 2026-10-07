@@ -1,25 +1,29 @@
-{ buildPythonPackage
-, fetchPypi
-, lib
-, pytest
-, pytest-xdist
-, pytest-dependency
-, pytest-mock
-, pytestCheckHook
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  lib,
+  setuptools,
+  pytest-xdist,
+  pytest-dependency,
+  pytest-mock,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pytest-order";
-  version = "1.0.0";
+  version = "1.5.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-WZeiYrMSNO67Rh+anvJGh79zICm0mYRaQ5i2nttawyE=";
+  src = fetchFromGitHub {
+    owner = "pytest-dev";
+    repo = "pytest-order";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-LLQy5dO3OWmm7W9eI8yfrOFVp9MQOU+pjoAyWl03tZ0=";
   };
 
-  buildInputs = [ pytest ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-xdist
     pytest-dependency
@@ -30,6 +34,9 @@ buildPythonPackage rec {
     description = "Pytest plugin that allows you to customize the order in which your tests are run";
     homepage = "https://github.com/pytest-dev/pytest-order";
     license = lib.licenses.mit;
-    maintainers = [ lib.maintainers.jacg ];
+    maintainers = with lib.maintainers; [
+      jacg
+      Luflosi
+    ];
   };
-}
+})

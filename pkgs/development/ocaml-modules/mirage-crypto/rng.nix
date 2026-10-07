@@ -1,18 +1,48 @@
-{ buildDunePackage, mirage-crypto, ounit, randomconv, dune-configurator
-, cstruct, duration, logs, mtime, ocaml_lwt }:
+{
+  lib,
+  stdenv,
+  buildDunePackage,
+  mirage-crypto,
+  ohex,
+  ounit2,
+  randomconv,
+  dune-configurator,
+  digestif,
+  duration,
+  logs,
+}:
 
 buildDunePackage {
   pname = "mirage-crypto-rng";
 
-  inherit (mirage-crypto) version src useDune2 minimumOCamlVersion;
+  minimalOCamlVersion = "4.14";
+
+  inherit (mirage-crypto) version src;
 
   doCheck = true;
-  checkInputs = [ ounit randomconv ];
+  checkInputs = [
+    ohex
+    ounit2
+    randomconv
+  ];
 
-  nativeBuildInputs = [ dune-configurator ];
-  propagatedBuildInputs = [ cstruct mirage-crypto duration logs mtime ocaml_lwt ];
+  # test_entropy relies on timer jitter and is flaky on x86_64-darwin.
+  postPatch = lib.optionalString (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isx86_64) ''
+    substituteInPlace tests/dune \
+      --replace-fail \
+        '(enabled_if (and (<> %{architecture} "arm64") (<> %{architecture} "riscv")))' \
+        '(enabled_if false)'
+  '';
+
+  buildInputs = [ dune-configurator ];
+  propagatedBuildInputs = [
+    digestif
+    mirage-crypto
+    duration
+    logs
+  ];
 
   meta = mirage-crypto.meta // {
-    description = "A cryptographically secure PRNG";
+    description = "Cryptographically secure PRNG";
   };
 }

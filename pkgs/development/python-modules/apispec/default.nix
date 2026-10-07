@@ -1,43 +1,47 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, pyyaml
-, prance
-, marshmallow
-, pytestCheckHook
-, mock
-, openapi-spec-validator
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  flit-core,
+  marshmallow,
+  openapi-spec-validator,
+  packaging,
+  pytestCheckHook,
+  pyyaml,
 }:
 
 buildPythonPackage rec {
   pname = "apispec";
-  version = "5.1.1";
-  disabled = pythonOlder "3.6";
+  version = "6.10.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d167890e37f14f3f26b588ff2598af35faa5c27612264ea1125509c8ff860834";
+    hash = "sha256-CoiFVc1KpftxdgQb4VaEFU/YlhBV4WcucDq/c36HYb8=";
   };
 
-  propagatedBuildInputs = [
-    pyyaml
-    prance
-  ];
+  build-system = [ flit-core ];
 
-  checkInputs = [
+  dependencies = [ packaging ];
+
+  optional-dependencies = {
+    marshmallow = [ marshmallow ];
+    yaml = [ pyyaml ];
+  };
+
+  nativeCheckInputs = [
     openapi-spec-validator
-    marshmallow
-    mock
     pytestCheckHook
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
   pythonImportsCheck = [ "apispec" ];
 
-  meta = with lib; {
-    description = "A pluggable API specification generator with support for the OpenAPI Specification";
+  meta = {
+    changelog = "https://github.com/marshmallow-code/apispec/blob/${version}/CHANGELOG.rst";
+    description = "Pluggable API specification generator with support for the OpenAPI Specification";
     homepage = "https://github.com/marshmallow-code/apispec";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

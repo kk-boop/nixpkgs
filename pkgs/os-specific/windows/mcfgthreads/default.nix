@@ -1,24 +1,54 @@
-{ stdenv, fetchFromGitHub, autoreconfHook }:
-
-stdenv.mkDerivation {
-  pname = "mcfgthreads";
-  version = "git";
+{
+  lib,
+  stdenv,
+  writeScriptBin,
+  fetchFromGitHub,
+  meson,
+  ninja,
+}:
+let
+  dllTool = writeScriptBin "dlltool" ''
+    ${stdenv.cc.targetPrefix}dlltool "$@"
+  '';
+in
+stdenv.mkDerivation (finalAttrs: {
+  pname = "mcfgthread";
+  version = "2.4.2";
 
   src = fetchFromGitHub {
     owner = "lhmouse";
     repo = "mcfgthread";
-    rev = "c446cf4fcdc262fc899a188a4bb7136284c34222";
-    sha256 = "1ib90lrd4dz8irq4yvzwhxqa86i5vxl2q2z3z04sf1i8hw427p2f";
+    tag = "v${lib.versions.majorMinor finalAttrs.version}-ga.${lib.versions.patch finalAttrs.version}";
+    hash = "sha256-KjZqFaTbPhdI87j11ugSu6Yoe+Rf473+AwopaIfNrKY=";
   };
 
-  outputs = [ "out" "dev" ];
-
-  # Don't want prebuilt binaries sneaking in.
-  postUnpack = ''
-    rm -r "$sourceRoot/debug" "$sourceRoot/release"
+  postPatch = ''
+    sed -z "s/Rules for tests.*//;s/'cpp'/'c'/g" -i meson.build
   '';
 
-  nativeBuildInputs = [
-    autoreconfHook
+  outputs = [
+    "out"
+    "dev"
   ];
-}
+
+  nativeBuildInputs = [
+    dllTool
+    meson
+    ninja
+  ];
+
+  # A libgcc built against this library gets the "mcf" threading model, which
+  # on Windows beats the "win32" model the bare libc offers. Same attribute a
+  # libc uses to declare what it provides; see `threadModel` in
+  # pkgs/development/compilers/gcc/ng/common/libgcc/default.nix.
+  passthru.threadModel = "mcf";
+
+  meta = {
+    description = "Threading support library for Windows 7 and above";
+    homepage = "https://github.com/lhmouse/mcfgthread/wiki";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ wegank ];
+    teams = [ lib.teams.windows ];
+    platforms = lib.platforms.windows;
+  };
+})

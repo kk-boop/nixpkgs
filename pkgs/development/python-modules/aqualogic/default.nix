@@ -1,43 +1,47 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pyserial
-, pytestCheckHook
-, websockets
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pyserial,
+  pytestCheckHook,
+  setuptools,
+  websockets,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aqualogic";
-  version = "3.3";
+  version = "3.11";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "swilson";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-6YvkSUtBc3Nl/Ap3LjU0IKY2bE4k86XdSoLo+/c8dDs=";
+    repo = "aqualogic";
+    tag = finalAttrs.version;
+    hash = "sha256-9+auDJaXCEpANYm2FzsDCvr8jXmIMZFIQs1Za2BIriY=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiohttp
     pyserial
     websockets
   ];
 
-  checkInputs = [
-    aiohttp
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  # With 3.3 the event loop is not terminated after the first test
+  # With 3.4 the event loop is not terminated after the first test
   # https://github.com/swilson/aqualogic/issues/9
   doCheck = false;
 
   pythonImportsCheck = [ "aqualogic" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to interface with Hayward/Goldline AquaLogic/ProLogic pool controllers";
     homepage = "https://github.com/swilson/aqualogic";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/swilson/aqualogic/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

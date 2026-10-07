@@ -1,39 +1,94 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, pytest_5
-, numpy
-, scipy
-, matplotlib
-, docutils
-, pyopencl
-, opencl-headers
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+
+  # build-system
+  columnize,
+  hatch-requirements-txt,
+  hatch-sphinx,
+  hatch-vcs,
+  hatchling,
+  siphash24,
+  sphinx,
+
+  numpy,
+  scipy,
+  bumps,
+  docutils,
+  matplotlib,
+  opencl-headers,
+  pycuda,
+  pyopencl,
+
+  # optional-dependencies
+
+  # tests
+  pytestCheckHook,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "sasmodels";
-  version = "1.0.5";
+  version = "1.0.12";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "SasView";
     repo = "sasmodels";
-    rev = "v${version}";
-    sha256 = "19h30kcgpvg1qirzjm0vhgvp1yn60ivlglc8a8n2b4d9fp0acfyd";
+    tag = "v${version}";
+    hash = "sha256-2AeFYFyK3jgJB/t4wMiHyKuKBD7CVLKl6cRSeICO+zQ=";
   };
 
-  buildInputs = [ opencl-headers ];
-  # Note: the 1.0.5 release should be compatible with pytest6, so this can
-  # be set back to 'pytest' at that point
-  checkInputs = [ pytest_5 ];
-  propagatedBuildInputs = [ docutils matplotlib numpy scipy pyopencl ];
-
-  checkPhase = ''
-    HOME=$(mktemp -d) py.test -c ./pytest.ini
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"tccbox",' ""
   '';
+
+  build-system = [
+    columnize
+    hatch-requirements-txt
+    hatch-sphinx
+    hatch-vcs
+    hatchling
+    siphash24
+    sphinx
+  ];
+
+  buildInputs = [ opencl-headers ];
+
+  pythonRemoveDeps = [
+    "tccbox" # unpackaged
+  ];
+  dependencies = [
+    numpy
+    scipy
+  ];
+
+  optional-dependencies = {
+    full = [
+      docutils
+      bumps
+      matplotlib
+      columnize
+    ];
+    server = [ bumps ];
+    opencl = [ pyopencl ];
+    cuda = [ pycuda ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    writableTmpDirAsHomeHook
+  ]
+  ++ optional-dependencies.full;
+
+  pythonImportsCheck = [ "sasmodels" ];
 
   meta = {
     description = "Library of small angle scattering models";
-    homepage = "http://sasview.org";
+    homepage = "https://github.com/SasView/sasmodels";
+    changelog = "https://github.com/SasView/sasmodels/blob/${src.tag}/CHANGES.rst";
     license = lib.licenses.bsd3;
     maintainers = with lib.maintainers; [ rprospero ];
   };

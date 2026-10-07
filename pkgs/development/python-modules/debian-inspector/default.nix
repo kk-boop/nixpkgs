@@ -1,47 +1,50 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, chardet
-, attrs
-, commoncode
-, pytestCheckHook
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  chardet,
+  attrs,
+  commoncode,
+  pytestCheckHook,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "debian-inspector";
-  version = "30.0.0";
+  version = "31.1.1";
+  pyproject = true;
 
   src = fetchPypi {
     pname = "debian_inspector";
     inherit version;
-    sha256 = "sha256-0PT5sT6adaqgYQtWjks12ys0z1C3n116aeJaEKR/Wxg=";
+    hash = "sha256-uyFsYrb7D9cM1OQzkIERX0oV711uI/TEKF6t67z8egU=";
   };
-
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
 
   dontConfigure = true;
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
     chardet
     attrs
-    commoncode
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    commoncode
     pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "debian_inspector"
-  ];
+  pythonImportsCheck = [ "debian_inspector" ];
 
-  meta = with lib; {
+  meta = {
     description = "Utilities to parse Debian package, copyright and control files";
     homepage = "https://github.com/nexB/debian-inspector";
-    license = with licenses; [ asl20 bsd3 mit ];
-    maintainers = teams.determinatesystems.members;
+    changelog = "https://github.com/aboutcode-org/debian-inspector/blob/v${version}/CHANGELOG.rst";
+    license = with lib.licenses; [
+      asl20
+      bsd3
+      mit
+    ];
+    maintainers = [ ];
   };
 }

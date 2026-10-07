@@ -1,30 +1,57 @@
-{ lib, buildPythonPackage, fetchFromGitHub
-, requests, requests_oauthlib, six
-, pytest, pytestcache, pytest-cov, responses, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  mock,
+  nix-update-script,
+  pytest-cov-stub,
+  pytestCheckHook,
+  requests,
+  requests-oauthlib,
+  responses,
+  six,
 }:
 
-buildPythonPackage rec {
-  version = "0.10.1";
+buildPythonPackage (finalAttrs: {
+  version = "0.11.0-unstable-2026-05-15";
   pname = "mwclient";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "mwclient";
     repo = "mwclient";
-    rev = "v${version}";
-    sha256 = "120snnsh9n5svfwkyj1w9jrxf99jnqm0jk282yypd3lpyca1l9hj";
+    rev = "87113730b1f41d8160057621bfd90ad88428f602";
+    hash = "sha256-R2erz4oo6111haxlc9zhpgWhihFjMT2Mg/kdWERzcp4=";
   };
 
-  checkInputs = [ pytest pytestcache pytest-cov responses mock ];
+  dependencies = [
+    requests
+    requests-oauthlib
+    six
+  ];
 
-  propagatedBuildInputs = [ requests requests_oauthlib six ];
+  build-system = [
+    hatchling
+  ];
 
-  checkPhase = ''
-    py.test
-  '';
+  nativeCheckInputs = [
+    mock
+    pytest-cov-stub
+    pytestCheckHook
+    responses
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "mwclient" ];
+
+  passthru.updateScript = nix-update-script {
+    extraArgs = [ "--version=branch" ];
+  };
+
+  meta = {
     description = "Python client library to the MediaWiki API";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     homepage = "https://github.com/mwclient/mwclient";
+    maintainers = [ lib.maintainers.klea ];
   };
-}
+})

@@ -1,46 +1,91 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, numpy
-, pyyaml
-, matplotlib
-, h5py
-, scipy
-, spglib
-, pytestCheckHook
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cmake,
+  nanobind,
+  ninja,
+  numpy,
+  scikit-build-core,
+  setuptools-scm,
+
+  # dependencies
+  h5py,
+  matplotlib,
+  phonors,
+  pyyaml,
+  scipy,
+  spglib,
+  symfc,
+
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "phonopy";
-  version = "2.12.0";
+  version = "4.7.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "ff65065f418ccbff9fbc1186b9a65581e83b42789aa4a656f45badfff9bd3f61";
+  __structuredAttrs = true;
+
+  src = fetchFromGitHub {
+    owner = "phonopy";
+    repo = "phonopy";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-3KbyMF/LLCuuNHy/rX6+eSmH4Vhbkoa2iAxHj8aDjPA=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "nanobind<2.10.0" "nanobind"
+  '';
+
+  build-system = [
+    cmake
+    nanobind
+    ninja
+    numpy
+    scikit-build-core
+    setuptools-scm
+  ];
+  dontUseCmakeConfigure = true;
+
+  dependencies = [
     h5py
     matplotlib
     numpy
     pyyaml
+    phonors
     scipy
     spglib
+    symfc
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  env = lib.optionalAttrs stdenv.hostPlatform.isDarwin {
+    # Prevents 'Fatal Python error: Aborted' on darwin during checkPhase
+    MPLBACKEND = "Agg";
+  };
 
   # prevent pytest from importing local directory
   preCheck = ''
     rm -r phonopy
   '';
 
-  meta = with lib; {
-    description = "A package for phonon calculations at harmonic and quasi-harmonic levels";
-    homepage = "https://atztogo.github.io/phonopy/";
-    license = licenses.bsd0;
-    maintainers = with maintainers; [ psyanticy ];
+  pythonImportsCheck = [ "phonopy" ];
+
+  meta = {
+    description = "Modulefor phonon calculations at harmonic and quasi-harmonic levels";
+    homepage = "https://phonopy.github.io/phonopy/";
+    changelog = "http://phonopy.github.io/phonopy/changelog.html";
+    license = lib.licenses.bsd0;
+    maintainers = with lib.maintainers; [
+      psyanticy
+      chn
+    ];
   };
-}
+})

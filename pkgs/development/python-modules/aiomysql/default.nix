@@ -1,56 +1,53 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pymysql
-, pytest
-, isPy27
-, fetchpatch
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+
+  # dependencies
+  pymysql,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiomysql";
-  version = "0.0.21";
-  disabled = isPy27;
+  version = "0.3.2";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "aio-libs";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1qvy3phbsxp55161dnppjfx2m1kn82v0irc3xzqw0adfd81vaiad";
+    repo = "aiomysql";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-DBNLmroR1W/gsYtW0iGNpki6EYUq6MyHI2pCRdyapU4=";
   };
-
-  patches = [
-    (fetchpatch {
-      # vendor functions previously provided by pymysql.util
-      url = "https://github.com/aio-libs/aiomysql/pull/554/commits/919b997a9de7f53d721af76762fba425e306531e.patch";
-      sha256 = "V1VYyqr6RwTXoVoGVyMuJst6uqTuuHbpMOpLoVZO1XA=";
-    })
-  ];
-
-  propagatedBuildInputs = [
-    pymysql
-  ];
-
-  checkInputs = [
-    pytest
-  ];
 
   postPatch = ''
-    substituteInPlace setup.py \
-      --replace "PyMySQL>=0.9,<=0.9.3" "PyMySQL"
+    substituteInPlace pyproject.toml \
+      --replace-fail \
+        "setuptools_scm[toml] >= 7, < 10" \
+        "setuptools_scm[toml]"
   '';
 
-  checkPhase = ''
-    pytest
-  '';
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  # tests require mysql database
+  dependencies = [ pymysql ];
+
+  # Tests require MySQL database
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [ "aiomysql" ];
+
+  meta = {
     description = "MySQL driver for asyncio";
     homepage = "https://github.com/aio-libs/aiomysql";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/aio-libs/aiomysql/blob/${finalAttrs.src.rev}/CHANGES.txt";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

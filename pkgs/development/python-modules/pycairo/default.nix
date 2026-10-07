@@ -1,28 +1,26 @@
-{ lib
-, pythonOlder
-, fetchFromGitHub
-, meson
-, ninja
-, buildPythonPackage
-, pytestCheckHook
-, pkg-config
-, cairo
-, python
+{
+  lib,
+  fetchFromGitHub,
+  meson,
+  ninja,
+  buildPythonPackage,
+  pytestCheckHook,
+  pkg-config,
+  cairo,
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "pycairo";
-  version = "1.20.1";
+  version = "1.29.0";
 
-  disabled = pythonOlder "3.6";
-
-  format = "other";
+  pyproject = false;
 
   src = fetchFromGitHub {
     owner = "pygobject";
     repo = "pycairo";
-    rev = "v${version}";
-    sha256 = "09aisph7ycgb4xi2xglvrn59i3cyqms8jbb876cl9763g7yqbcr6";
+    tag = "v${version}";
+    hash = "sha256-ErWxSQFYpqTZ9TPrcEUjVTa0LU619nm04TWTshGgttQ=";
   };
 
   nativeBuildInputs = [
@@ -31,25 +29,28 @@ buildPythonPackage rec {
     pkg-config
   ];
 
-  buildInputs = [
-    cairo
-  ];
+  buildInputs = [ cairo ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  # Cairo tries to load system fonts by default.
+  # It's surfaced as a Cairo "out of memory" error in tests.
+  __impureHostDeps = [ "/System/Library/Fonts" ];
 
   mesonFlags = [
     # This is only used for figuring out what version of Python is in
     # use, and related stuff like figuring out what the install prefix
     # should be, but it does need to be able to execute Python code.
-    "-Dpython=${python.pythonForBuild.interpreter}"
+    "-Dpython=${python.pythonOnBuildForHost.interpreter}"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Python 3 bindings for cairo";
     homepage = "https://pycairo.readthedocs.io/";
-    license = with licenses; [ lgpl21Only mpl11 ];
-    platforms = lib.platforms.linux ++ lib.platforms.darwin;
+    license = with lib.licenses; [
+      lgpl21Only
+      mpl11
+    ];
+    platforms = lib.platforms.unix;
   };
 }

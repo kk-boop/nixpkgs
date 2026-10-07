@@ -1,31 +1,35 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, substituteAll
-, fetchPypi
-, cython
-, fontconfig
-, freetype-py
-, hsluv
-, kiwisolver
-, libGL
-, numpy
-, setuptools-scm
-, setuptools-scm-git-archive
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  replaceVars,
+  fetchPypi,
+  cython,
+  fontconfig,
+  freetype-py,
+  hsluv,
+  kiwisolver,
+  libGL,
+  numpy,
+  oldest-supported-numpy,
+  packaging,
+  setuptools,
+  setuptools-scm,
+  wheel,
 }:
 
 buildPythonPackage rec {
   pname = "vispy";
-  version = "0.9.3";
+  version = "0.16.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "bc3aec042637947d4e999121bab224077a6f7ede4af745102f41737f7c81c05a";
+    hash = "sha256-CUUavoeBM2/WhCIHzZXOXoYJ2Z8TvN6JhBJTgSXDUIg=";
   };
 
-  patches = [
-    (substituteAll {
-      src = ./library-paths.patch;
+  patches = lib.optionals (!stdenv.hostPlatform.isDarwin) [
+    (replaceVars ./library-paths.patch {
       fontconfig = "${fontconfig.lib}/lib/libfontconfig${stdenv.hostPlatform.extensions.sharedLibrary}";
       gl = "${libGL.out}/lib/libGL${stdenv.hostPlatform.extensions.sharedLibrary}";
     })
@@ -33,23 +37,23 @@ buildPythonPackage rec {
 
   nativeBuildInputs = [
     cython
+    oldest-supported-numpy
+    setuptools
     setuptools-scm
-    setuptools-scm-git-archive
+    wheel
   ];
 
-  buildInputs = [
-    libGL
-  ];
+  buildInputs = [ libGL ];
 
   propagatedBuildInputs = [
-    fontconfig
     freetype-py
     hsluv
     kiwisolver
     numpy
+    packaging
   ];
 
-  doCheck = false;  # otherwise runs OSX code on linux.
+  doCheck = false; # otherwise runs OSX code on linux.
 
   pythonImportsCheck = [
     "vispy"
@@ -64,10 +68,11 @@ buildPythonPackage rec {
     "vispy.visuals"
   ];
 
-  meta = with lib; {
-    homepage = "https://vispy.org/index.html";
+  meta = {
     description = "Interactive scientific visualization in Python";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ goertzenator ];
+    homepage = "https://vispy.org/index.html";
+    changelog = "https://github.com/vispy/vispy/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ goertzenator ];
   };
 }

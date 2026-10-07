@@ -1,13 +1,27 @@
 {
   mkDerivation,
+  cmake,
   extra-cmake-modules,
-  kcoreaddons, kwindowsystem, qtbase, qtx11extras,
+  kcoreaddons,
+  kwindowsystem,
+  qtbase,
+  qtx11extras,
 }:
 
 mkDerivation {
-  name = "kcrash";
-  nativeBuildInputs = [ extra-cmake-modules ];
-  buildInputs = [ kcoreaddons kwindowsystem qtx11extras ];
+  pname = "kcrash";
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+  ];
+  buildInputs = [
+    kcoreaddons
+    kwindowsystem
+    qtx11extras
+  ];
   propagatedBuildInputs = [ qtbase ];
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 }

@@ -1,59 +1,59 @@
-{ lib
-, angr
-, buildPythonPackage
-, cmd2
-, coreutils
-, fetchFromGitHub
-, pygments
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  angr,
+  buildPythonPackage,
+  cmd2,
+  coreutils,
+  fetchFromGitHub,
+  pygments,
+  pytestCheckHook,
+  setuptools,
+  stdenv,
 }:
 
 buildPythonPackage rec {
   pname = "angrcli";
-  version = "1.1.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "1.3.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "fmagin";
     repo = "angr-cli";
-    rev = "v${version}";
-    sha256 = "0mz3yzsw08xwpj6188rxmr7darilh4ismcnh8nhp9945wjyzl4kr";
+    tag = "v${version}";
+    hash = "sha256-egu7jlEk8/i36qQMHztGr959sBt9d5crW8mj6+sKaHI=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace tests/test_derefs.py \
+      --replace-fail "/bin/ls" "${coreutils}/bin/ls"
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     angr
     cmd2
     pygments
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     coreutils
     pytestCheckHook
   ];
 
-  postPatch = ''
-    # Version mismatch, https://github.com/fmagin/angr-cli/pull/11
-    substituteInPlace setup.py \
-      --replace "version='1.1.0'," "version='${version}',"
-    substituteInPlace tests/test_derefs.py \
-      --replace "/bin/ls" "${coreutils}/bin/ls"
-  '';
-
-  disabledTests = [
-    "test_sims"
+  disabledTests = lib.optionals (!stdenv.hostPlatform.isx86) [
+    # expects the x86 register "rax" to exist
+    "test_cc"
+    "test_loop"
+    "test_max_depth"
   ];
 
-  pythonImportsCheck = [
-    "angrcli"
-  ];
+  pythonImportsCheck = [ "angrcli" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python modules to allow easier interactive use of angr";
     homepage = "https://github.com/fmagin/angr-cli";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

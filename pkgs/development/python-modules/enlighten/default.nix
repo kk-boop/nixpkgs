@@ -1,37 +1,45 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, blessed
-, prefixed
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # dependencies
+  blessed,
+  prefixed,
+
+  # tests
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "enlighten";
-  version = "1.10.1";
+  version = "1.14.1";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "3391916586364aedced5d6926482b48745e4948f822de096d32258ba238ea984";
+    hash = "sha256-hcNUEqmk84hrMzfUH4E0Qfq5ow2fW18MAVvQeKRBFHM=";
   };
 
-  propagatedBuildInputs = [
+  dependencies = [
     blessed
     prefixed
   ];
-  checkInputs = [ pytestCheckHook ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "enlighten" ];
-  disabledTests =
-    # https://github.com/Rockhopper-Technologies/enlighten/issues/44
-    lib.optional stdenv.isDarwin "test_autorefresh"
-    ;
 
-  meta = with lib; {
+  meta = {
     description = "Enlighten Progress Bar for Python Console Apps";
     homepage = "https://github.com/Rockhopper-Technologies/enlighten";
-    license = with licenses; [ mpl20 ];
-    maintainers = with maintainers; [ veprbl ];
+    changelog = "https://github.com/Rockhopper-Technologies/enlighten/releases/tag/${version}";
+    license = lib.licenses.mpl20;
+    maintainers = with lib.maintainers; [
+      veprbl
+      doronbehar
+    ];
   };
 }

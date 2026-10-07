@@ -1,76 +1,106 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, brotlipy
-, zopfli
-, fs
-, lxml
-, scipy
-, munkres
-, unicodedata2
-, sympy
-, matplotlib
-, reportlab
-, sphinx
-, pytest
-, pytest-randomly
-, glibcLocales
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  pythonOlder,
+  isPyPy,
+  fetchFromGitHub,
+  setuptools,
+  setuptools-scm,
+  lxml,
+  brotli,
+  brotlicffi,
+  zopfli,
+  unicodedata2,
+  lz4,
+  scipy,
+  munkres,
+  pycairo,
+  matplotlib,
+  sympy,
+  xattr,
+  skia-pathops,
+  uharfbuzz,
+  addBinToPathHook,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "fonttools";
-  version = "4.21.1";
-  disabled = pythonOlder "3.6";
+  version = "4.63.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner  = pname;
-    repo   = pname;
-    rev    = version;
-    sha256 = "1x9qrg6ppqhm5214ymwvn0r34qdz8pqvyxd0sj7rkp06wa757z2i";
+    owner = "fonttools";
+    repo = "fonttools";
+    tag = finalAttrs.version;
+    hash = "sha256-XTE18TKpIa4MpbJ5tcHwCyLk3Q6CV/ElzMtddG86HJA=";
   };
 
-  # all dependencies are optional, but
-  # we run the checks with them
-  checkInputs = [
-    pytest
-    pytest-randomly
-    glibcLocales
-    # etree extra
-    lxml
-    # ufo extra
-    fs
-    # woff extra
-    brotlipy
-    zopfli
-    # unicode extra
-    unicodedata2
-    # interpolatable extra
-    scipy
-    munkres
-    # symfont
-    sympy
-    # varLib
-    matplotlib
-    # pens
-    reportlab
-    sphinx
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
 
-  preCheck = ''
-    export LC_ALL="en_US.UTF-8"
-  '';
+  optional-dependencies =
+    let
+      extras = {
+        ufo = [ ];
+        lxml = [ lxml ];
+        woff = [
+          (if isPyPy then brotlicffi else brotli)
+          zopfli
+        ];
+        unicode = lib.optional (pythonOlder "3.15") unicodedata2;
+        graphite = [ lz4 ];
+        interpolatable = [
+          pycairo
+          (if isPyPy then munkres else scipy)
+        ];
+        plot = [ matplotlib ];
+        symfont = [ sympy ];
+        type1 = lib.optional stdenv.hostPlatform.isDarwin xattr;
+        pathops = [ skia-pathops ];
+        repacker = [ uharfbuzz ];
+      };
+    in
+    extras // { all = lib.concatLists (lib.attrValues extras); };
 
-  # avoid timing issues with timestamps in subset_test.py and ttx_test.py
-  checkPhase = ''
-    pytest Tests fontTools \
-      -k 'not ttcompile_timestamp_calcs and not recalc_timestamp'
-  '';
+  nativeCheckInputs = [
+    addBinToPathHook
+    pytestCheckHook
+  ]
+  ++ lib.concatLists (
+    lib.attrVals (
+      [
+        "woff"
+        # "interpolatable" is not included because it only contains 2 tests at the time of writing but adds 270 extra dependencies
+        "ufo"
+      ]
+      ++
+        lib.optionals (lib.meta.availableOn stdenv.hostPlatform skia-pathops && !skia-pathops.meta.broken)
+          [
+            "pathops" # broken
+          ]
+      ++ [ "repacker" ]
+    ) finalAttrs.passthru.optional-dependencies
+  );
 
-  meta = with lib; {
+  pythonImportsCheck = [ "fontTools" ];
+
+  # Timestamp tests have timing issues probably related
+  # to our file timestamp normalization
+  disabledTests = [
+    "test_recalc_timestamp_ttf"
+    "test_recalc_timestamp_otf"
+    "test_ttcompile_timestamp_calcs"
+  ];
+
+  meta = {
     homepage = "https://github.com/fonttools/fonttools";
-    description = "A library to manipulate font files from Python";
-    license = licenses.mit;
-    maintainers = [ maintainers.sternenseemann ];
+    description = "Library to manipulate font files from Python";
+    changelog = "https://github.com/fonttools/fonttools/blob/${finalAttrs.src.tag}/NEWS.rst";
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.sternenseemann ];
   };
-}
+})

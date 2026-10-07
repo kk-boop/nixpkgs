@@ -1,39 +1,53 @@
-{ lib, stdenv, fetchurl, ocaml, findlib, ocamlbuild, topkg, uchar, uutf, uunf, uucd }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  ocaml,
+  findlib,
+  ocamlbuild,
+  topkg,
+  uchar,
+  uutf,
+  uunf,
+  uucd,
+}:
 
-let
+stdenv.mkDerivation (finalAttrs: {
+  name = "ocaml${ocaml.version}-${finalAttrs.pname}-${finalAttrs.version}";
   pname = "uucp";
-  version = "14.0.0";
-  webpage = "https://erratique.ch/software/${pname}";
-  minimumOCamlVersion = "4.03";
-  doCheck = true;
-in
-
-if !(lib.versionAtLeast ocaml.version minimumOCamlVersion)
-then builtins.throw "${pname} needs at least OCaml ${minimumOCamlVersion}"
-else
-
-stdenv.mkDerivation {
-
-  name = "ocaml${ocaml.version}-${pname}-${version}";
+  version = "18.0.0";
 
   src = fetchurl {
-    url = "${webpage}/releases/${pname}-${version}.tbz";
-    sha256 = "sha256:1yx9nih3d9prb9zizq8fzmmqylf24a6yifhf81h33znrj5xn1mpj";
+    url = "https://erratique.ch/software/uucp/releases/uucp-${finalAttrs.version}.tbz";
+    hash = "sha256-ut7cfFg6entCN2O625f5/UuWmQa5NFyFQifDje1jI/w=";
   };
 
-  buildInputs = [ ocaml findlib ocamlbuild topkg uutf uunf ];
+  nativeBuildInputs = [
+    ocaml
+    findlib
+    ocamlbuild
+    topkg
+  ];
+  buildInputs = [
+    topkg
+    uutf
+    uunf
+    uucd
+  ];
 
   propagatedBuildInputs = [ uchar ];
 
+  strictDeps = true;
+
   buildPhase = ''
     runHook preBuild
-    ${topkg.buildPhase} --with-cmdliner false --tests ${lib.boolToString doCheck}
+    ${topkg.buildPhase} --with-cmdliner false --tests ${lib.boolToString finalAttrs.finalPackage.doCheck}
     runHook postBuild
   '';
 
   inherit (topkg) installPhase;
 
-  inherit doCheck;
+  doCheck = true;
   checkPhase = ''
     runHook preCheck
     ${topkg.run} test
@@ -41,11 +55,11 @@ stdenv.mkDerivation {
   '';
   checkInputs = [ uucd ];
 
-  meta = with lib; {
-    description = "An OCaml library providing efficient access to a selection of character properties of the Unicode character database";
-    homepage = webpage;
+  meta = {
+    description = "OCaml library providing efficient access to a selection of character properties of the Unicode character database";
+    homepage = "https://erratique.ch/software/uucp";
     inherit (ocaml.meta) platforms;
-    license = licenses.bsd3;
-    maintainers = [ maintainers.vbgl ];
+    license = lib.licenses.bsd3;
+    maintainers = [ lib.maintainers.vbgl ];
   };
-}
+})

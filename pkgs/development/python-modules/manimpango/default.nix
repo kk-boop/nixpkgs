@@ -1,37 +1,57 @@
-{ stdenv, lib, buildPythonPackage, fetchFromGitHub, python, pkg-config, pango, cython, AppKit, pytestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pkg-config,
+  setuptools,
+  pango,
+  cython,
+  pytest-cov-stub,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "manimpango";
-  version = "0.4.0";
+  version = "0.6.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "ManimCommunity";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1qffb04bz4s2anb6a7nm6dpqwdlvq6626z1whqwrwsvn8z9sry76";
+    repo = "manimpango";
+    tag = "v${version}";
+    hash = "sha256-8eQmhVsW440/zxOwjngnPTGT7iFbdSvBV7tnI332piE=";
   };
 
   postPatch = ''
-    substituteInPlace setup.cfg --replace "--cov --no-cov-on-fail" ""
+    substituteInPlace pyproject.toml \
+      --replace-fail "Cython>=3.0.2,<3.1" Cython
   '';
 
   nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ pango ] ++ lib.optionals stdenv.isDarwin [ AppKit ];
-  propagatedBuildInputs = [
+
+  buildInputs = [ pango ];
+
+  build-system = [
+    setuptools
     cython
   ];
 
-  preBuild = ''
-    ${python.interpreter} setup.py build_ext --inplace
+  nativeCheckInputs = [
+    pytest-cov-stub
+    pytestCheckHook
+  ];
+
+  preCheck = ''
+    rm -r manimpango
   '';
 
-  checkInputs = [ pytestCheckHook ];
   pythonImportsCheck = [ "manimpango" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/ManimCommunity/ManimPango";
-    license = licenses.gpl3Plus;
+  meta = {
     description = "Binding for Pango";
-    maintainers = [ maintainers.angustrau ];
+    homepage = "https://github.com/ManimCommunity/ManimPango";
+    changelog = "https://github.com/ManimCommunity/ManimPango/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ emilytrau ];
   };
 }

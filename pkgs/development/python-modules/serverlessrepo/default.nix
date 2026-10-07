@@ -1,16 +1,18 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytest
-, boto3
-, six
-, pyyaml
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  boto3,
+  six,
+  pyyaml,
+  mock,
 }:
 
 buildPythonPackage rec {
   pname = "serverlessrepo";
   version = "0.1.10";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
@@ -23,13 +25,22 @@ buildPythonPackage rec {
     pyyaml
   ];
 
-  checkInputs = [ pytest mock ];
+  nativeCheckInputs = [
+    pytestCheckHook
+    mock
+  ];
 
-  checkPhase = ''
-    pytest tests/unit
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace "pyyaml~=5.1" "pyyaml" \
+      --replace "boto3~=1.9, >=1.9.56" "boto3"
   '';
 
-  meta = with lib; {
+  enabledTestPaths = [ "tests/unit" ];
+
+  pythonImportsCheck = [ "serverlessrepo" ];
+
+  meta = {
     homepage = "https://github.com/awslabs/aws-serverlessrepo-python";
     description = "Helpers for working with the AWS Serverless Application Repository";
     longDescription = ''
@@ -37,6 +48,6 @@ buildPythonPackage rec {
       AWS Serverless Application Repository.
     '';
     license = lib.licenses.asl20;
-    maintainers = with maintainers; [ dhkl ];
+    maintainers = with lib.maintainers; [ dhkl ];
   };
 }

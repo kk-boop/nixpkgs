@@ -1,50 +1,91 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, fetchpatch
-, numpy
-, astropy
-, astropy-healpix
-, astropy-helpers
-, astropy-extension-helpers
-, scipy
-, pytest
-, pytest-astropy
-, setuptools-scm
-, cython
+{
+  lib,
+  asdf,
+  astropy,
+  astropy-healpix,
+  buildPythonPackage,
+  cython,
+  dask,
+  dask-image,
+  extension-helpers,
+  fetchFromGitHub,
+  fsspec,
+  gwcs,
+  numpy,
+  pillow,
+  pyavm,
+  pytest-astropy,
+  pytest-xdist,
+  pytestCheckHook,
+  scipy,
+  setuptools,
+  setuptools-scm,
+  shapely,
+  tqdm,
+  zarr,
 }:
 
 buildPythonPackage rec {
   pname = "reproject";
-  version = "0.7.1";
+  version = "0.21.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1jsc3ad518vyys5987fr1achq8qvnz8rm80zp5an9qxlwr4zmh4m";
+  src = fetchFromGitHub {
+    owner = "astropy";
+    repo = "reproject";
+    tag = "v${version}";
+    hash = "sha256-IuGVipAb4x63U2k9tNHhps5Gbk+3Hi/1ZkeMTZ/vaiU=";
   };
 
-  patches = [ (fetchpatch {
-      # Can be removed in next release after 0.7.1
-      # See https://github.com/astropy/reproject/issues/246
-      url = "https://github.com/astropy/reproject/pull/243.patch";
-      sha256 = "0dq3ii39hsrks0b9v306dlqf07dx0hqad8rwajmzw6rfda9m3c2a";
-    })
+  build-system = [
+    setuptools
+    setuptools-scm
+    cython
+    extension-helpers
+    numpy
   ];
 
-  propagatedBuildInputs = [ numpy astropy astropy-healpix astropy-helpers scipy ];
-  nativeBuildInputs = [ astropy-helpers cython astropy-extension-helpers setuptools-scm ];
-  checkInputs = [ pytest pytest-astropy ];
+  dependencies = [
+    astropy
+    astropy-healpix
+    dask
+    dask-image
+    fsspec
+    numpy
+    pillow
+    pyavm
+    scipy
+    zarr
+  ]
+  ++ dask.optional-dependencies.array;
 
-  # Tests must be run in the build directory
-  checkPhase = ''
-    cd build/lib*
-    pytest
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-astropy
+    pytest-xdist
+    asdf
+    gwcs
+    shapely
+    tqdm
+  ];
 
-  meta = with lib; {
+  enabledTestPaths = [
+    "build/lib*"
+  ];
+
+  disabledTestPaths = [
+    # Uses network
+    "build/lib*/reproject/interpolation/"
+  ];
+
+  pythonImportsCheck = [ "reproject" ];
+
+  meta = {
     description = "Reproject astronomical images";
+    downloadPage = "https://github.com/astropy/reproject";
     homepage = "https://reproject.readthedocs.io";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.smaret ];
+    changelog = "https://github.com/astropy/reproject/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ smaret ];
   };
 }

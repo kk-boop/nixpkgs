@@ -1,39 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, setuptools-scm
-, pytest
-, pyqt5
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools-scm,
+  pytest,
+  pluggy,
+  typing-extensions,
+  pyqt5,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-qt";
-  version = "4.0.2";
+  version = "4.5.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "dfc5240dec7eb43b76bcb5f9a87eecae6ef83592af49f3af5f1d5d093acaa93e";
+  src = fetchFromGitHub {
+    owner = "pytest-dev";
+    repo = "pytest-qt";
+    tag = version;
+    hash = "sha256-ZCWWhd1/7qdSgGLNbsjPlxg24IFdqbNtLRktgMFVCJY=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
+  build-system = [ setuptools-scm ];
+
+  buildInputs = [ pytest ];
+
+  dependencies = [
+    pluggy
+    typing-extensions
   ];
 
-  buildInputs = [
-    pytest
-  ];
+  nativeCheckInputs = [ pyqt5 ];
 
-  checkInputs = [
-    pyqt5
-  ];
+  pythonImportsCheck = [ "pytestqt" ];
 
-  # tests require X server
+  # Tests require X server
   doCheck = false;
 
-  meta = with lib; {
-    description = "pytest support for PyQt and PySide applications";
+  meta = {
+    description = "Pytest support for PyQt and PySide applications";
     homepage = "https://github.com/pytest-dev/pytest-qt";
-    license = licenses.mit;
-    maintainers = with maintainers; [ costrouc ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

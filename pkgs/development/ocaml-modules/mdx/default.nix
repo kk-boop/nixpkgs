@@ -1,38 +1,85 @@
-{ lib, fetchurl, buildDunePackage, ocaml
-, alcotest
-, astring, cmdliner, cppo, fmt, logs, ocaml-version, odoc-parser, ocaml_lwt, re, result, csexp
-, pandoc}:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  buildDunePackage,
+  ocaml,
+  findlib,
+  alcotest,
+  astring,
+  cmdliner,
+  cppo,
+  fmt,
+  logs,
+  ocaml-version,
+  camlp-streams,
+  lwt,
+  re,
+  result,
+  csexp,
+  gitUpdater,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "mdx";
-  version = "1.11.1";
-  useDune2 = true;
+  version = "2.5.2";
 
   src = fetchurl {
-    url = "https://github.com/realworldocaml/mdx/releases/download/${version}/mdx-${version}.tbz";
-    sha256 = "sha256:1q6169gmynnbrvlnzlmx7lpd6hwv6vwxg5j8ibc88wgs5s0r0fb0";
+    url = "https://github.com/realworldocaml/mdx/releases/download/${finalAttrs.version}/mdx-${finalAttrs.version}.tbz";
+    hash = "sha256-yEjCxoDGJmLcSgX1WOXGwY7Sqre7ZQjB1JEJ1uqRo88=";
   };
 
+  env =
+    # Fix build with gcc15
+    lib.optionalAttrs
+      (
+        lib.versionAtLeast ocaml.version "4.10" && lib.versionOlder ocaml.version "4.14"
+        || lib.versions.majorMinor ocaml.version == "5.0"
+      )
+      {
+        NIX_CFLAGS_COMPILE = "-std=gnu11";
+      };
+
   nativeBuildInputs = [ cppo ];
-  buildInputs = [ cmdliner ];
-  propagatedBuildInputs = [ astring fmt logs result csexp ocaml-version odoc-parser re ];
-  checkInputs = [ alcotest ocaml_lwt pandoc ];
+  propagatedBuildInputs = [
+    astring
+    fmt
+    logs
+    csexp
+    cmdliner
+    ocaml-version
+    camlp-streams
+    re
+    result
+    findlib
+  ];
+  checkInputs = [
+    alcotest
+    lwt
+  ];
 
-  doCheck = true;
+  doCheck = !stdenv.hostPlatform.isDarwin;
 
-  outputs = [ "bin" "lib" "out" ];
+  outputs = [
+    "bin"
+    "lib"
+    "out"
+  ];
 
   installPhase = ''
     runHook preInstall
-    dune install --prefix=$bin --libdir=$lib/lib/ocaml/${ocaml.version}/site-lib ${pname}
+    dune install --prefix=$bin --libdir=$lib/lib/ocaml/${ocaml.version}/site-lib mdx
     runHook postInstall
   '';
 
+  passthru.updateScript = gitUpdater { };
+
   meta = {
-    homepage = "https://github.com/realworldocaml/mdx";
     description = "Executable OCaml code blocks inside markdown files";
-    changelog = "https://github.com/realworldocaml/mdx/raw/${version}/CHANGES.md";
+    homepage = "https://github.com/realworldocaml/mdx";
+    changelog = "https://github.com/realworldocaml/mdx/raw/${finalAttrs.version}/CHANGES.md";
     license = lib.licenses.isc;
     maintainers = [ lib.maintainers.romildo ];
+    mainProgram = "ocaml-mdx";
   };
-}
+})

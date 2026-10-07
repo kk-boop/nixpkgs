@@ -1,57 +1,49 @@
-{ lib
-, fetchFromGitHub
-, cmake
-, llvmPackages
-, libxml2
-, zlib
+{
+  lib,
+  callPackage,
+  llvmPackages_18,
+  llvmPackages_19,
+  llvmPackages_20,
+  llvmPackages_21,
+  llvmPackages_22,
+  zigVersions ? { },
 }:
-
 let
-  inherit (llvmPackages) stdenv;
+  versions = {
+    "0.13.0" = {
+      llvmPackages = llvmPackages_18;
+      hash = "sha256-5qSiTq+UWGOwjDVZMIrAt2cDKHkyNPBSAEjpRQUByFM=";
+    };
+    "0.14.1" = {
+      llvmPackages = llvmPackages_19;
+      hash = "sha256-DhVJIY/z12PJZdb5j4dnCRb7k1CmeQVOnayYRP8azDI=";
+    };
+    "0.15.2" = {
+      llvmPackages = llvmPackages_20;
+      hash = "sha256-u3pEMcYN71d83MJh14vtzU4DJXnMHu/Jw86d9XvwKE8=";
+    };
+    "0.16.0" = {
+      llvmPackages = llvmPackages_21;
+      hash = "sha256-2sTMhaasyrKoBnyH/hQrNCbi0Vh6HekIrpE4XkyQulQ=";
+    };
+    "0.17.0" = {
+      llvmPackages = llvmPackages_22;
+      hash = "sha256-dXy3DrGQHDpXCnr+Wi/1tPEktPm9bBDJQiQ/0VyiMaM=";
+    };
+  }
+  // zigVersions;
+
+  mkPackage =
+    {
+      version,
+      hash,
+      llvmPackages,
+    }@args:
+    callPackage ./generic.nix args;
+
+  zigPackages = lib.mapAttrs' (
+    version: args:
+    lib.nameValuePair (lib.versions.majorMinor version) (mkPackage (args // { inherit version; }))
+  ) versions;
 in
-stdenv.mkDerivation rec {
-  pname = "zig";
-  version = "0.8.1";
-
-  src = fetchFromGitHub {
-    owner = "ziglang";
-    repo = pname;
-    rev = version;
-    hash = "sha256-zMSOH8ZWcvzHRwOgGIbLO9Q6jf1P5QL5KCMD+frp+JA=";
-  };
-
-  nativeBuildInputs = [
-    cmake
-    llvmPackages.llvm.dev
-  ];
-  buildInputs = [
-    libxml2
-    zlib
-  ] ++ (with llvmPackages; [
-    libclang
-    lld
-    llvm
-  ]);
-
-  preBuild = ''
-    export HOME=$TMPDIR;
-  '';
-
-  doCheck = true;
-  checkPhase = ''
-    runHook preCheck
-    ./zig test --cache-dir "$TMPDIR" -I $src/test $src/test/behavior.zig
-    runHook postCheck
-  '';
-
-  meta = with lib; {
-    homepage = "https://ziglang.org/";
-    description =
-      "General-purpose programming language and toolchain for maintaining robust, optimal, and reusable software";
-    license = licenses.mit;
-    maintainers = with maintainers; [ andrewrk AndersonTorres ];
-    platforms = platforms.unix;
-    broken = stdenv.isDarwin; # See https://github.com/NixOS/nixpkgs/issues/86299
-  };
-}
-
+zigPackages

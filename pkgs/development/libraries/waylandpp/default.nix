@@ -1,45 +1,85 @@
-{ lib, stdenv
-, fetchFromGitHub
-, cmake
-, pkg-config
-, pugixml
-, wayland
-, libGL
-, libffi
-, buildPackages
-, docSupport ? true
-, doxygen ? null
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  cmake,
+  makeFontsConf,
+  pkg-config,
+  pugixml,
+  wayland,
+  libGL,
+  libffi,
+  buildPackages,
+  docSupport ? true,
+  doxygen,
+  graphviz,
 }:
 
-assert docSupport -> doxygen != null;
-
-with lib;
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "waylandpp";
-  version = "0.2.8";
+  version = "1.0.1";
 
   src = fetchFromGitHub {
     owner = "NilsBrause";
-    repo = pname;
-    rev = version;
-    sha256 = "1kxiqab48p0n97pwg8c2zx56wqq32m3rcq7qd2pjj33ipcanb3qq";
+    repo = "waylandpp";
+    tag = finalAttrs.version;
+    hash = "sha256-vKYKUXq5lmjQcZ0rD+b2O7N1iCVnpkpKd8Z/RTI083g=";
   };
 
   cmakeFlags = [
-    "-DCMAKE_INSTALL_DATADIR=${placeholder "dev"}"
-  ] ++ lib.optionals (stdenv.hostPlatform != stdenv.buildPlatform) [
-    "-DWAYLAND_SCANNERPP=${buildPackages.waylandpp}/bin/wayland-scanner++"
+    (lib.cmakeFeature "CMAKE_INSTALL_DATADIR" (placeholder "dev"))
+  ]
+  ++ lib.optionals (stdenv.hostPlatform != stdenv.buildPlatform) [
+    (lib.cmakeFeature "WAYLAND_SCANNERPP" "${buildPackages.waylandpp}/bin/wayland-scanner++")
   ];
 
-  nativeBuildInputs = [ cmake pkg-config ] ++ optional docSupport doxygen;
-  buildInputs = [ pugixml wayland libGL libffi ];
-
-  outputs = [ "bin" "dev" "lib" "out" ] ++ optionals docSupport [ "doc" "devman" ];
-
-  meta = with lib; {
-    description = "Wayland C++ binding";
-    homepage = "https://github.com/NilsBrause/waylandpp/";
-    license = with licenses; [ bsd2 hpnd ];
-    maintainers = with maintainers; [ minijackson ];
+  # Complains about not being able to find the fontconfig config file otherwise
+  env = lib.optionalAttrs docSupport {
+    FONTCONFIG_FILE = makeFontsConf {
+      fontDirectories = [ ];
+    };
   };
-}
+
+  nativeBuildInputs = [
+    cmake
+    pkg-config
+  ]
+  ++ lib.optionals docSupport [
+    doxygen
+    graphviz
+  ];
+  buildInputs = [
+    pugixml
+    wayland
+    libGL
+    libffi
+  ];
+
+  outputs = [
+    "bin"
+    "dev"
+    "lib"
+    "out"
+  ]
+  ++ lib.optionals docSupport [
+    "doc"
+    "devman"
+  ];
+
+  # Resolves the warning "Fontconfig error: No writable cache directories"
+  preBuild = ''
+    export XDG_CACHE_HOME="$(mktemp -d)"
+  '';
+
+  meta = {
+    description = "Wayland C++ binding";
+    mainProgram = "wayland-scanner++";
+    homepage = "https://github.com/NilsBrause/waylandpp/";
+    license = with lib.licenses; [
+      bsd2
+      hpnd
+    ];
+    maintainers = with lib.maintainers; [ minijackson ];
+    platforms = lib.platforms.linux;
+  };
+})

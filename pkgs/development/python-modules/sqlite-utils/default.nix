@@ -1,48 +1,63 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, click
-, click-default-group
-, dateutils
-, sqlite-fts4
-, tabulate
-, pytestCheckHook
-, hypothesis
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  click,
+  click-default-group,
+  python-dateutil,
+  sqlite-fts4,
+  tabulate,
+  pip,
+  pluggy,
+  pytestCheckHook,
+  hypothesis,
+  testers,
+  sqlite-utils,
+  setuptools,
 }:
-
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sqlite-utils";
-  version = "3.17.1";
-  disabled = pythonOlder "3.6";
+  version = "4.2.1";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0cfde0c46a2d4c09d6df8609fe53642bc3ab443bcef3106d8f1eabeb3fccbe3d";
+  build-system = [ setuptools ];
+
+  src = fetchFromGitHub {
+    owner = "simonw";
+    repo = "sqlite-utils";
+    tag = finalAttrs.version;
+    hash = "sha256-PuAQ1dk999St3Wt4tGBgFUuPehv7ZTf4T7dAC+r1Pis=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace '"pytest-runner"' ""
-  '';
-
-  propagatedBuildInputs = [
+  dependencies = [
     click
     click-default-group
-    dateutils
+    pip
+    pluggy
+    python-dateutil
     sqlite-fts4
     tabulate
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     hypothesis
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "sqlite_utils" ];
+
+  passthru.tests.version = testers.testVersion { package = sqlite-utils; };
+
+  meta = {
     description = "Python CLI utility and library for manipulating SQLite databases";
+    mainProgram = "sqlite-utils";
     homepage = "https://github.com/simonw/sqlite-utils";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ meatcar ];
+    changelog = "https://github.com/simonw/sqlite-utils/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      meatcar
+      techknowlogick
+    ];
   };
-}
+})

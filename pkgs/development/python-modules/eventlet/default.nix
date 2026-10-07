@@ -1,59 +1,89 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, dnspython
-, greenlet
-, monotonic
-, six
-, nose
-, pyopenssl
-, iana-etc
-, libredirect
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatch-vcs,
+  hatchling,
+
+  # dependencies
+  dnspython,
+  greenlet,
+  isPyPy,
+  six,
+
+  # tests
+  iana-etc,
+  pytestCheckHook,
+  libredirect,
 }:
 
 buildPythonPackage rec {
   pname = "eventlet";
-  version = "0.32.0";
+  version = "0.41.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "2f0bb8ed0dc0ab21d683975d5d8ab3c054d588ce61def9faf7a465ee363e839b";
+  src = fetchFromGitHub {
+    owner = "eventlet";
+    repo = "eventlet";
+    tag = version;
+    hash = "sha256-g/AmHqCtWExp8XAdb9/knfATPne9Ma8MbIhYBHZxyOY=";
   };
 
-  propagatedBuildInputs = [ dnspython greenlet pyopenssl six ]
-    ++ lib.optional (pythonOlder "3.5") monotonic;
+  pythonRelaxDeps = lib.optionals isPyPy [ "greenlet" ];
 
-  checkInputs = [ nose ];
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
 
-  doCheck = !stdenv.isDarwin;
+  dependencies = [
+    dnspython
+    greenlet
+    six
+  ];
+
+  nativeCheckInputs = [
+    libredirect.hook
+    pytestCheckHook
+  ];
+
+  # tests hang on pypy indefinitely
+  # most tests also fail/flake on Darwin
+  doCheck = !isPyPy && !stdenv.hostPlatform.isDarwin;
 
   preCheck = lib.optionalString doCheck ''
     echo "nameserver 127.0.0.1" > resolv.conf
     export NIX_REDIRECTS=/etc/protocols=${iana-etc}/etc/protocols:/etc/resolv.conf=$(realpath resolv.conf)
-    export LD_PRELOAD=${libredirect}/lib/libredirect.so
 
     export EVENTLET_IMPORT_VERSION_ONLY=0
   '';
 
-  checkPhase = ''
-    runHook preCheck
+  disabledTests = [
+    # AssertionError: Expected single line "pass" in stdout
+    "test_fork_after_monkey_patch"
+    # Tests requires network access
+    "test_getaddrinfo"
+    "test_hosts_no_network"
+    # flaky test, depends on builder performance
+    "test_server_connection_timeout_exception"
+    # broken with openssl 3.4
+    "test_ssl_close"
+    # flaky test
+    "test_send_timeout"
+    # greenlet 3.5.1 compat issue
+    "test_patcher_existing_logging_module_lock"
+  ];
 
-    # test_fork-after_monkey_patch fails on aarch64 on hydra only
-    #   AssertionError: Expected single line "pass" in stdout
-    nosetests --exclude test_getaddrinfo --exclude test_hosts_no_network --exclude test_fork_after_monkey_patch
+  pythonImportsCheck = [ "eventlet" ];
 
-    runHook postCheck
-  '';
-
-  # unfortunately, it needs /etc/protocol to be present to not fail
-  # pythonImportsCheck = [ "eventlet" ];
-
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/eventlet/eventlet/blob/${src.tag}/NEWS";
+    description = "Concurrent networking library for Python";
     homepage = "https://github.com/eventlet/eventlet/";
-    description = "A concurrent networking library for Python";
-    maintainers = with maintainers; [ SuperSandro2000 ];
-    license = licenses.mit;
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ SuperSandro2000 ];
   };
 }

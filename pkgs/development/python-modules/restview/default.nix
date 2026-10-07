@@ -1,38 +1,51 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, fetchpatch
-, docutils
-, readme_renderer
-, packaging
-, pygments
-, mock
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  docutils,
+  fetchPypi,
+  packaging,
+  pygments,
+  pytestCheckHook,
+  readme-renderer,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "restview";
-  version = "2.9.2";
+  version = "3.0.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1p1jgdvc04ws8kga3r0vrq3m0b52qw3clwyydl96a13wb3mrf03r";
+    hash = "sha256-i011oL7Xa2e0Vu9wEfTrbJilVsn4N2Qt8iAscxL8zBo=";
   };
 
-  patches = [
-    (fetchpatch {
-      url = "https://github.com/mgedmin/restview/commit/a1ded30a87c65f3ce59a18497a7fc5099317c2be.patch";
-      sha256 = "1ax7pih456a3nbj8qrrq7hqigbyag4ihzpn6bm0z4y74d0r3v8a5";
-    })
+  pythonRelaxDeps = [ "readme_renderer" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    docutils
+    readme-renderer
+    packaging
+    pygments
   ];
 
-  propagatedBuildInputs = [ docutils readme_renderer packaging pygments ];
-  checkInputs = [ mock pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "restview" ];
+
+  disabledTests = [
+    # Tests are comparing output
+    "rest_to_html"
+  ];
 
   meta = {
     description = "ReStructuredText viewer";
     homepage = "https://mg.pov.lt/restview/";
-    license = lib.licenses.gpl3Only;
+    changelog = "https://github.com/mgedmin/restview/blob/${version}/CHANGES.rst";
+    license = lib.licenses.gpl3Plus;
     maintainers = with lib.maintainers; [ koral ];
+    mainProgram = "restview";
   };
 }

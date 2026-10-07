@@ -1,43 +1,99 @@
-{ lib, stdenv, buildPythonPackage, fetchFromGitHub, pythonOlder
-, pandas, shapely, fiona, pyproj
-, pytestCheckHook, Rtree }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 
-buildPythonPackage rec {
+  # build-system
+  setuptools,
+
+  # dependencies
+  packaging,
+  pandas,
+  pyogrio,
+  pyproj,
+  shapely,
+
+  # optional-dependencies
+  folium,
+  geoalchemy2,
+  geopy,
+  mapclassify,
+  matplotlib,
+  psycopg,
+  pyarrow,
+  sqlalchemy,
+  xyzservices,
+
+  # tests
+  pytestCheckHook,
+  rtree,
+  writableTmpDirAsHomeHook,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "geopandas";
-  version = "0.10.2";
-  disabled = pythonOlder "3.6";
+  version = "1.1.4";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "geopandas";
     repo = "geopandas";
-    rev = "v${version}";
-    sha256 = "14azl3gppqn90k8h4hpjilsivj92k6p1jh7mdr6p4grbww1b7sdq";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-7XWPPLuJjc6x+Vb16z0bEjYe1lX710vz5Rwjg/WFHH0=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    packaging
     pandas
-    shapely
-    fiona
+    pyogrio
     pyproj
+    shapely
   ];
 
-  doCheck = !stdenv.isDarwin;
-  preCheck = ''
-    # Wants to write test files into $HOME.
-    export HOME="$TMPDIR"
-  '';
-  checkInputs = [ pytestCheckHook Rtree ];
+  optional-dependencies = {
+    all = [
+      # prevent infinite recursion
+      (folium.overridePythonAttrs (prevAttrs: {
+        doCheck = false;
+      }))
+      geoalchemy2
+      geopy
+      # prevent infinite recursion
+      (mapclassify.overridePythonAttrs (prevAttrs: {
+        doCheck = false;
+      }))
+      matplotlib
+      psycopg
+      pyarrow
+      sqlalchemy
+      xyzservices
+    ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    rtree
+    writableTmpDirAsHomeHook
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.all;
+
   disabledTests = [
-    # requires network access
-    "test_read_file_remote_geojson_url"
-    "test_read_file_remote_zipfile_url"
+    # Requires network access
+    "test_read_file_url"
   ];
-  pytestFlagsArray = [ "geopandas" ];
 
-  meta = with lib; {
+  enabledTestPaths = [ "geopandas" ];
+
+  pythonImportsCheck = [ "geopandas" ];
+
+  meta = {
     description = "Python geospatial data analysis framework";
     homepage = "https://geopandas.org";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ knedlsepp ];
+    changelog = "https://github.com/geopandas/geopandas/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    teams = [ lib.teams.geospatial ];
   };
-}
+})

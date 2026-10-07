@@ -1,46 +1,121 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, pythonOlder
-, filelock
-, importlib-metadata
-, packaging
-, requests
-, ruamel-yaml
-, tqdm
-, typing-extensions
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  click,
+  filelock,
+  fsspec,
+  hf-xet,
+  httpx,
+  packaging,
+  pyyaml,
+  tqdm,
+  typing-extensions,
+
+  # optional-dependencies
+  # torch
+  torch,
+  safetensors,
+  # fastai
+  toml,
+  fastai,
+  fastcore,
+  # gradio
+  gradio,
+  requests,
+  # oauth
+  authlib,
+  fastapi,
+  itsdangerous,
+  # mcp
+  mcp,
+
+  # tests
+  versionCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "huggingface-hub";
-  version = "0.0.18";
+  version = "1.30.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "huggingface";
     repo = "huggingface_hub";
-    rev = "v${version}";
-    sha256 = "sha256-SxA7rAdKuSrSYFIuxG81lblPJOL69Yx4rBccVrbQa/g=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-43yZ9wOmCaGw8wcuD0j91kKYwzgf9xqSTabYJaA+tDg=";
   };
 
-  nativeBuildInputs = [ packaging ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "click"
+  ];
+  dependencies = [
+    click
     filelock
-    requests
-    ruamel-yaml
+    fsspec
+    hf-xet
+    httpx
+    packaging
+    pyyaml
     tqdm
     typing-extensions
-  ] ++ lib.optionals (pythonOlder "3.8") [ importlib-metadata ];
+  ];
 
-  # Tests require network access.
-  doCheck = false;
+  optional-dependencies = {
+    all = [
+    ];
+    fastai = [
+      toml
+      fastai
+      fastcore
+    ];
+    gradio = [
+      gradio
+      requests
+    ];
+    hf_xet = [
+      hf-xet
+    ];
+    mcp = [
+      mcp
+    ];
+    oauth = [
+      authlib
+      fastapi
+      httpx
+      itsdangerous
+    ];
+    torch = [
+      torch
+      safetensors
+    ]
+    ++ safetensors.optional-dependencies.torch;
+  };
+
+  nativeCheckInputs = [
+    versionCheckHook
+  ];
+  versionCheckProgramArg = "version";
+
   pythonImportsCheck = [ "huggingface_hub" ];
 
-   meta = with lib; {
-    homepage = "https://github.com/huggingface/huggingface_hub";
+  meta = {
     description = "Download and publish models and other files on the huggingface.co hub";
-    changelog = "https://github.com/huggingface/huggingface_hub/releases/tag/${version}";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ];
+    mainProgram = "hf";
+    homepage = "https://github.com/huggingface/huggingface_hub";
+    changelog = "https://github.com/huggingface/huggingface_hub/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [
+      GaetanLepage
+      osbm
+    ];
   };
-}
+})

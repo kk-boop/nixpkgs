@@ -1,52 +1,59 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, responses
-, pytestCheckHook
-, python-dotenv
-, pytest-rerunfailures
-, tox
-, requests
-, python-dateutil
-, websocket-client
-, ibm-cloud-sdk-core
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  ibm-cloud-sdk-core,
+  pytest-rerunfailures,
+  pytestCheckHook,
+  python-dateutil,
+  python-dotenv,
+  requests,
+  setuptools,
+  responses,
+  websocket-client,
 }:
 
 buildPythonPackage rec {
   pname = "ibm-watson";
-  version = "5.3.0";
+  version = "11.2.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "watson-developer-cloud";
     repo = "python-sdk";
-    rev = "v${version}";
-    sha256 = "0g63h7rf0710bxcsr115857bvz69sl2g5d13k5a7qi7hjh33bxrk";
+    tag = "v${version}";
+    hash = "sha256-z+sGfYbPZcHQh6JGdVC2DDFHd0VIgC2GmvGvN+hrXU0=";
   };
 
-  checkInputs = [
-    responses
+  build-system = [ setuptools ];
+
+  dependencies = [
+    ibm-cloud-sdk-core
+    python-dateutil
+    requests
+    websocket-client
+  ];
+
+  nativeCheckInputs = [
+    pytest-rerunfailures
     pytestCheckHook
     python-dotenv
-    pytest-rerunfailures
-    tox
+    responses
   ];
 
-  propagatedBuildInputs = [
-    requests
-    python-dateutil
-    websocket-client
-    ibm-cloud-sdk-core
+  # FileNotFoundError: [Errno 2] No such file or directory: './auth.json'
+  disabledTestPaths = [
+    "test/integration/test_assistant_v2.py"
+    "test/integration/test_natural_language_understanding_v1.py"
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace websocket-client==1.1.0 websocket-client>=1.1.0
-  '';
+  pythonImportsCheck = [ "ibm_watson" ];
 
-  meta = with lib; {
+  meta = {
     description = "Client library to use the IBM Watson Services";
     homepage = "https://github.com/watson-developer-cloud/python-sdk";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ globin lheckemann ];
+    changelog = "https://github.com/watson-developer-cloud/python-sdk/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

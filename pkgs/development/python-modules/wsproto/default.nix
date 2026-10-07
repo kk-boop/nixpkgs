@@ -1,30 +1,34 @@
-{ lib, buildPythonPackage, fetchPypi, pythonOlder, isPy36
-, dataclasses
-, h11
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  h11,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "wsproto";
-  version = "1.0.0";
-  disabled = pythonOlder "3.6"; # python versions <3.6
+  version = "1.3.2";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "868776f8456997ad0d9720f7322b746bbe9193751b5b290b7f924659377c8c38";
+    hash = "sha256-uGiF3PKU4VIEkZlQ9mbgb/xsfBFMqQCwYNbhYpNSgpQ=";
   };
 
-  propagatedBuildInputs = [ h11 ] ++ lib.optional isPy36 dataclasses;
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytest ];
+  dependencies = [ h11 ];
 
-  checkPhase = ''
-    py.test
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "wsproto" ];
+
+  meta = {
     description = "Pure Python, pure state-machine WebSocket implementation";
     homepage = "https://github.com/python-hyper/wsproto/";
-    license = licenses.mit;
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

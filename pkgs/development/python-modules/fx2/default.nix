@@ -1,30 +1,38 @@
-{ lib
-, buildPythonPackage
-, python
-, fetchFromGitHub
-, sdcc
-, libusb1
-, crcmod
+{
+  lib,
+  buildPythonPackage,
+  fetchFromCodeberg,
+  sdcc,
+  libusb1,
+  setuptools-scm,
+  crcmod,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "fx2";
-  version = "0.9";
+  version = "0.16";
+  format = "setuptools";
 
-  src = fetchFromGitHub {
-    owner = "whitequark";
+  src = fetchFromCodeberg {
+    owner = "GlasgowEmbedded";
     repo = "libfx2";
-    rev = "v${version}";
-    sha256 = "sha256-Uk+K7ym92JX4fC3PyTNxd0UvBzoNZmtbscBYjSWChuk=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-0AHFjb3dhkr3VVFHFNB/gpQKcqh0oGST1NoeZhdtT6o=";
   };
 
-  nativeBuildInputs = [ sdcc ];
+  nativeBuildInputs = [
+    setuptools-scm
+    sdcc
+  ];
 
-  propagatedBuildInputs = [ libusb1 crcmod ];
+  propagatedBuildInputs = [
+    libusb1
+    crcmod
+  ];
 
   preBuild = ''
+    make -C firmware
     cd software
-    ${python.pythonForBuild.interpreter} setup.py build_ext
   '';
 
   preInstall = ''
@@ -36,10 +44,11 @@ buildPythonPackage rec {
   # installCheckPhase tries to run build_ext again and there are no tests
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Chip support package for Cypress EZ-USB FX2 series microcontrollers";
-    homepage = "https://github.com/whitequark/libfx2";
-    license = licenses.bsd0;
-    maintainers = with maintainers; [ emily ];
+    mainProgram = "fx2tool";
+    homepage = "https://codeberg.org/GlasgowEmbedded/libfx2";
+    license = lib.licenses.bsd0;
+    maintainers = [ ];
   };
-}
+})

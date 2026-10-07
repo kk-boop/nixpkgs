@@ -1,43 +1,45 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, async-timeout
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  hatchling,
+  psutil,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "aiopulse";
-  version = "0.4.3";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "0.5.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-Wp8NUjRlO+6ASqIt3C0YJRh0EKcEukXVMp4I+TCTElo=";
+    hash = "sha256-acUcJM5ghUKezpYTncDADQTZa6NMyteG6Yu7GFPbuLs=";
   };
 
-  propagatedBuildInputs = [
-    async-timeout
+  build-system = [ hatchling ];
+
+  dependencies = [ psutil ];
+
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
   ];
 
-  # tests are not present
-  doCheck = false;
+  pythonImportsCheck = [ "aiopulse" ];
 
-  pythonImportsCheck = [
-    "aiopulse"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Python Rollease Acmeda Automate Pulse hub protocol implementation";
     longDescription = ''
       The Rollease Acmeda Pulse Hub is a WiFi hub that communicates with
       Rollease Acmeda Automate roller blinds via a proprietary RF protocol.
-      This module communicates over a local area network using a propriatery
+      This module communicates over a local area network using a proprietary
       binary protocol to issues commands to the Pulse Hub.
     '';
     homepage = "https://github.com/atmurray/aiopulse";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/atmurray/aiopulse/releases/tag/v${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

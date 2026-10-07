@@ -1,33 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, click
-, psutil
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  click,
+  psutil,
+  pytestCheckHook,
+  lsof,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "daemonocle";
-  version = "1.0.2";
+  version = "1.2.3";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "jnrbsn";
     repo = "daemonocle";
-    rev = "v${version}";
-    hash = "sha256-kDCbosXTIffuCzHcReXhiW4YPbxDW3OPnTbMC/EGJrM=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-K+IqpEQ4yhfSguPPm2Ult3kGNO/9H56B+kD5ntaCZdk=";
   };
 
-  propagatedBuildInputs = [ click psutil ];
-  checkInputs = [ pytestCheckHook ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    click
+    psutil
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    lsof
+  ];
 
   # One third of the tests fail on the sandbox with
   # "psutil.NoSuchProcess: no process found with pid 0".
-  doCheck = false;
-  disabledTests = [ "sudo" ];
+  disabledTests = [
+    "sudo"
+    "test_chrootdir_without_permission"
+    "test_uid_and_gid_without_permission"
+    "test_multi_daemon"
+    "test_multi_daemon_action_worker_id"
+    "test_exec_worker"
+  ];
+
   pythonImportsCheck = [ "daemonocle" ];
 
-  meta = with lib; {
-    description = "A Python library for creating super fancy Unix daemons";
+  meta = {
+    description = "Python library for creating super fancy Unix daemons";
     longDescription = ''
       daemonocle is a library for creating your own Unix-style daemons
       written in Python.  It solves many problems that other daemon
@@ -35,8 +57,8 @@ buildPythonPackage rec {
       often see in other daemons.
     '';
     homepage = "https://github.com/jnrbsn/daemonocle";
-    license = licenses.mit;
-    maintainers = [ maintainers.AluisioASG ];
-    platforms = platforms.unix;
+    license = lib.licenses.mit;
+    maintainers = [ ];
+    platforms = lib.platforms.unix;
   };
-}
+})

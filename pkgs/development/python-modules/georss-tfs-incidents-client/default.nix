@@ -1,37 +1,33 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, georss-client
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  georss-client,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "georss-tfs-incidents-client";
-  version = "0.3";
-  disabled = pythonOlder "3.7";
+  version = "0.4";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "exxamalte";
     repo = "python-georss-tfs-incidents-client";
     rev = "v${version}";
-    sha256 = "11nvwrjzax4yy6aj971yym05yyizwfafy4ccsyy1qpwbs6dwbw7m";
+    hash = "sha256-Cz0PRcGReAE0mg04ktCUaoLqPTjvyU1TiB/Pdz7o7zo=";
   };
 
-  propagatedBuildInputs = [
-    georss-client
-  ];
+  propagatedBuildInputs = [ georss-client ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "georss_tfs_incidents_client" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for accessing Tasmania Fire Service Incidents feed";
     homepage = "https://github.com/exxamalte/python-georss-tfs-incidents-client";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

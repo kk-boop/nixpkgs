@@ -5,17 +5,19 @@
 The easiest way to get a working idris version is to install the `idris` attribute:
 
 ```ShellSession
-$ # On NixOS
-$ nix-env -i nixos.idris
-$ # On non-NixOS
-$ nix-env -i nixpkgs.idris
+$ nix-env -f "<nixpkgs>" -iA idris
 ```
 
 This however only provides the `prelude` and `base` libraries. To install idris with additional libraries, you can use the `idrisPackages.with-packages` function, e.g. in an overlay in `~/.config/nixpkgs/overlays/my-idris.nix`:
 
 ```nix
 self: super: {
-  myIdris = with self.idrisPackages; with-packages [ contrib pruviloj ];
+  myIdris =
+    with self.idrisPackages;
+    with-packages [
+      contrib
+      pruviloj
+    ];
 }
 ```
 
@@ -71,13 +73,14 @@ prelude
 As an example of how a Nix expression for an Idris package can be created, here is the one for `idrisPackages.yaml`:
 
 ```nix
-{ lib
-, build-idris-package
-, fetchFromGitHub
-, contrib
-, lightyear
+{
+  lib,
+  build-idris-package,
+  fetchFromGitHub,
+  contrib,
+  lightyear,
 }:
-build-idris-package  {
+build-idris-package {
   name = "yaml";
   version = "2018-01-25";
 
@@ -87,20 +90,23 @@ build-idris-package  {
   # different from its package name here.
   ipkgName = "Yaml";
   # Idris dependencies to provide for the build
-  idrisDeps = [ contrib lightyear ];
+  idrisDeps = [
+    contrib
+    lightyear
+  ];
 
   src = fetchFromGitHub {
     owner = "Heather";
     repo = "Idris.Yaml";
     rev = "5afa51ffc839844862b8316faba3bafa15656db4";
-    sha256 = "1g4pi0swmg214kndj85hj50ccmckni7piprsxfdzdfhg87s0avw7";
+    hash = "sha256-h28F9EEPuvab6zrfeE+0k1XGQJGwINnsJEG8yjWIl7w=";
   };
 
-  meta = with lib; {
+  meta = {
     description = "Idris YAML lib";
     homepage = "https://github.com/Heather/Idris.Yaml";
-    license = licenses.mit;
-    maintainers = [ maintainers.brainrape ];
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.brainrape ];
   };
 }
 ```
@@ -114,10 +120,10 @@ $ nix-build -E '(import <nixpkgs> {}).idrisPackages.callPackage ./yaml.nix {}'
 Or it's possible to use
 
 ```nix
-with import <nixpkgs> {};
+with import <nixpkgs> { };
 
 {
-  yaml = idrisPackages.callPackage ./yaml.nix {};
+  yaml = idrisPackages.callPackage ./yaml.nix { };
 }
 ```
 
@@ -137,9 +143,13 @@ For example you could set
 
 ```nix
 build-idris-package {
-  idrisBuildOptions = [ "--log" "1" "--verbose" ]
+  idrisBuildOptions = [
+    "--log"
+    "1"
+    "--verbose"
+  ];
 
-  ...
+  # ...
 }
 ```
 

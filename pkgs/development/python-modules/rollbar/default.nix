@@ -1,47 +1,56 @@
-{ aiocontextvars
-, blinker
-, buildPythonPackage
-, fetchPypi
-, httpx
-, lib
-, mock
-, pytestCheckHook
-, requests
-, six
-, unittest2
-, webob
+{
+  lib,
+  aiocontextvars,
+  blinker,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  httpx,
+  mock,
+  pytestCheckHook,
+  requests,
+  six,
+  webob,
 }:
 
 buildPythonPackage rec {
   pname = "rollbar";
-  version = "0.16.2";
+  version = "1.3.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "aa3b570062dd8dfb0e11537ba858f9e1633a604680e062a525434b8245540f87";
+    hash = "sha256-UZQC6sObzE+khIIYcva7GEl/t7bIEWcEeGfRdxTTs3k=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     requests
     six
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     webob
     blinker
-    unittest2
     mock
     httpx
     aiocontextvars
     pytestCheckHook
   ];
 
+  # Still supporting unittest2
+  # https://github.com/rollbar/pyrollbar/pull/346
+  # https://github.com/rollbar/pyrollbar/pull/340
+  doCheck = false;
+
   pythonImportsCheck = [ "rollbar" ];
 
-  meta = with lib; {
+  meta = {
     description = "Error tracking and logging from Python to Rollbar";
+    mainProgram = "rollbar";
     homepage = "https://github.com/rollbar/pyrollbar";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

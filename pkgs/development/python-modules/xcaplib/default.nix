@@ -1,28 +1,50 @@
-{ lib
-, buildPythonPackage
-, fetchdarcs
-, isPy3k
-, eventlib
-, application
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  lxml,
+  twisted,
+  python3-application,
+  unstableGitUpdater,
 }:
 
-buildPythonPackage rec {
-  pname = "python-xcaplib";
-  version = "1.2.1";
-  disabled = isPy3k;
+buildPythonPackage {
+  pname = "xcaplib";
+  # latest commit is needed for python 3.13 compat.
+  version = "2.0.2-unstable-2026-07-09";
+  pyproject = true;
 
-  src = fetchdarcs {
-    url = "http://devel.ag-projects.com/repositories/${pname}";
-    rev = "release-${version}";
-    sha256 = "15ww8f0a9zh37mypw5s4q1qk44cwf7jlhc9q1z4vjlpvnzimg54v";
+  src = fetchFromGitHub {
+    owner = "AGProjects";
+    repo = "python3-xcaplib";
+    rev = "73cc7f405f2a10fd113b5cbbc80e4b3fc5537236";
+    hash = "sha256-67go56VUKbZOyaofpurfN50acpzBrzzmjrGqh7mUKZg=";
   };
 
-  propagatedBuildInputs = [ eventlib application ];
+  build-system = [
+    setuptools
+  ];
 
-  meta = with lib; {
-    homepage = "https://github.com/AGProjects/python-xcaplib";
+  dependencies = [
+    lxml
+    twisted
+    python3-application
+  ];
+
+  # the one and only upstream test relies on networking
+  doCheck = false;
+
+  pythonImportsCheck = [ "xcaplib" ];
+
+  passthru.updateScript = unstableGitUpdater { };
+
+  meta = {
     description = "XCAP (RFC4825) client library";
-    license = licenses.gpl2;
+    homepage = "https://github.com/AGProjects/python3-xcaplib";
+    license = lib.licenses.lgpl21Plus;
+    teams = [ lib.teams.ngi ];
+    maintainers = [ lib.maintainers.ethancedwards8 ];
+    mainProgram = "xcapclient3";
   };
-
 }

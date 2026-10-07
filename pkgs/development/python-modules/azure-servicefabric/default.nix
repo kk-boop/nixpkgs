@@ -1,21 +1,28 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, azure-common
-, msrest
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  azure-common,
+  msrest,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "azure-servicefabric";
-  version = "8.0.0.0";
+  version = "8.2.0.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
+    inherit (finalAttrs) pname version;
     extension = "zip";
-    sha256 = "f414cc114e28a358a7f39772205f3f15d7fc1aa30a08d106b0b80623f4303f1d";
+    hash = "sha256-9JyHWUR5cIF7my09S5dDl2Xc91ugG2Bmzpa2BQUvuyM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     azure-common
     msrest
   ];
@@ -23,10 +30,12 @@ buildPythonPackage rec {
   # has no tests
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [ "azure.servicefabric" ];
+
+  meta = {
     description = "This project provides a client library in Python that makes it easy to consume Microsoft Azure Storage services";
     homepage = "https://github.com/Azure/azure-sdk-for-python";
-    license = licenses.mit;
-    maintainers = with maintainers; [ maxwilson ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ maxwilson ];
   };
-}
+})

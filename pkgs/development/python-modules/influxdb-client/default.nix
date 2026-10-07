@@ -1,49 +1,62 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, rx
-, certifi
-, six
-, python-dateutil
-, setuptools
-, urllib3
-, ciso8601
-, pytz
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  aiocsv,
+  buildPythonPackage,
+  certifi,
+  ciso8601,
+  fetchFromGitHub,
+  numpy,
+  pandas,
+  python-dateutil,
+  reactivex,
+  setuptools,
+  urllib3,
 }:
 
 buildPythonPackage rec {
   pname = "influxdb-client";
-  version = "1.24.0";
-  disabled = pythonOlder "3.6";
+  version = "1.50.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "influxdata";
     repo = "influxdb-client-python";
-    rev = "v${version}";
-    sha256 = "0w0pw87fnxms88f3dadyhxdgms4rzvcww18h6l87wnqc6wxa6paw";
+    tag = "v${version}";
+    hash = "sha256-39ioVlTgvICHArTNhfXZQ+WrUda2B5LxLtMwXWp6krU=";
   };
 
-  propagatedBuildInputs = [
-    rx
+  build-system = [ setuptools ];
+
+  dependencies = [
     certifi
-    six
     python-dateutil
-    setuptools
+    reactivex
     urllib3
-    ciso8601
-    pytz
   ];
 
-  # requires influxdb server
+  optional-dependencies = {
+    async = [
+      aiocsv
+      aiohttp
+    ];
+    ciso = [ ciso8601 ];
+    extra = [
+      numpy
+      pandas
+    ];
+  };
+
+  # Requires influxdb server
   doCheck = false;
 
   pythonImportsCheck = [ "influxdb_client" ];
 
-  meta = with lib; {
-    description = "InfluxDB 2.0 Python client library";
+  meta = {
+    description = "InfluxDB client library";
     homepage = "https://github.com/influxdata/influxdb-client-python";
-    license = licenses.mit;
-    maintainers = [ maintainers.mic92 ];
+    changelog = "https://github.com/influxdata/influxdb-client-python/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mic92 ];
   };
 }

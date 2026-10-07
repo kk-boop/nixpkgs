@@ -1,35 +1,77 @@
-{ lib, buildPythonPackage, isPy3k, fetchPypi
-, bluez, dbus-next, pytestCheckHook, pytest-cov
+{
+  lib,
+  stdenv,
+  bluez,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  uv-build,
+
+  # dependencies
+  bumble,
+  dbus-fast,
+  pyobjc-core,
+  pyobjc-framework-CoreBluetooth,
+  pyobjc-framework-libdispatch,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "bleak";
-  version = "0.13.0";
+  version = "3.0.2";
+  pyproject = true;
 
-  disabled = !isPy3k;
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1vnwk36qfws9amqrdaynf63dcj2gzxm0ns1l75hrczmd5j2ic1zb";
+  src = fetchFromGitHub {
+    owner = "hbldh";
+    repo = "bleak";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-I+nN3/KKF0PC9TO8SULXX1oOGUokYa2tlPVfEJ/0mbY=";
   };
 
   postPatch = ''
-    # bleak checks BlueZ's version with a call to `bluetoothctl --version`
-    substituteInPlace bleak/backends/bluezdbus/__init__.py \
-      --replace \"bluetoothctl\" \"${bluez}/bin/bluetoothctl\"
+    substituteInPlace pyproject.toml \
+      --replace-fail "uv_build>=0.10.9,<0.11.0" "uv_build" \
+      --replace-fail "ignore:Couldn't import C tracer:coverage.exceptions.CoverageWarning" ""
+  ''
+  # bleak checks BlueZ's version with a call to `bluetoothctl --version`
+  + lib.optionalString stdenv.hostPlatform.isLinux ''
+    substituteInPlace bleak/backends/bluezdbus/version.py \
+      --replace-fail \
+        '"bluetoothctl"' \
+        '"${lib.getExe' bluez "bluetoothctl"}"'
   '';
 
-  propagatedBuildInputs = [ dbus-next ];
+  build-system = [ uv-build ];
 
-  checkInputs = [ pytestCheckHook pytest-cov ];
+  dependencies = [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    dbus-fast
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    pyobjc-core
+    pyobjc-framework-CoreBluetooth
+    pyobjc-framework-libdispatch
+  ];
+
+  nativeCheckInputs = [
+    bumble
+    pytest-asyncio
+    pytest-cov-stub
+    pytestCheckHook
+  ];
 
   pythonImportsCheck = [ "bleak" ];
 
-  meta = with lib; {
-    description = "Bluetooth Low Energy platform Agnostic Klient for Python";
+  meta = {
+    description = "Bluetooth Low Energy platform agnostic client";
     homepage = "https://github.com/hbldh/bleak";
-    license = licenses.mit;
-    platforms = platforms.linux;
-    maintainers = with maintainers; [ oxzi ];
+    changelog = "https://github.com/hbldh/bleak/blob/${finalAttrs.src.tag}/CHANGELOG.rst";
+    license = lib.licenses.mit;
+    platforms = lib.platforms.linux ++ lib.platforms.darwin;
+    maintainers = with lib.maintainers; [ rhendric ];
   };
-}
+})

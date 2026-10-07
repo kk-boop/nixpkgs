@@ -1,42 +1,34 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "aiohttp-wsgi";
-  version = "0.9.1";
-  disabled = pythonOlder "3.6";
+  version = "0.10.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "etianen";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-lQ0mAUqsOmozUIMd6nwRATaq8C5SUFGoyQu1v0RBnas=";
+    repo = "aiohttp-wsgi";
+    rev = "v${version}";
+    hash = "sha256-3Q00FidZWV1KueuHyHKQf1PsDJGOaRW6v/kBy7lzD4Q=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
-  ];
+  propagatedBuildInputs = [ aiohttp ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
-
-  disabledTests = [
-    # makes http request to another server
-    "testEnviron"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "aiohttp_wsgi" ];
 
-  meta = with lib; {
+  meta = {
     description = "WSGI adapter for aiohttp";
+    mainProgram = "aiohttp-wsgi-serve";
     homepage = "https://github.com/etianen/aiohttp-wsgi";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

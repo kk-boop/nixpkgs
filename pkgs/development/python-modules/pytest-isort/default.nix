@@ -1,26 +1,40 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27, mock, pytest, isort }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  isort,
+  poetry-core,
+  pytest,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "pytest-isort";
-  version = "2.0.0";
+  version = "4.0.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "821a8c5c9c4f3a3c52cfa9c541fbe89ac9e28728125125af53724c4c3f129117";
+  src = fetchFromGitHub {
+    owner = "stephrdev";
+    repo = "pytest-isort";
+    tag = version;
+    hash = "sha256-fMt2tYc+Ngb57T/VJYxI2UN25qvIrgIsEoImVIitDK4=";
   };
+
+  nativeBuildInputs = [ poetry-core ];
+
+  buildInputs = [ pytest ];
 
   propagatedBuildInputs = [ isort ];
 
-  checkInputs = [ pytest ]
-    ++ lib.optionals isPy27 [ mock ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  checkPhase = ''
-    py.test -vs --cache-clear
-  '';
+  pythonImportsCheck = [ "pytest_isort" ];
 
-  meta = with lib; {
+  meta = {
     description = "Pytest plugin to perform isort checks (import ordering)";
     homepage = "https://github.com/moccu/pytest-isort/";
-    license = licenses.bsd3;
+    changelog = "https://github.com/stephrdev/pytest-isort/blob/${version}/CHANGELOG.rst";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

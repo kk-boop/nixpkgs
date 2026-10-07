@@ -1,54 +1,108 @@
-{ lib
-, stdenv
-, fetchPypi
-, buildPythonPackage
-, Mako
-, pytest
-, numpy
-, cffi
-, pytools
-, decorator
-, appdirs
-, six
-, opencl-headers
-, ocl-icd
-, pybind11
-, mesa_drivers
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  buildPythonPackage,
+
+  # build-system
+  cmake,
+  nanobind,
+  ninja,
+  numpy,
+  scikit-build-core,
+
+  # buildInputs
+  opencl-headers,
+  pybind11,
+  ocl-icd,
+
+  # dependencies
+  platformdirs,
+  pytools,
+  typing-extensions,
+
+  # tests
+  pytestCheckHook,
+  writableTmpDirAsHomeHook,
+  mako,
+  pocl,
 }:
 
-let
-  os-specific-buildInputs =
-    if stdenv.isDarwin then [ mesa_drivers.dev ] else [ ocl-icd ];
-in buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyopencl";
-  version = "2021.2.10";
+  version = "2026.1.4";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  checkInputs = [ pytest ];
-  buildInputs = [ opencl-headers pybind11 ] ++ os-specific-buildInputs;
-
-  propagatedBuildInputs = [ numpy cffi pytools decorator appdirs six Mako ];
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "75a1f202741bace9606a8680bbbfac69bf8a73d4e7511fb1a6ce3e48185996ae";
+  src = fetchFromGitHub {
+    owner = "inducer";
+    repo = "pyopencl";
+    tag = "v${finalAttrs.version}";
+    fetchSubmodules = true;
+    hash = "sha256-jYonctlEmvfZoY8n5eNfh5XQdUPrZRGcKzFVUP78eUk=";
   };
 
-  # py.test is not needed during runtime, so remove it from `install_requires`
   postPatch = ''
-    substituteInPlace setup.py --replace "pytest>=2" ""
+    substituteInPlace pyproject.toml \
+      --replace-fail \
+        "nanobind >=3.0" \
+        "nanobind"
   '';
 
-  preBuild = ''
-    export HOME=$(mktemp -d)
+  build-system = [
+    cmake
+    nanobind
+    ninja
+    numpy
+    scikit-build-core
+  ];
+
+  dontUseCmakeConfigure = true;
+
+  buildInputs = [
+    opencl-headers
+    ocl-icd
+    pybind11
+  ];
+
+  dependencies = [
+    numpy
+    platformdirs
+    pytools
+    typing-extensions
+  ];
+
+  nativeCheckInputs = [
+    pocl
+    mako
+    pytestCheckHook
+    writableTmpDirAsHomeHook
+  ];
+
+  env = {
+    CL_INC_DIR = "${lib.getInclude opencl-headers}/include";
+    CL_LIB_DIR = "${lib.getLib ocl-icd}/lib";
+    CL_LIBNAME = "${lib.getLib ocl-icd}/lib/libOpenCL${stdenv.hostPlatform.extensions.sharedLibrary}";
+  };
+
+  preCheck = ''
+    rm -rf pyopencl
   '';
 
-  # gcc: error: pygpu_language_opencl.cpp: No such file or directory
-  doCheck = false;
+  pythonImportsCheck = [
+    "pyopencl"
+    "pyopencl.array"
+    "pyopencl.cltypes"
+    "pyopencl.compyte"
+    "pyopencl.elementwise"
+    "pyopencl.tools"
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Python wrapper for OpenCL";
     homepage = "https://github.com/pyopencl/pyopencl";
-    license = licenses.mit;
-    maintainers = [ maintainers.fridh ];
+    changelog = "https://github.com/inducer/pyopencl/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

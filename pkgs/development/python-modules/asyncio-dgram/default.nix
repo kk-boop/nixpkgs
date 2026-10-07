@@ -1,38 +1,48 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pytest-asyncio
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "asyncio-dgram";
-  version = "2.1.0";
+  version = "3.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jsbronder";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1ibyphncb3d8vrs3yk8j6l1smmnibizx9k1vir2njhi09r57h9mx";
+    repo = "asyncio-dgram";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-08XQHx+ArduVdkK5ZYq2lL2OWF9CvdSWcNLfc7ey2wI=";
   };
 
-  # OSError: AF_UNIX path too long
-  doCheck = !stdenv.isDarwin;
+  build-system = [ hatchling ];
 
-  checkInputs = [
-    pytestCheckHook
+  nativeCheckInputs = [
     pytest-asyncio
+    pytestCheckHook
   ];
 
-  disabledTests = [ "test_protocol_pause_resume" ];
+  # OSError: AF_UNIX path too long
+  doCheck = !stdenv.hostPlatform.isDarwin;
+
+  disabledTests = [
+    "test_protocol_pause_resume"
+    # TypeError: socket type must be 2
+    "test_from_socket_bad_socket"
+  ];
 
   pythonImportsCheck = [ "asyncio_dgram" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python support for higher level Datagram";
     homepage = "https://github.com/jsbronder/asyncio-dgram";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/jsbronder/asyncio-dgram/blob/${finalAttrs.src.tag}/ChangeLog";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

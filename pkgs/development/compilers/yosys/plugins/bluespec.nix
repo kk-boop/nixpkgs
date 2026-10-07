@@ -1,19 +1,38 @@
-{ stdenv, lib, fetchFromGitHub, pkg-config
-, yosys, readline, zlib, bluespec
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  pkg-config,
+  yosys,
+  readline,
+  zlib,
+  bluespec,
 }:
 
 stdenv.mkDerivation {
   pname = "yosys-bluespec";
-  version = "2021.08.19";
+  version = "2021.09.08";
+  plugin = "bluespec";
 
   src = fetchFromGitHub {
-    owner  = "thoughtpolice";
-    repo   = "yosys-bluespec";
-    rev    = "bcea1635c97747acd3bcb5b8f1968b3f57ae62bc";
-    sha256 = "0ipx9yjngs3haksdb440wlydviszwqnxgzynpp7yic2x3ai7i8m1";
+    owner = "thoughtpolice";
+    repo = "yosys-bluespec";
+    rev = "f6f4127a4e96e18080fd5362b6769fa3e24c76b1";
+    sha256 = "sha256-3cNFP/k4JsgLyUQHWU10Htl2Rh0staAcA3R4piD6hDE=";
   };
 
-  buildInputs = [ yosys readline zlib bluespec ];
+  # yosys >=0.67 headers require C++20; the Makefile otherwise pins c++17.
+  postPatch = ''
+    substituteInPlace Makefile \
+      --replace-fail '-std=c++17' '-std=c++20'
+  '';
+
+  buildInputs = [
+    yosys
+    readline
+    zlib
+    bluespec
+  ];
   nativeBuildInputs = [ pkg-config ];
 
   doCheck = true;
@@ -23,10 +42,11 @@ stdenv.mkDerivation {
     "STATIC_BSC_LIBDIR=${bluespec}/lib"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Bluespec plugin for Yosys";
-    license     = licenses.isc;
-    platforms   = platforms.all;
-    maintainers = with maintainers; [ thoughtpolice ];
+    homepage = "https://github.com/thoughtpolice/yosys-bluespec";
+    license = lib.licenses.isc;
+    platforms = lib.platforms.all;
+    maintainers = with lib.maintainers; [ thoughtpolice ];
   };
 }

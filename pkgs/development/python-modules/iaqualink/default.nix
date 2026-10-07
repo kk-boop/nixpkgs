@@ -1,36 +1,63 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pytest-runner
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatch-vcs,
+  hatchling,
+  httpx-retries,
+  httpx,
+  pytest-cov-stub,
+  pytestCheckHook,
+  pyyaml,
+  respx,
+  typer,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "iaqualink";
-  version = "0.4.1";
-  disabled = pythonOlder "3.8";
+  version = "0.7.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "flz";
     repo = "iaqualink-py";
-    rev = "v${version}";
-    sha256 = "0xgxajw38jrc55xh8w8mq0dk82ml77mfs8yn05gcpv8l24y70chq";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Bn4dcfTRkY+qc/c39ip+vZvlbqll7qZOl7phMgw9EjY=";
   };
 
-  nativeBuildInputs = [ pytest-runner ];
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
 
-  propagatedBuildInputs = [ aiohttp ];
+  dependencies = [
+    httpx
+    httpx-retries
+  ]
+  ++ httpx.optional-dependencies.http2;
 
-  checkInputs = [ pytestCheckHook ];
+  optional-dependencies = {
+    cli = [
+      pyyaml
+      typer
+    ];
+  };
+
+  nativeCheckInputs = [
+    pytest-cov-stub
+    pytestCheckHook
+    respx
+    typer
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "iaqualink" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for Jandy iAqualink";
     homepage = "https://github.com/flz/iaqualink-py";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/flz/iaqualink-py/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,36 +1,61 @@
-{ lib, stdenv, fetchurl, perl
-, CoreServices, ApplicationServices }:
+{
+  fetchFromGitHub,
+  lib,
+  perl,
+  pkg-config,
+  stdenv,
+  versionCheckHook,
+  zstd,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "moarvm";
-  version = "2021.10";
+  version = "2026.07";
 
-  src = fetchurl {
-    url = "https://moarvm.org/releases/MoarVM-${version}.tar.gz";
-    sha256 = "sha256-fzSHpw6Ld74OTi8SsUxJ9qAdA3jglAyGlYyQFsSVrXU=";
-   };
+  # nixpkgs-update: no auto update
+  src = fetchFromGitHub {
+    owner = "MoarVM";
+    repo = "MoarVM";
+    tag = finalAttrs.version;
+    fetchSubmodules = true;
+    hash = "sha256-zdmBlDtu5y54iwfXAcx79amfhee+Jw94sIAfdF6rfSk=";
+  };
+
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [ zstd ];
 
   postPatch = ''
     patchShebangs .
-  '' + lib.optionalString stdenv.isDarwin ''
     substituteInPlace Configure.pl \
-      --replace '`/usr/bin/arch`' '"${stdenv.hostPlatform.darwinArch}"' \
-      --replace '/usr/bin/arch' "$(type -P true)" \
-      --replace '/usr/' '/nope/'
+      --replace-fail 'my @check_tools = qw/ar cc ld/;' 'my @check_tools = ();'
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    substituteInPlace Configure.pl \
+      --replace-fail '`/usr/bin/arch`' '"${stdenv.hostPlatform.darwinArch}"' \
+      --replace-fail '/usr/bin/arch' "$(type -P true)" \
+      --replace-fail '/usr/' '/nope/'
     substituteInPlace 3rdparty/dyncall/configure \
-      --replace '`sw_vers -productVersion`' '"$MACOSX_DEPLOYMENT_TARGET"'
+      --replace-fail '`sw_vers -productVersion`' '"11.0"'
   '';
 
-  buildInputs = [ perl ] ++ lib.optionals stdenv.isDarwin [ CoreServices ApplicationServices ];
-  doCheck = false; # MoarVM does not come with its own test suite
+  configureScript = "${lib.getExe perl} ./Configure.pl";
+  configureFlags = [
+    "--pkgconfig=${lib.getExe pkg-config}"
+  ];
 
-  configureScript = "${perl}/bin/perl ./Configure.pl";
+  doInstallCheck = true;
+  nativeInstallCheckInputs = [ versionCheckHook ];
 
-  meta = with lib; {
+  meta = {
     description = "VM with adaptive optimization and JIT compilation, built for Rakudo";
-    homepage    = "https://moarvm.org";
-    license     = licenses.artistic2;
-    platforms   = platforms.unix;
-    maintainers = with maintainers; [ thoughtpolice vrthra sgo ];
+    homepage = "https://moarvm.org";
+    license = lib.licenses.artistic2;
+    maintainers = with lib.maintainers; [
+      thoughtpolice
+      sgo
+      prince213
+    ];
+    mainProgram = "moar";
+    platforms = lib.platforms.unix;
   };
-}
+})

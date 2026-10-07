@@ -1,32 +1,44 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, colorama
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  colorama,
+  pytestCheckHook,
+  unstableGitUpdater,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage {
   pname = "migen";
-  version = "unstable-2021-09-14";
-  disabled = pythonOlder "3.3";
+  version = "0.9.2-unstable-2025-10-03";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "m-labs";
     repo = "migen";
-    rev = "a5bc262560238f93ceaad423820eb06843326274";
-    sha256 = "32UjaIam/B7Gx6XbPcR067LcXfokJH2mATG9mU38a6o=";
+    rev = "147f003fb7076ac4c7cf76a9a5ce152dc10e0ca6";
+    hash = "sha256-gRAvl5cUvrjq4t7htXsDBt4F8MEbHXFZoS0jbhrEs1I=";
   };
 
-  propagatedBuildInputs = [
-    colorama
+  patches = [
+    # Add LOAD_FAST_BORROW to opcode tracer for python 3.14.
+    ./tracer-3.14.patch
   ];
+
+  nativeBuildInputs = [ setuptools ];
+
+  propagatedBuildInputs = [ colorama ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "migen" ];
 
-  meta = with lib; {
-    description = " A Python toolbox for building complex digital hardware";
+  passthru.updateScript = unstableGitUpdater { };
+
+  meta = {
+    description = "Python toolbox for building complex digital hardware";
     homepage = "https://m-labs.hk/migen";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ l-as ];
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
 }

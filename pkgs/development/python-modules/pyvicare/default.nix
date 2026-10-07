@@ -1,53 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, requests_oauthlib
-, simplejson
-, pkce
-, pytestCheckHook
+{
+  lib,
+  authlib,
+  buildPythonPackage,
+  deprecated,
+  fetchFromGitHub,
+  poetry-core,
+  requests,
+  pytest-cov-stub,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyvicare";
-  version = "2.14.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "2.63.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "somm15";
+    owner = "openviess";
     repo = "PyViCare";
-    rev = version;
-    sha256 = "sha256-+Rjs5PwsjcE8vsCS9gHmEj2Hy2OSH/YxNjYgjrBXHPk=";
+    tag = finalAttrs.version;
+    hash = "sha256-axJhzF21lwMRp5OIZBJhwE1hNkX5KdcZvqCCbLQvoNc=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'version = "0.1.0"' 'version = "${finalAttrs.version}"'
+  '';
 
-  propagatedBuildInputs = [
-    requests_oauthlib
-    simplejson
-    pkce
+  build-system = [ poetry-core ];
+
+  dependencies = [
+    authlib
+    deprecated
+    requests
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytestCheckHook
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "version_config=True," 'version="${version}",' \
-      --replace "'setuptools-git-versioning'" " "
-  '';
+  pythonImportsCheck = [ "PyViCare" ];
 
-  pythonImportsCheck = [
-    "PyViCare"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Python Library to access Viessmann ViCare API";
     homepage = "https://github.com/somm15/PyViCare";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/openviess/PyViCare/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

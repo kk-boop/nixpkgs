@@ -1,26 +1,32 @@
-{ lib, stdenv, fetchurl
-, gfortran
-, pkg-config, libtool
-, m4, gnum4
-, file
-# Memory Hierarchy (End-user can provide this.)
-, memHierarchy ? ""
-# Headers/Libraries
-, blas, zlib
-# RPC headers (rpc/xdr.h)
-, openmpi
-, help2man
-, doxygen
-, octave
+{
+  lib,
+  stdenv,
+  fetchurl,
+  gfortran,
+  pkg-config,
+  libtool,
+  m4,
+  gnum4,
+  file,
+  # Memory Hierarchy (End-user can provide this.)
+  memHierarchy ? "",
+  # Headers/Libraries
+  blas,
+  zlib,
+  # RPC headers (rpc/xdr.h)
+  openmpi,
+  help2man,
+  doxygen,
+  octave,
 }:
 
 stdenv.mkDerivation rec {
   pname = "librsb";
-  version = "1.2.0.9";
+  version = "1.3.0.2";
 
   src = fetchurl {
     url = "mirror://sourceforge/${pname}/${pname}-${version}.tar.gz";
-    sha256 = "1ynrsgnvv1jfm8dv3jwjrip9x9icxv7w3qrk149025j6fbaza8gl";
+    sha256 = "sha256-GMb8RD+hz9KoEQ99S4jVu8tJO56Fs6YgFLi7V6hI4E8=";
   };
 
   # The default configure flags are still present when building
@@ -39,17 +45,28 @@ stdenv.mkDerivation rec {
   ];
 
   # Ensure C/Fortran code is position-independent.
-  NIX_CFLAGS_COMPILE = [ "-fPIC" "-Ofast" ];
-  FCFLAGS = [ "-fPIC" "-Ofast" ];
+  env = {
+    NIX_CFLAGS_COMPILE = toString [
+      "-fPIC"
+      "-Ofast"
+    ];
+    FCFLAGS = toString [
+      "-fPIC"
+      "-Ofast"
+    ];
+  };
 
   enableParallelBuilding = true;
 
   nativeBuildInputs = [
     gfortran
-    pkg-config libtool
-    m4 gnum4
+    pkg-config
+    libtool
+    m4
+    gnum4
     file
-    blas zlib
+    blas
+    zlib
     openmpi
     octave
     help2man # Turn "--help" into a man-page
@@ -61,13 +78,13 @@ stdenv.mkDerivation rec {
     make cleanall
   '';
 
-  checkInputs = [
+  nativeCheckInputs = [
     octave
   ];
   checkTarget = "tests";
 
-  meta = with lib; {
-    homepage = "http://librsb.sourceforge.net/";
+  meta = {
+    homepage = "https://librsb.sourceforge.net/";
     description = "Shared memory parallel sparse matrix and sparse BLAS library";
     longDescription = ''
       Library for sparse matrix computations featuring the Recursive Sparse
@@ -79,8 +96,10 @@ stdenv.mkDerivation rec {
       Contains libraries and header files for developing applications that
       want to make use of librsb.
     '';
-    license = with licenses; [ lgpl3Plus ];
-    maintainers = with maintainers; [ KarlJoad ];
-    platforms = platforms.all;
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ ravenjoad ];
+    platforms = lib.platforms.all;
+    # linking errors such as 'undefined reference to `gzungetc'
+    broken = true;
   };
 }

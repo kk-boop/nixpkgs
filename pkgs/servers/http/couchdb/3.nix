@@ -1,42 +1,75 @@
-{ lib, stdenv, fetchurl, erlang, icu, openssl, spidermonkey_78
-, coreutils, bash, makeWrapper, python3, nixosTests }:
+{
+  lib,
+  stdenv,
+  fetchurl,
+  beamMinimalPackages,
+  icu,
+  openssl,
+  python3,
+  nixosTests,
+}:
 
 stdenv.mkDerivation rec {
   pname = "couchdb";
-  version = "3.2.1";
+  version = "3.5.2";
 
-
-  # when updating this, please consider bumping the erlang/OTP version
-  # in all-packages.nix
   src = fetchurl {
     url = "mirror://apache/couchdb/source/${version}/apache-${pname}-${version}.tar.gz";
-    sha256 = "1y5cfic88drlr9qiwyj2p8xc9m9hcbvw77j5lwbp0cav78f2vphi";
+    hash = "sha256-5WEQKqrf3aHkmebp4S0kc0MykbYIvNOQvLz1kLu2z2g=";
   };
 
-  buildInputs = [ erlang icu openssl spidermonkey_78 (python3.withPackages(ps: with ps; [ requests ]))];
   postPatch = ''
-    substituteInPlace src/couch/rebar.config.script --replace '/usr/include/mozjs-78' "${spidermonkey_78.dev}/include/mozjs-78"
     patchShebangs bin/rebar
+  ''
+  + lib.optionalString stdenv.hostPlatform.isDarwin ''
+    # LTO with Clang produces LLVM bitcode, which causes linking to fail quietly.
+    # (There are warnings, but no hard errors, and it produces an empty dylib.)
+    substituteInPlace src/jiffy/rebar.config.script --replace '"-flto"' '""'
   '';
 
-  dontAddPrefix= "True";
-  configureFlags = ["--spidermonkey-version=78"];
-  buildFlags = ["release"];
+  nativeBuildInputs = [
+    beamMinimalPackages.erlang
+  ];
+
+  buildInputs = [
+    icu
+    openssl
+    (python3.withPackages (ps: with ps; [ requests ]))
+  ];
+
+  dontAddPrefix = "True";
+
+  configureFlags = [
+    "--js-engine=quickjs"
+    "--disable-spidermonkey"
+  ];
+
+  buildFlags = [
+    "release"
+  ];
+
+  env.NIX_CFLAGS_COMPILE = lib.concatStringsSep " " (
+    lib.optionals stdenv.cc.isClang [
+      "-Wno-error=implicit-function-declaration"
+    ]
+  );
 
   installPhase = ''
+    runHook preInstall
     mkdir -p $out
     cp -r rel/couchdb/* $out
+    runHook postInstall
   '';
 
   passthru.tests = {
     inherit (nixosTests) couchdb;
   };
 
-  meta = with lib; {
-    description = "A database that uses JSON for documents, JavaScript for MapReduce queries, and regular HTTP for an API";
-    homepage = "http://couchdb.apache.org";
-    license = licenses.asl20;
-    platforms = platforms.all;
-    maintainers = with maintainers; [ lostnet ];
+  meta = {
+    description = "Database that uses JSON for documents, JavaScript for MapReduce queries, and regular HTTP for an API";
+    homepage = "https://couchdb.apache.org";
+    license = lib.licenses.asl20;
+    platforms = lib.platforms.all;
+    maintainers = [ ];
   };
 }

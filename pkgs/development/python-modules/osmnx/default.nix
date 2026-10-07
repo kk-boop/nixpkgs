@@ -1,29 +1,64 @@
-{ lib, buildPythonPackage, fetchFromGitHub, pythonOlder, geopandas, matplotlib, networkx, numpy
-, pandas, requests, Rtree, shapely, folium, scikit-learn, scipy, gdal, rasterio}:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  folium,
+  gdal,
+  geopandas,
+  matplotlib,
+  networkx,
+  numpy,
+  pandas,
+  rasterio,
+  requests,
+  rtree,
+  scikit-learn,
+  scipy,
+  shapely,
+  uv-build,
+}:
 
 buildPythonPackage rec {
   pname = "osmnx";
-  version = "1.1.1";
-  disabled = pythonOlder "3.6";
+  version = "2.1.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner  = "gboeing";
-    repo   = pname;
-    rev    = "v${version}";
-    sha256 = "0dkv3fnlq23d7d30lhdf4a313lxy3a5qfldidvszs1z9n16ycnwb";
+    owner = "gboeing";
+    repo = "osmnx";
+    tag = "v${version}";
+    hash = "sha256-PX4Vhf3R9UGKMYp636+tJ5NV/oURd3Zzxfvj7LLCaPM=";
   };
 
-  propagatedBuildInputs = [ geopandas matplotlib networkx numpy pandas requests Rtree shapely folium scikit-learn scipy gdal rasterio ];
+  build-system = [ uv-build ];
 
-  # requires network
+  dependencies = [
+    geopandas
+    matplotlib
+    networkx
+    numpy
+    pandas
+    requests
+    rtree
+    shapely
+    folium
+    scikit-learn
+    scipy
+    gdal
+    rasterio
+  ];
+
+  # Tests require network
   doCheck = false;
+
   pythonImportsCheck = [ "osmnx" ];
 
-  meta = with lib; {
-    description = "A package to easily download, construct, project, visualize, and analyze complex street networks from OpenStreetMap with NetworkX.";
+  meta = {
+    description = "Package to easily download, construct, project, visualize, and analyze complex street networks from OpenStreetMap with NetworkX";
     homepage = "https://github.com/gboeing/osmnx";
-    license = licenses.mit;
-    maintainers = with maintainers; [ psyanticy ];
+    changelog = "https://github.com/gboeing/osmnx/blob/${src.rev}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ psyanticy ];
+    teams = [ lib.teams.geospatial ];
   };
 }
-

@@ -1,40 +1,61 @@
-{ lib, stdenv
-, buildPythonPackage
-, fetchPypi
-, mock
-, pytest
-, pytest-mock
-, pytz
-, requests
-, requests-kerberos
-, toml
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  docker,
+  hatchling,
+  mock,
+  pyprojectVersionPatchHook,
+  pytest-mock,
+  pytest-xdist,
+  pytestCheckHook,
+  pytz,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "jenkinsapi";
-  version = "0.3.11";
+  version = "0.3.23";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "a212a244b0a6022a61657746c8120ac9b6db83432371b345154075eb8faceb61";
+  src = fetchFromGitHub {
+    owner = "pycontribs";
+    repo = "jenkinsapi";
+    tag = finalAttrs.version;
+    hash = "sha256-NtILbbXu4dtYda28WaFiGkICf0bOmVMKOOnnrHptxsg=";
   };
 
-  propagatedBuildInputs = [ pytz requests ];
-  checkInputs = [ mock pytest pytest-mock requests-kerberos toml ];
-  # TODO requests-kerberos is broken on darwin, weeding out the broken tests without
-  # access to macOS is not an adventure I am ready to embark on - @rski
-  doCheck = !stdenv.isDarwin;
-  # don't run tests that try to spin up jenkins, and a few more that are mysteriously broken
-  checkPhase = ''
-    py.test jenkinsapi_tests \
-      -k "not systests and not test_plugins and not test_view"
-  '';
+  build-system = [ hatchling ];
 
-  meta = with lib; {
-    description = "A Python API for accessing resources on a Jenkins continuous-integration server";
-    homepage = "https://github.com/salimfadhley/jenkinsapi";
-    maintainers = with maintainers; [ drets ];
-    license = licenses.mit;
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
+
+  dependencies = [
+    pytz
+    requests
+  ];
+
+  nativeCheckInputs = [
+    docker
+    mock
+    pytest-mock
+    pytest-xdist
+    pytestCheckHook
+  ];
+
+  # don't run tests that try to spin up jenkins
+  disabledTests = [ "systests" ];
+
+  pythonImportsCheck = [ "jenkinsapi" ];
+
+  meta = {
+    description = "Python API for accessing resources on a Jenkins continuous-integration server";
+    homepage = "https://github.com/pycontribs/jenkinsapi";
+    changelog = "https://github.com/pycontribs/jenkinsapi/releases/tag/${finalAttrs.version}";
+    maintainers = with lib.maintainers; [
+      de11n
+      despsyched
+      drets
+    ];
+    license = lib.licenses.mit;
   };
-
-}
+})

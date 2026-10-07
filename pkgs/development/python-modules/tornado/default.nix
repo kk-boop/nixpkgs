@@ -1,29 +1,72 @@
-{ lib
-, python
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
+
+  # for passthru.tests
+  distributed,
+  jupyter-server,
+  jupyterlab,
+  matplotlib,
+  mitmproxy,
+  pytest-tornado,
+  pytest-tornasync,
+  pyzmq,
+  sockjs-tornado,
+  urllib3,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "tornado";
-  version = "6.1";
+  version = "6.5.7";
+  pyproject = true;
 
-  # We specify the name of the test files to prevent
-  # https://github.com/NixOS/nixpkgs/issues/14634
-  checkPhase = ''
-    ${python.interpreter} -m unittest discover *_test.py
-  '';
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "33c6e81d7bd55b468d2e793517c909b139960b6c790a60b7991b9b6b76fb9791";
+  src = fetchFromGitHub {
+    owner = "tornadoweb";
+    repo = "tornado";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-iE0Tf95zmPoZJhw7FDLzTmv8HaWds3ZU5xzZSMvxFH4=";
   };
+
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  # To allow tests to pass on slower/high-load machines
+  env.ASYNC_TEST_TIMEOUT = 30;
+
+  disabledTestPaths = [
+    # additional tests that have extra dependencies, run slowly, or produce more output than a simple pass/fail
+    # https://github.com/tornadoweb/tornado/blob/v6.2.0/maint/test/README
+    "maint/test"
+  ];
+
+  pythonImportsCheck = [ "tornado" ];
 
   __darwinAllowLocalNetworking = true;
 
+  passthru.tests = {
+    inherit
+      distributed
+      jupyter-server
+      jupyterlab
+      matplotlib
+      mitmproxy
+      pytest-tornado
+      pytest-tornasync
+      pyzmq
+      sockjs-tornado
+      urllib3
+      ;
+  };
+
   meta = {
-    description = "A web framework and asynchronous networking library";
+    changelog = "https://www.tornadoweb.org/en/stable/releases/${finalAttrs.src.tag}.html";
+    description = "Web framework and asynchronous networking library";
     homepage = "https://www.tornadoweb.org/";
     license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

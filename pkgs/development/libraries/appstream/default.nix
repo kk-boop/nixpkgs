@@ -1,92 +1,155 @@
-{ lib
-, stdenv
-, substituteAll
-, fetchFromGitHub
-, meson
-, ninja
-, pkg-config
-, gettext
-, xmlto
-, docbook-xsl-nons
-, docbook_xml_dtd_45
-, libxslt
-, libstemmer
-, glib
-, xapian
-, libxml2
-, libyaml
-, gobject-introspection
-, pcre
-, itstool
-, gperf
-, vala
-, lmdb
-, curl
+{
+  lib,
+  stdenv,
+  buildPackages,
+  replaceVars,
+  fetchFromGitHub,
+  meson,
+  mesonEmulatorHook,
+  appstream,
+  ninja,
+  pkg-config,
+  cmake,
+  gettext,
+  xmlto,
+  docbook-xsl-ns,
+  docbook_xml_dtd_45,
+  libblake3,
+  libxslt,
+  libstemmer,
+  glib,
+  xapian,
+  libxml2,
+  libxmlb,
+  libfyaml,
+  gobject-introspection,
+  itstool,
+  gperf,
+  vala,
+  curl,
+  cairo,
+  gdk-pixbuf,
+  pango,
+  librsvg,
+  bash-completion,
+  systemdLibs,
+  nixosTests,
+  testers,
+  withIntrospection ?
+    lib.meta.availableOn stdenv.hostPlatform gobject-introspection
+    && stdenv.hostPlatform.emulatorAvailable buildPackages,
+  withSystemd ? lib.meta.availableOn stdenv.hostPlatform systemdLibs,
 }:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "appstream";
-  version = "0.14.4";
+  version = "1.1.3";
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+    "installedTests"
+  ];
 
   src = fetchFromGitHub {
     owner = "ximion";
     repo = "appstream";
-    rev = "v${version}";
-    sha256 = "sha256-DJXCw50f+8c58bJw6xx0ECfkc9/KcWaeA+ne2zmTyhg=";
+    rev = "v${finalAttrs.version}";
+    hash = "sha256-z9HmTYOjglki+ID7GPMf3jGLOAkxLqJd4+GsIR3W3u4=";
   };
 
   patches = [
     # Fix hardcoded paths
-    (substituteAll {
-      src = ./fix-paths.patch;
+    (replaceVars ./fix-paths.patch {
       libstemmer_includedir = "${lib.getDev libstemmer}/include";
     })
+
+    # Allow installing installed tests to a separate output.
+    ./installed-tests-path.patch
+  ];
+
+  strictDeps = true;
+
+  depsBuildBuild = [
+    pkg-config
   ];
 
   nativeBuildInputs = [
     meson
     ninja
     pkg-config
+    cmake
     gettext
     libxslt
     xmlto
-    docbook-xsl-nons
+    docbook-xsl-ns
     docbook_xml_dtd_45
-    gobject-introspection
+    glib
     itstool
+    gperf
+  ]
+  ++ lib.optionals (!stdenv.buildPlatform.canExecute stdenv.hostPlatform) [
+    mesonEmulatorHook
+  ]
+  ++ lib.optionals (!lib.systems.equals stdenv.buildPlatform stdenv.hostPlatform) [
+    appstream
+  ]
+  ++ lib.optionals withIntrospection [
+    gobject-introspection
     vala
   ];
 
   buildInputs = [
+    libblake3
     libstemmer
-    pcre
     glib
     xapian
     libxml2
-    libyaml
-    gperf
-    lmdb
+    libxmlb
+    libfyaml
     curl
+    cairo
+    gdk-pixbuf
+    pango
+    librsvg
+    bash-completion
+  ]
+  ++ lib.optionals withSystemd [
+    systemdLibs
   ];
 
   mesonFlags = [
     "-Dapidocs=false"
+    "-Dc_args=-Wno-error=missing-include-dirs"
     "-Ddocs=false"
     "-Dvapi=true"
+    "-Dinstalled_test_prefix=${placeholder "installedTests"}"
+    "-Dcompose=true"
+    (lib.mesonBool "gir" withIntrospection)
+  ]
+  ++ lib.optionals (!withSystemd) [
+    "-Dsystemd=false"
   ];
 
-  meta = with lib; {
+  passthru.tests = {
+    installed-tests = nixosTests.installed-tests.appstream;
+    pkg-config = testers.hasPkgConfigModules {
+      package = finalAttrs.finalPackage;
+    };
+  };
+
+  meta = {
     description = "Software metadata handling library";
-    homepage = "https://www.freedesktop.org/wiki/Distributions/AppStream/";
     longDescription = ''
       AppStream is a cross-distro effort for building Software-Center applications
       and enhancing metadata provided by software components.  It provides
       specifications for meta-information which is shipped by upstream projects and
       can be consumed by other software.
     '';
-    license = licenses.lgpl21Plus;
-    platforms = platforms.unix;
- };
-}
+    homepage = "https://www.freedesktop.org/wiki/Distributions/AppStream/";
+    license = lib.licenses.lgpl21Plus;
+    mainProgram = "appstreamcli";
+    platforms = lib.platforms.unix;
+    pkgConfigModules = [ "appstream" ];
+  };
+})

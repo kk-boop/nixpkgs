@@ -1,43 +1,55 @@
-{ lib
-, buildPythonApplication
-, fetchPypi
-, pbr
-, oslo-config
-, oslo-log
-, oslo-serialization
-, oslo-utils
-, prettytable
-, requests
-, simplejson
-, Babel
-, osc-lib
-, python-keystoneclient
-, debtcollector
-, callPackage
+{
+  lib,
+  buildPythonPackage,
+  callPackage,
+  debtcollector,
+  fetchPypi,
+  keystoneauth1,
+  openstackdocstheme,
+  osc-lib,
+  oslo-config,
+  oslo-log,
+  oslo-serialization,
+  oslo-utils,
+  pbr,
+  prettytable,
+  requests,
+  setuptools,
+  sphinxHook,
+  sphinxcontrib-programoutput,
 }:
 
-buildPythonApplication rec {
+buildPythonPackage rec {
   pname = "python-manilaclient";
-  version = "3.0.0";
+  version = "6.3.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "2d90af35c5beccc53fa6b0f5a3c4b330a065e86924c33c42b017f18943ab2b05";
+    pname = "python_manilaclient";
+    inherit version;
+    hash = "sha256-ktc2Z6GsIKsINYjokStZdpvgcG8g+26YRewG09cnI9Q=";
   };
 
-  propagatedBuildInputs = [
-    pbr
+  build-system = [
+    openstackdocstheme
+    setuptools
+    sphinxHook
+    sphinxcontrib-programoutput
+  ];
+
+  sphinxBuilders = [ "man" ];
+
+  dependencies = [
+    debtcollector
+    keystoneauth1
+    osc-lib
     oslo-config
     oslo-log
     oslo-serialization
     oslo-utils
+    pbr
     prettytable
     requests
-    simplejson
-    Babel
-    osc-lib
-    python-keystoneclient
-    debtcollector
   ];
 
   # Checks moved to 'passthru.tests' to workaround infinite recursion
@@ -49,10 +61,11 @@ buildPythonApplication rec {
 
   pythonImportsCheck = [ "manilaclient" ];
 
-  meta = with lib; {
+  meta = {
     description = "Client library for OpenStack Manila API";
+    mainProgram = "manila";
     homepage = "https://github.com/openstack/python-manilaclient";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
 }

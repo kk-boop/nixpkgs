@@ -1,35 +1,42 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, persistent
-, zope_interface
-, transaction
-, zope_testrunner
-, python
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  persistent,
+  zope-interface,
+  transaction,
+  zope-testrunner,
+  python,
+  setuptools,
 }:
 
 buildPythonPackage rec {
-  pname = "BTrees";
-  version = "4.9.2";
+  pname = "btrees";
+  version = "6.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d33323655924192c4ac998d9ee3002e787915d19c1e17a6baf47c9a63d9556e3";
+    hash = "sha256-Fga9/6erKMaACYRUC2le7oSPbhWwFF2Fj/SwxiZOjtI=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     persistent
-    zope_interface
+    zope-interface
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     transaction
-    zope_testrunner
+    zope-testrunner
   ];
 
   checkPhase = ''
     runHook preCheck
+
     ${python.interpreter} -m zope.testrunner --test-path=src --auto-color --auto-progress
+
     runHook postCheck
   '';
 
@@ -40,10 +47,11 @@ buildPythonPackage rec {
     "BTrees.IFBTree"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Scalable persistent components";
     homepage = "http://packages.python.org/BTrees";
-    license = licenses.zpl21;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/zopefoundation/BTrees/blob/${version}/CHANGES.rst";
+    license = lib.licenses.zpl21;
+    maintainers = [ ];
   };
 }

@@ -1,26 +1,34 @@
-{ lib, fetchFromGitHub, buildOasisPackage
-, ctypes, mariadb, libmysqlclient }:
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  ctypes,
+  mariadb,
+  libmysqlclient,
+  dune-configurator,
+}:
 
-buildOasisPackage rec {
+buildDunePackage (finalAttrs: {
   pname = "mariadb";
-  version = "1.1.4";
+  version = "2.0.0";
 
-  minimumOCamlVersion = "4.07.0";
-
-  src = fetchFromGitHub {
-    owner = "andrenth";
-    repo = "ocaml-mariadb";
-    rev = version;
-    sha256 = "1rxqvxr6sv4x2hsi05qm9jz0asaq969m71db4ckl672rcql1kwbr";
+  src = fetchurl {
+    url = "https://github.com/ocaml-community/ocaml-mariadb/releases/download/${finalAttrs.version}/mariadb-${finalAttrs.version}.tbz";
+    hash = "sha256-MnsGPH4gAs401Y8/uvrvRx21stQSVrU9RYpC2T8TEcw=";
   };
 
-  buildInputs = [ mariadb libmysqlclient ];
+  buildInputs = [
+    mariadb
+    libmysqlclient
+    dune-configurator
+  ];
+
   propagatedBuildInputs = [ ctypes ];
 
   meta = {
     description = "OCaml bindings for MariaDB";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ bcc32 ];
-    homepage = "https://github.com/andrenth/ocaml-mariadb";
+    homepage = "https://github.com/ocaml-community/ocaml-mariadb";
   };
-}
+})

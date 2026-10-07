@@ -1,35 +1,39 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, meson
-, ninja
-, pkg-config
-, python3
-, vala
-, accountsservice
-, dbus
-, desktop-file-utils
-, geoclue2
-, glib
-, gobject-introspection
-, gtk3
-, granite
-, libgee
-, systemd
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  accountsservice,
+  dbus,
+  desktop-file-utils,
+  fwupd,
+  gdk-pixbuf,
+  geoclue2,
+  gexiv2_0_10,
+  glib,
+  gnome-settings-daemon,
+  gobject-introspection,
+  gtk3,
+  granite,
+  libgee,
+  packagekit,
+  systemdLibs,
+  wrapGAppsHook3,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-settings-daemon";
-  version = "1.1.0";
-
-  repoName = "settings-daemon";
+  version = "8.5.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = repoName;
-    rev = version;
-    sha256 = "sha256-1Xp1uJzDFuGZlhJhKj00cYtb4Q1syMAm+82fTOtk0VI=";
+    repo = "settings-daemon";
+    tag = version;
+    hash = "sha256-npHSj+Zq0fqWVjr5kl/C96gfziLMNOeXxCUgxFGht/s=";
   };
 
   nativeBuildInputs = [
@@ -38,33 +42,36 @@ stdenv.mkDerivation rec {
     meson
     ninja
     pkg-config
-    python3
     vala
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
 
   buildInputs = [
     accountsservice
     dbus
+    fwupd
+    gdk-pixbuf
     geoclue2
+    gexiv2_0_10
     glib
+    gnome-settings-daemon # org.gnome.settings-daemon.* gschema
     gtk3
     granite
     libgee
-    systemd
+    packagekit
+    systemdLibs
   ];
 
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
+  passthru = {
+    updateScript = nix-update-script { };
+  };
 
-  meta = with lib; {
+  meta = {
     description = "Settings daemon for Pantheon";
     homepage = "https://github.com/elementary/settings-daemon";
-    license = licenses.gpl3Plus;
-    maintainers = teams.pantheon.members;
-    platforms = platforms.linux;
+    license = lib.licenses.gpl3Plus;
+    teams = [ lib.teams.pantheon ];
+    platforms = lib.platforms.linux;
     mainProgram = "io.elementary.settings-daemon";
   };
 }

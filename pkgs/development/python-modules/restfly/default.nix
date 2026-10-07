@@ -1,35 +1,48 @@
-{ lib
-, arrow
-, buildPythonPackage
-, fetchFromGitHub
-, pytest-datafiles
-, pytest-vcr
-, pytestCheckHook
-, python-box
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  httpx,
+  pydantic-xml,
+  pydantic,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytest-datafiles,
+  pytest-httpx,
+  pytest-vcr,
+  pytestCheckHook,
+  responses,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "restfly";
-  version = "1.4.4";
+  version = "2.0.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "stevemcgrath";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-T5NfG+Vuguh6xZ/Rdx3a1vMDgXPcl/OYhOkxb76yEXg=";
+    repo = "restfly";
+    tag = finalAttrs.version;
+    hash = "sha256-RE1k0orzDAqGSRfGaMrZ2gKXKVYt/lIYm+fn5HP3POA=";
   };
 
-  propagatedBuildInputs = [
-    requests
-    arrow
-    python-box
+  build-system = [ setuptools ];
+
+  dependencies = [
+    httpx
+    pydantic
+    pydantic-xml
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytest-cov-stub
     pytest-datafiles
+    pytest-httpx
     pytest-vcr
     pytestCheckHook
+    responses
   ];
 
   disabledTests = [
@@ -39,10 +52,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "restfly" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python RESTfly API Library Framework";
     homepage = "https://github.com/stevemcgrath/restfly";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/librestfly/restfly/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,30 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, GitPython
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  gitpython,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "git-sweep";
   version = "0.1.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "1csp0zd049d643d409rfivbswwzrayb4i6gkypp5mc27fb1z2afd";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-zSnxw3JHsFru9fOZSJZX+XOu144uJ0DaIKYlAtoHV7M=";
   };
 
-  propagatedBuildInputs = [ GitPython ];
+  build-system = [ setuptools ];
 
-  # no tests
+  dependencies = [ gitpython ];
+
+  # Module has no tests
   doCheck = false;
 
   pythonImportsCheck = [ "gitsweep" ];
 
-  meta = with lib; {
-    description = "A command-line tool that helps you clean up Git branches";
+  meta = {
+    description = "Command-line tool that helps you clean up Git branches";
+    mainProgram = "git-sweep";
     homepage = "https://github.com/arc90/git-sweep";
-    license = licenses.mit;
-    maintainers = with maintainers; [ pSub ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ pSub ];
   };
-
-}
+})

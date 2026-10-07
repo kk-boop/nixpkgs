@@ -1,42 +1,48 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, pytestCheckHook
-, pytz
-, simplejson
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  flit-core,
+
+  # tests
+  pytestCheckHook,
+  simplejson,
 }:
 
 buildPythonPackage rec {
   pname = "marshmallow";
-  version = "3.13.0";
-
-  disabled = pythonOlder "3.6";
+  version = "4.3.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "marshmallow-code";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-tP/RKo2Hzxz2bT7ybRs9wGzq7TpsmzmOPi3BGuSLDA0=";
+    repo = "marshmallow";
+    tag = version;
+    hash = "sha256-KNxR8AiEJ9S15G5l3rB48BvLdgB5s6q6L1I83V7iMv0=";
   };
 
-  checkInputs = [
+  build-system = [ flit-core ];
+
+  nativeCheckInputs = [
     pytestCheckHook
-    pytz
     simplejson
   ];
 
-  pythonImportsCheck = [
-    "marshmallow"
+  disabledTests = lib.optionals stdenv.hostPlatform.isx86_32 [
+    # Raises a slightly different error than upstream expects: 'Timestamp is too large' instead of 'out of range'
+    "test_from_timestamp_with_overflow_value"
   ];
 
-  meta = with lib; {
-    description = ''
-      A lightweight library for converting complex objects to and from
-      simple Python datatypes.
-    '';
+  pythonImportsCheck = [ "marshmallow" ];
+
+  meta = {
+    description = "Library for converting complex objects to and from simple Python datatypes";
     homepage = "https://github.com/marshmallow-code/marshmallow";
-    license = licenses.mit;
-    maintainers = with maintainers; [ cript0nauta ];
+    changelog = "https://github.com/marshmallow-code/marshmallow/blob/${version}/CHANGELOG.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ cript0nauta ];
   };
 }

@@ -1,40 +1,85 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, asgiref
-, click
-, itsdangerous
-, jinja2
-, python-dotenv
-, werkzeug
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # build-system
+  flit-core,
+
+  # dependencies
+  blinker,
+  click,
+  itsdangerous,
+  jinja2,
+  werkzeug,
+
+  # optional-dependencies
+  asgiref,
+  python-dotenv,
+
+  # tests
+  pytestCheckHook,
+
+  # reverse dependencies
+  flask-limiter,
+  flask-restful,
+  flask-restx,
+  moto,
 }:
 
 buildPythonPackage rec {
-  version = "2.0.2";
-  pname = "Flask";
+  pname = "flask";
+  version = "3.1.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "7b2fb8e934ddd50731893bdcdb00fc8c0315916f9fcd50d22c7cc1a95ab634e2";
+    hash = "sha256-DvDlK4qc2TKFU3kZfdj5QEezWcoKeGlRRDBMtF+Hyes=";
   };
 
-  propagatedBuildInputs = [
-    asgiref
-    python-dotenv
+  patches = [
+    # https://github.com/pallets/flask/issues/6071
+    ./pytest-9.1-compat.patch
+  ];
+
+  build-system = [ flit-core ];
+
+  dependencies = [
     click
+    blinker
     itsdangerous
     jinja2
     werkzeug
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  optional-dependencies = {
+    async = [ asgiref ];
+    dotenv = [ python-dotenv ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ] ++ lib.concatAttrValues optional-dependencies;
+
+  disabledTests = [
+    # https://github.com/pallets/flask/issues/6092#issuecomment-4952497033
+    "test_bad_environ_raises_bad_request"
   ];
 
-  meta = with lib; {
-    homepage = "http://flask.pocoo.org/";
-    description = "The Python micro framework for building web applications";
+  passthru.tests = {
+    inherit
+      flask-limiter
+      flask-restful
+      flask-restx
+      moto
+      ;
+  };
+
+  meta = {
+    changelog = "https://flask.palletsprojects.com/en/stable/changes/#version-${
+      lib.replaceStrings [ "." ] [ "-" ] version
+    }";
+    homepage = "https://flask.palletsprojects.com/";
+    description = "Python micro framework for building web applications";
+    mainProgram = "flask";
     longDescription = ''
       Flask is a lightweight WSGI web application framework. It is
       designed to make getting started quick and easy, with the ability
@@ -42,6 +87,7 @@ buildPythonPackage rec {
       around Werkzeug and Jinja and has become one of the most popular
       Python web application frameworks.
     '';
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ nickcao ];
   };
 }

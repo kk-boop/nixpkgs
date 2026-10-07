@@ -1,19 +1,26 @@
-{ lib, buildDunePackage, dune_2, dune-private-libs }:
+{
+  lib,
+  buildDunePackage,
+  dune,
+  dune-private-libs,
+  re,
+}:
 
-buildDunePackage rec {
+buildDunePackage {
   pname = "dune-glob";
-  inherit (dune_2) src version patches;
-
-  useDune2 = true;
+  inherit (dune) src version;
 
   dontAddPrefix = true;
 
-  propagatedBuildInputs = [ dune-private-libs ];
+  propagatedBuildInputs = [
+    dune-private-libs
+    re
+  ];
 
-  meta = with lib; {
-    inherit (dune_2.meta) homepage;
+  meta = {
+    inherit (dune.meta) homepage;
     description = "Glob string matching language supported by dune";
-    maintainers = [ maintainers.marsam ];
-    license = licenses.mit;
+    maintainers = [ ];
+    license = lib.licenses.mit;
   };
 }

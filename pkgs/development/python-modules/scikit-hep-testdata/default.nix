@@ -1,46 +1,46 @@
-{ lib
-, fetchFromGitHub
-, pythonAtLeast
-, buildPythonPackage
-, importlib-resources
-, pyyaml
-, requests
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools-scm,
+
+  # dependencies
+  pyyaml,
+  requests,
 }:
 
 buildPythonPackage rec {
   pname = "scikit-hep-testdata";
-  version = "0.4.10";
-  format = "pyproject";
+  version = "0.6.8";
+  pyproject = true;
 
-  # fetch from github as we want the data files
-  # https://github.com/scikit-hep/scikit-hep-testdata/issues/60
   src = fetchFromGitHub {
     owner = "scikit-hep";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0x6ba02f3sba9341nhyg9jdcbl9c1h880d8m75ybdpbn7zlaya1d";
+    repo = "scikit-hep-testdata";
+    tag = "v${version}";
+    hash = "sha256-wbhZyAXtTQAhJbQa7pgzAHqsZ1mr2kp2x/j5Si1mQgU=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
-  propagatedBuildInputs = [
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
     pyyaml
     requests
-  ] ++ lib.optional (!pythonAtLeast "3.9") importlib-resources;
+  ];
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  SKHEP_DATA = 1; # install the actual root files
+  env.SKHEP_DATA = 1; # install the actual root files
 
   doCheck = false; # tests require networking
+
   pythonImportsCheck = [ "skhep_testdata" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/scikit-hep/scikit-hep-testdata";
-    description = "A common package to provide example files (e.g., ROOT) for testing and developing packages against";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ veprbl ];
+    description = "Common package to provide example files (e.g., ROOT) for testing and developing packages against";
+    changelog = "https://github.com/scikit-hep/scikit-hep-testdata/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ veprbl ];
   };
 }

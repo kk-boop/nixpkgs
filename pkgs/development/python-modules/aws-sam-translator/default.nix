@@ -1,54 +1,80 @@
-{ lib
-, boto3
-, buildPythonPackage
-, enum34
-, fetchFromGitHub
-, jsonschema
-, mock
-, parameterized
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, six
+{
+  lib,
+  boto3,
+  buildPythonPackage,
+  fetchFromGitHub,
+  jsonschema,
+  parameterized,
+  pydantic,
+  pytest-env,
+  pytest-rerunfailures,
+  pytest-xdist,
+  pytestCheckHook,
+  pyyaml,
+  requests,
+  setuptools,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "aws-sam-translator";
-  version = "1.42.0";
+  version = "1.110.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "aws";
     repo = "serverless-application-model";
-    rev = "v${version}";
-    sha256 = "sha256-pjcRsmxPL4lbgDopW+wKQRkRcqebLPTd95JTL8PiWtc=";
+    tag = "v${version}";
+    hash = "sha256-Zn+6cDyDZSsV9V+zAA8BOPs4aKl0j3dF92/azGYG+OI=";
   };
 
-  propagatedBuildInputs = [
-    boto3
-    jsonschema
-    six
-  ] ++ lib.optionals (pythonOlder "3.4") [
-    enum34
-  ];
-
   postPatch = ''
-    substituteInPlace pytest.ini \
-      --replace " --cov samtranslator --cov-report term-missing --cov-fail-under 95" ""
+    # don't try to use --cov or fail on new warnings
+    rm pytest.ini
   '';
 
-  checkInputs = [
-    mock
+  pythonRelaxDeps = [ "pydantic" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    boto3
+    jsonschema
+    pydantic
+    typing-extensions
+  ];
+
+  nativeCheckInputs = [
     parameterized
+    pytest-env
+    pytest-rerunfailures
+    pytest-xdist
     pytestCheckHook
     pyyaml
+    requests
   ];
+
+  preCheck = ''
+    export AWS_DEFAULT_REGION=us-east-1
+  '';
+
+  enabledTestPaths = [
+    "tests"
+  ];
+
+  disabledTestMarks = [
+    "slow"
+  ];
+
+  __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "samtranslator" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to transform SAM templates into AWS CloudFormation templates";
-    homepage = "https://github.com/awslabs/serverless-application-model";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ ];
+    homepage = "https://github.com/aws/serverless-application-model";
+    changelog = "https://github.com/aws/serverless-application-model/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

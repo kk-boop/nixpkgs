@@ -1,53 +1,82 @@
-{ lib
-, aiohttp
-, aiosqlite
-, asynctest
-, buildPythonPackage
-, crccheck
-, fetchFromGitHub
-, pycryptodome
-, pytest-aiohttp
-, pytest-timeout
-, pytestCheckHook
-, pythonOlder
-, voluptuous
+{
+  lib,
+  aiohttp,
+  aioresponses,
+  aiosqlite,
+  attrs,
+  buildPythonPackage,
+  crccheck,
+  cryptography,
+  fetchFromGitHub,
+  filelock,
+  freezegun,
+  frozendict,
+  jsonschema,
+  pytest-asyncio,
+  pytest-timeout,
+  pytest-xdist,
+  pytestCheckHook,
+  serialx,
+  setuptools,
+  typing-extensions,
+  voluptuous,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "zigpy";
-  version = "0.42.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.7";
+  version = "2.2.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "zigpy";
     repo = "zigpy";
-    rev = version;
-    sha256 = "sha256-kSUFcN3QOZWFBgDrOopkYuUyBE9asO6MXf0H9CMjFlc=";
+    tag = finalAttrs.version;
+    hash = "sha256-7HGS3nZ+xse6Hx4oj3iZIjvcjc8vhECz1uJfseYlUUY=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"setuptools-git-versioning<2"' "" \
+      --replace-fail 'dynamic = ["version"]' 'version = "${finalAttrs.version}"'
+
+    # do not install development tools
+    rm -r tools
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    attrs
     aiohttp
     aiosqlite
     crccheck
-    pycryptodome
+    cryptography
+    frozendict
+    jsonschema
+    serialx
+    typing-extensions
     voluptuous
   ];
 
-  checkInputs = [
-    pytest-aiohttp
+  nativeCheckInputs = [
+    aioresponses
+    filelock
+    freezegun
+    pytest-asyncio
     pytest-timeout
+    pytest-xdist
     pytestCheckHook
-  ]  ++ lib.optionals (pythonOlder "3.8") [
-    asynctest
   ];
 
   disabledTests = [
-    # RuntimeError: coroutine 'test_remigrate_forcibly_downgraded_v4' was never awaited
-    #"test_remigrate_forcibly_downgraded_v4"
-    # RuntimeError: Event loop is closed
-    #"test_startup"
+    # (Race condition) AssertionError: assert 4 == 3
+    "test_periodic_scan_priority"
+  ];
+
+  disabledTestPaths = [
+    # Tests require network access
+    "tests/ota/test_ota_image.py"
+    "tests/ota/test_ota_providers.py"
   ];
 
   pythonImportsCheck = [
@@ -58,11 +87,12 @@ buildPythonPackage rec {
     "zigpy.zcl"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Library implementing a ZigBee stack";
     homepage = "https://github.com/zigpy/zigpy";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ etu mvnetbiz ];
-    platforms = platforms.linux;
+    changelog = "https://github.com/zigpy/zigpy/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ mvnetbiz ];
+    platforms = lib.platforms.linux;
   };
-}
+})

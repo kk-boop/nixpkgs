@@ -1,33 +1,53 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, setuptools-scm
-, m2r
-, pyyaml
-, jsonschema
-, sphinxcontrib_httpdomain
+{
+  lib,
+  buildPythonPackage,
+  deepmerge,
+  fetchPypi,
+  setuptools,
+  setuptools-scm,
+  jsonschema,
+  picobox,
+  pyyaml,
+  sphinx-mdinclude,
+  sphinxcontrib-httpdomain,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sphinxcontrib-openapi";
-  version = "0.7.0";
-  disabled = isPy27;
+  version = "0.8.4";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "1c1bd10d7653912c59a42f727c62cbb7b75f7905ddd9ccc477ebfd1bc69f0cf3";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-34g4CKW15LQROtaXGFxDo/Qt89znBFOveLpwdpB+miA=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-  propagatedBuildInputs = [ pyyaml jsonschema m2r sphinxcontrib_httpdomain ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
+
+  dependencies = [
+    deepmerge
+    jsonschema
+    picobox
+    pyyaml
+    sphinx-mdinclude
+    sphinxcontrib-httpdomain
+  ];
 
   doCheck = false;
 
-  meta = with lib; {
+  pythonNamespaces = [ "sphinxcontrib" ];
+
+  pythonImportsCheck = [ "sphinxcontrib.openapi" ];
+
+  meta = {
     homepage = "https://github.com/ikalnytskyi/sphinxcontrib-openapi";
     description = "OpenAPI (fka Swagger) spec renderer for Sphinx";
-    license = licenses.bsd0;
+    license = lib.licenses.bsd0;
+    maintainers = [ lib.maintainers.flokli ];
   };
-
-}
+})

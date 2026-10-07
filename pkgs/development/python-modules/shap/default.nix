@@ -1,72 +1,170 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, isPy27
-, pytestCheckHook
-, numpy
-, scipy
-, scikit-learn
-, pandas
-, tqdm
-, slicer
-, numba
-, matplotlib
-, nose
-, ipython
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  python,
+
+  # build-system
+  cmake,
+  nanobind,
+  ninja,
+  numpy,
+  packaging,
+  scikit-build-core,
+  setuptools-scm,
+
+  # dependencies
+  cloudpickle,
+  llvmlite,
+  numba,
+  pandas,
+  scikit-learn,
+  scipy,
+  slicer,
+  tqdm,
+
+  pytestCheckHook,
+  writeText,
+  catboost,
+  ipython,
+  lightgbm,
+  lime,
+  matplotlib,
+  opencv4,
+  pyspark,
+  pytest-mpl,
+  sentencepiece,
+  transformers,
+  xgboost,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "shap";
-  version = "0.39.0";
-  disabled = isPy27;
+  version = "0.52.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "slundberg";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "065c40k6g8sy6ynzk4k8k7iddl18g2b6kb9kg4m6g7npclmn5wvp";
+    repo = "shap";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-/U/FdJlsLcu4m1X4R5rr4S7Q79L57Q6MKIVQppW/LR0=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [
+    cmake
+    nanobind
+    ninja
     numpy
-    scipy
-    scikit-learn
-    pandas
-    tqdm
-    slicer
+    packaging
+    scikit-build-core
+    setuptools-scm
+  ];
+  dontUseCmakeConfigure = true;
+
+  env.CMAKE_PREFIX_PATH = "${nanobind}/${python.sitePackages}/nanobind";
+
+  dependencies = [
+    cloudpickle
+    llvmlite
     numba
+    numpy
+    packaging
+    pandas
+    scikit-learn
+    scipy
+    slicer
+    tqdm
   ];
 
-  preCheck = ''
-    export HOME=$TMPDIR
-    # when importing the local copy the extension is not found
-    rm -r shap
-  '';
-  checkInputs = [ pytestCheckHook matplotlib nose ipython ];
-  # Those tests access the network
-  disabledTests = [
-    "test_kernel_shap_with_a1a_sparse_zero_background"
-    "test_kernel_shap_with_a1a_sparse_nonzero_background"
-    "test_kernel_shap_with_high_dim_sparse"
-    "test_sklearn_random_forest_newsgroups"
-    "test_sum_match_random_forest"
-    "test_sum_match_extra_trees"
-    "test_single_row_random_forest"
-    "test_sum_match_gradient_boosting_classifier"
-    "test_single_row_gradient_boosting_classifier"
-    "test_HistGradientBoostingClassifier_proba"
-    "test_HistGradientBoostingClassifier_multidim"
-    "test_sum_match_gradient_boosting_regressor"
-    "test_single_row_gradient_boosting_regressor"
-  ];
-
-  meta = with lib; {
-    description = "A unified approach to explain the output of any machine learning model";
-    homepage = "https://github.com/slundberg/shap";
-    license = licenses.mit;
-    maintainers = with maintainers; [ evax ];
-    platforms = platforms.unix;
-    # ModuleNotFoundError: No module named 'sklearn.ensemble.iforest'
-    broken = true;
+  optional-dependencies = {
+    plots = [
+      matplotlib
+      ipython
+    ];
+    others = [ lime ];
   };
-}
+
+  preCheck =
+    let
+      # This pytest hook mocks and catches attempts at accessing the network
+      # tests that try to access the network will raise, get caught, be marked as skipped and tagged as xfailed.
+      conftestSkipNetworkErrors = writeText "conftest.py" ''
+        from _pytest.runner import pytest_runtest_makereport as orig_pytest_runtest_makereport
+        import urllib, requests, transformers
+
+        class NetworkAccessDeniedError(RuntimeError): pass
+        def deny_network_access(*a, **kw):
+          raise NetworkAccessDeniedError
+
+        requests.head = deny_network_access
+        requests.get  = deny_network_access
+        urllib.request.urlopen = deny_network_access
+        urllib.request.Request = deny_network_access
+        transformers.AutoTokenizer.from_pretrained = deny_network_access
+
+        def pytest_runtest_makereport(item, call):
+          tr = orig_pytest_runtest_makereport(item, call)
+          if call.excinfo is not None and call.excinfo.type is NetworkAccessDeniedError:
+              tr.outcome = 'skipped'
+              tr.wasxfail = "reason: Requires network access."
+          return tr
+      '';
+    in
+    ''
+      export HOME=$TMPDIR
+      # when importing the local copy the extension is not found
+      rm -r shap
+
+      # Add pytest hook skipping tests that access network.
+      # These tests are marked as "Expected fail" (xfail)
+      cat ${conftestSkipNetworkErrors} >> tests/conftest.py
+    '';
+
+  nativeCheckInputs = [
+    ipython
+    matplotlib
+    pytest-mpl
+    pytestCheckHook
+    # optional dependencies, which only serve to enable more tests:
+    catboost
+    lightgbm
+    opencv4
+    pyspark
+    sentencepiece
+    #torch # we already skip all its tests due to slowness, adding it does nothing
+    transformers
+    xgboost
+  ];
+
+  # Test startup hangs with 0.43.0 and Hydra ends with a timeout
+  doCheck = false;
+
+  disabledTestPaths = [
+    # The resulting plots look sane, but does not match pixel-perfectly with the baseline.
+    # Likely due to a matplotlib version mismatch, different backend, or due to missing fonts.
+    "tests/plots/test_summary.py" # FIXME: enable
+  ];
+
+  disabledTests = [
+    # The same reason as above test_summary.py
+    "test_random_force_plot_negative_sign"
+    "test_random_force_plot_positive_sign"
+    "test_random_summary_layered_violin_with_data2"
+    "test_random_summary_violin_with_data2"
+    "test_simple_bar_with_cohorts_dict"
+  ];
+
+  pythonImportsCheck = [ "shap" ];
+
+  meta = {
+    description = "Unified approach to explain the output of any machine learning model";
+    homepage = "https://github.com/slundberg/shap";
+    changelog = "https://github.com/slundberg/shap/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      evax
+      natsukium
+    ];
+  };
+})

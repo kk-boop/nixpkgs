@@ -1,68 +1,94 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, html5lib
-, isodate
-, networkx
-, nose
-, pyparsing
-, tabulate
-, pandas
-, pytestCheckHook
-, pythonOlder
-, SPARQLWrapper
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # builds
+  poetry-core,
+
+  # propagates
+  pyparsing,
+
+  # extras: networkx
+  networkx,
+
+  # extras: html
+  html5lib,
+
+  # tests
+  pip,
+  pytest-cov-stub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "rdflib";
-  version = "6.0.2";
-  format = "setuptools";
+  version = "7.6.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-YTauBWABR07ir/X8W5VuYqEcOpxmuw89nAqqX7tWhU4=";
+  src = fetchFromGitHub {
+    owner = "RDFLib";
+    repo = "rdflib";
+    tag = version;
+    hash = "sha256-05p7KSAymRn7KBIyKcgarAeUlMMku/DHfEg4HfZ3Llw=";
   };
 
-  propagatedBuildInputs = [
-    isodate
-    html5lib
+  build-system = [ poetry-core ];
+
+  dependencies = [
     pyparsing
-    SPARQLWrapper
   ];
 
-  checkInputs = [
-    networkx
-    pandas
-    nose
-    tabulate
+  optional-dependencies = {
+    html = [ html5lib ];
+    networkx = [ networkx ];
+  };
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
+    pip
+    pytest-cov-stub
     pytestCheckHook
+    setuptools
+  ]
+  ++ optional-dependencies.networkx
+  ++ optional-dependencies.html;
+
+  disabledTestPaths = [
+    # requires network access
+    "rdflib/__init__.py::rdflib"
+    "test/jsonld/test_onedotone.py::test_suite"
   ];
 
   disabledTests = [
     # Requires network access
-    "api_key"
-    "BerkeleyDBTestCase"
-    "test_bad_password"
     "test_service"
     "testGuessFormatForParse"
-  ] ++ lib.optional stdenv.isDarwin [
+    "test_infix_owl_example1"
+    "test_context"
+    "test_example"
+    "test_guess_format_for_parse"
+    "rdflib.extras.infixowl"
+    # Upstream don't seem worried about these two tests failing
+    # https://github.com/RDFLib/rdflib/issues/2649#issuecomment-2443482119
+    "test_sparqleval"
+    "test_parser"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
     # Require loopback network access
-    "test_sparqlstore"
-    "test_sparqlupdatestore_mock"
     "TestGraphHTTP"
   ];
 
-  pythonImportsCheck = [
-    "rdflib"
-  ];
+  pythonImportsCheck = [ "rdflib" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/RDFLib/rdflib/blob/${src.tag}/CHANGELOG.md";
     description = "Python library for working with RDF";
     homepage = "https://rdflib.readthedocs.io";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

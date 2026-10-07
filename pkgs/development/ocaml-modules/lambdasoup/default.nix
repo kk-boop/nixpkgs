@@ -1,23 +1,32 @@
-{ lib, fetchFromGitHub, buildDunePackage, ocaml, markup, ounit2 }:
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  ocaml,
+  camlp-streams,
+  markup,
+  ounit2,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "lambdasoup";
-  version = "0.7.3";
+  version = "1.1.1";
 
-  minimalOCamlVersion = "4.02";
-
-  useDune2 = true;
+  minimalOCamlVersion = "4.03";
 
   src = fetchFromGitHub {
     owner = "aantron";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256:1wclkn1pl0d150dw0xswb29jc7y1q9mhipff1pnsc1hli3pyvvb7";
+    repo = "lambdasoup";
+    rev = finalAttrs.version;
+    hash = "sha256-+d1JPU7OyQgt8pDTlwZraqPHH+OBQD1ycsELKpHT95Y=";
   };
 
-  propagatedBuildInputs = [ markup ];
+  propagatedBuildInputs = [
+    camlp-streams
+    markup
+  ];
 
-  doCheck = lib.versionAtLeast ocaml.version "4.04";
+  doCheck = lib.versionAtLeast ocaml.version "4.08";
   checkInputs = [ ounit2 ];
 
   meta = {
@@ -27,4 +36,4 @@ buildDunePackage rec {
     maintainers = [ lib.maintainers.vbgl ];
   };
 
-}
+})

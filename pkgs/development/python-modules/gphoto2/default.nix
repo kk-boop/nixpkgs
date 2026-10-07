@@ -1,26 +1,48 @@
-{ lib, fetchPypi, buildPythonPackage
-, pkg-config
-, libgphoto2 }:
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  pkg-config,
+  libgphoto2,
+  pytestCheckHook,
+  setuptools,
+  toml,
+}:
 
 buildPythonPackage rec {
   pname = "gphoto2";
-  version = "2.3.0";
+  version = "2.6.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "a208264ed252a39b29a0b0f7ccc4c4ffb941398715aec84c3a547281a43c4eb8";
+  src = fetchFromGitHub {
+    owner = "jim-easterbrook";
+    repo = "python-gphoto2";
+    tag = "v${version}";
+    hash = "sha256-fxrgHFVfTs7PZFHafld5uNmvaqW2uLAs01GatdxtbAU=";
   };
 
-  nativeBuildInputs = [ pkg-config ];
+  build-system = [
+    setuptools
+    toml
+  ];
+
+  nativeBuildInputs = [
+    pkg-config
+  ];
 
   buildInputs = [ libgphoto2 ];
 
-  doCheck = false; # No tests available
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "gphoto2" ];
+
+  meta = {
+    changelog = "https://github.com/jim-easterbrook/python-gphoto2/blob/${src.tag}/CHANGELOG.txt";
     description = "Python interface to libgphoto2";
     homepage = "https://github.com/jim-easterbrook/python-gphoto2";
-    license = licenses.gpl3;
-    maintainers = with maintainers; [ jfrankenau ];
+    license = lib.licenses.lgpl3Plus;
+    maintainers = [ ];
   };
 }

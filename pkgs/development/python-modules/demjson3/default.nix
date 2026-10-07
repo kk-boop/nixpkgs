@@ -1,31 +1,34 @@
-{ lib
-, python
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "demjson3";
-  version = "3.0.5";
+  version = "3.0.6";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "103dc4pzwg8791q3zll1vv4gcc17d9v3jvr9zj23cpv9hpfsp6mb";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-N8g7DG6wjSXe/IjfCipIddWKeAmpZQvW7uev2AU826w=";
   };
 
-  checkPhase = ''
-    ${python.interpreter} test/test_demjson3.py
-  '';
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "demjson3" ];
 
-  meta = with lib; {
+  meta = {
     description = "Encoder/decoder and lint/validator for JSON (JavaScript Object Notation)";
+    mainProgram = "jsonlint";
     homepage = "https://github.com/nielstron/demjson3/";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

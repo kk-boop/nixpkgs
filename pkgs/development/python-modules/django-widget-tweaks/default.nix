@@ -1,25 +1,38 @@
-{ buildPythonPackage, fetchFromGitHub, python, lib, django }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools-scm,
+  django,
+  python,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "django-widget-tweaks";
-  version = "1.4.8";
+  version = "1.5.1";
+  pyproject = true;
 
-  src = fetchFromGitHub { # package from Pypi missing runtests.py
+  src = fetchFromGitHub {
     owner = "jazzband";
-    repo = pname;
-    rev = version;
-    sha256 = "00w1ja56dc7cyw7a3mph69ax6mkch1lsh4p98ijdhzfpjdy36rbg";
+    repo = "django-widget-tweaks";
+    tag = version;
+    hash = "sha256-ymjBuNGfndUwQdBU2xnc9CA51oOaEPA+RaAspJMKQ04=";
   };
 
-  checkPhase = "${python.interpreter} runtests.py";
-  propagatedBuildInputs = [ django ];
+  build-system = [ setuptools-scm ];
 
-  meta = with lib; {
-      description = "Tweak the form field rendering in templates, not in python-level form definitions.";
-      homepage = "https://github.com/jazzband/django-widget-tweaks";
-      license = licenses.mit;
-      maintainers = with maintainers; [
-          maxxk
-      ];
+  dependencies = [ django ];
+
+  checkPhase = ''
+    ${python.interpreter} -m django test --settings=tests.settings
+  '';
+
+  meta = {
+    description = "Tweak the form field rendering in templates, not in python-level form definitions";
+    homepage = "https://github.com/jazzband/django-widget-tweaks";
+    changelog = "https://github.com/jazzband/django-widget-tweaks/blob/${src.tag}/CHANGES.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ maxxk ];
   };
 }

@@ -1,54 +1,92 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, brotlicffi
-, certifi
-, charset-normalizer
-, h2
-, httpcore
-, rfc3986
-, sniffio
-, pytestCheckHook
-, pytest-asyncio
-, pytest-trio
-, typing-extensions
-, trustme
-, uvicorn
+{
+  lib,
+  stdenv,
+  anyio,
+  brotli,
+  brotlicffi,
+  buildPythonPackage,
+  certifi,
+  chardet,
+  click,
+  fetchFromGitHub,
+  h2,
+  hatch-fancy-pypi-readme,
+  hatchling,
+  httpcore,
+  idna,
+  isPyPy,
+  multipart,
+  pygments,
+  python,
+  rich,
+  socksio,
+  pytestCheckHook,
+  pytest-asyncio,
+  pytest-trio,
+  trustme,
+  uvicorn,
+  zstandard,
 }:
 
 buildPythonPackage rec {
   pname = "httpx";
-  version = "0.19.0";
-  disabled = pythonOlder "3.6";
+  version = "0.28.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "encode";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-bUxxeUYqOHBmSL2gPQG5cIq6k5QY4Kyhj9ToA5yZXPA=";
+    repo = "httpx";
+    tag = version;
+    hash = "sha256-tB8uZm0kPRnmeOvsDdrkrHcMVIYfGanB4l/xHsTKpgE=";
   };
 
-  propagatedBuildInputs = [
-    brotlicffi
-    certifi
-    charset-normalizer
-    h2
-    httpcore
-    rfc3986
-    sniffio
+  build-system = [
+    hatch-fancy-pypi-readme
+    hatchling
   ];
 
-  checkInputs = [
+  dependencies = [
+    anyio
+    certifi
+    httpcore
+    idna
+  ];
+
+  optional-dependencies = {
+    brotli = if isPyPy then [ brotlicffi ] else [ brotli ];
+    cli = [
+      click
+      rich
+      pygments
+    ];
+    http2 = [ h2 ];
+    socks = [ socksio ];
+    zstd = [ zstandard ];
+  };
+
+  # trustme uses pyopenssl
+  doCheck = !(stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64);
+
+  nativeCheckInputs = [
+    chardet
+    multipart
     pytestCheckHook
     pytest-asyncio
     pytest-trio
     trustme
-    typing-extensions
     uvicorn
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
-  pythonImportsCheck = [ "httpx" ];
+  # testsuite wants to find installed packages for testing entrypoint
+  preCheck = ''
+    export PYTHONPATH=$out/${python.sitePackages}:$PYTHONPATH
+  '';
+
+  pytestFlags = [
+    "-Wignore::DeprecationWarning"
+    "-Wignore::trio.TrioDeprecationWarning"
+  ];
 
   disabledTests = [
     # httpcore.ConnectError: [Errno 101] Network is unreachable
@@ -56,14 +94,33 @@ buildPythonPackage rec {
     # httpcore.ConnectError: [Errno -2] Name or service not known
     "test_async_proxy_close"
     "test_sync_proxy_close"
+    # ResourceWarning: Async generator 'httpx._content.ByteStream.__aiter__' was garbage collected before it had been exhausted. Surround its use in 'async with aclosing(...):' to ensure that it gets cleaned up as soon as you're done using it.
+    "test_write_timeout" # trio variant
+    # chardet v6 recognizes the wrong encoding
+    "test_client_decode_text_using_autodetect"
+    "test_client_decode_text_using_explicit_encoding"
+    "test_response_decode_text_using_autodetect"
+    # uvicorn access logging mismatch
+    "test_logging_request"
+    "test_logging_redirect_chain"
   ];
+
+  disabledTestPaths = [ "tests/test_main.py" ];
+
+  pythonImportsCheck = [ "httpx" ];
 
   __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
-    description = "The next generation HTTP client";
+  # stdenv's fake SSL_CERT_FILE breaks default http transport constructor with:
+  # FileNotFoundError: [Errno 2] No such file or directory
+  setupHook = ./setup-hook.sh;
+
+  meta = {
+    changelog = "https://github.com/encode/httpx/blob/${src.rev}/CHANGELOG.md";
+    description = "Next generation HTTP client";
+    mainProgram = "httpx";
     homepage = "https://github.com/encode/httpx";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ costrouc fab ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

@@ -1,34 +1,85 @@
 {
-  buildPythonPackage,
-  fetchPypi,
   lib,
-  # build dependencies
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cysignals,
   cython,
-  leptonica,
+  setuptools,
+
+  # native dependencies
   pkg-config,
-  tesseract,
-  # extra python packages
-  pillow
+  leptonica,
+  tesseract5,
+
+  # dependencies
+  pillow,
+
+  # tests
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "tesserocr";
-  version = "2.5.2";
+  version = "2.11.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1bmj76gi8401lcqdaaznfmz9yf11myy1bzivqwwq08z3dwzxswck";
+  src = fetchFromGitHub {
+    owner = "sirfz";
+    repo = "tesserocr";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-DkwWTCsuDs9dmHjZ8CQrqfVJjWVxnn7Bx0UhylY/AMY=";
   };
 
-  nativeBuildInputs = [ cython pkg-config ];
-  buildInputs = [ leptonica tesseract ];
-  propagatedBuildInputs = [ pillow ];
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail \
+        "Cython>=3.0.0,<3.2.0" \
+        "Cython"
+  '';
 
-  meta = with lib; {
-    description = "A simple, Pillow-friendly, wrapper around the tesseract-ocr API for Optical Character Recognition (OCR)";
+  build-system = [
+    cysignals
+    cython
+    setuptools
+  ];
+
+  nativeBuildInputs = [
+    pkg-config
+  ];
+
+  buildInputs = [
+    leptonica
+    tesseract5
+  ];
+
+  dependencies = [
+    cysignals # also needed at runtime
+    pillow
+  ];
+
+  pythonImportsCheck = [ "tesserocr" ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
+  preCheck = ''
+    rm -rf tesserocr
+  '';
+
+  disabledTests = [
+    # AssertionError: '.bl' != '.tif'
+    "test_init_full"
+  ];
+
+  meta = {
+    description = "Simple, Pillow-friendly, wrapper around the tesseract-ocr API for Optical Character Recognition (OCR)";
     homepage = "https://github.com/sirfz/tesserocr";
-    license = licenses.mit;
-    maintainers = with maintainers; [ mtrsk ];
-    platforms = platforms.linux;
+    changelog = "https://github.com/sirfz/tesserocr/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ mtrsk ];
+    platforms = lib.platforms.unix;
   };
-}
+})

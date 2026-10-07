@@ -1,35 +1,87 @@
-{ buildPackages, callPackage, stdenv }@prev:
+{
+  lib,
+  buildPackages,
+  callPackages,
+  cargo-auditable,
+  config,
+  stdenv,
+  runCommand,
+  generateSplicesForMkScope,
+  makeScopeWithSplicing',
+}@prev:
 
-{ rustc, cargo, stdenv ? prev.stdenv, ... }:
+{
+  rustc,
+  cargo,
+  cargo-auditable ? prev.cargo-auditable,
+  stdenv ? prev.stdenv,
+  ...
+}:
 
-rec {
-  rust = {
-    inherit rustc cargo;
-  };
+(makeScopeWithSplicing' {
+  otherSplices = generateSplicesForMkScope "rustPlatform";
+  f =
+    self:
+    let
+      inherit (self) callPackage;
+    in
+    {
+      fetchCargoVendor = buildPackages.callPackage ../../../build-support/rust/fetch-cargo-vendor.nix {
+        inherit cargo;
+      };
 
-  fetchCargoTarball = buildPackages.callPackage ../../../build-support/rust/fetch-cargo-tarball {
-    git = buildPackages.gitMinimal;
-    inherit cargo;
-  };
+      buildRustPackage = callPackage ../../../build-support/rust/build-rust-package {
+        inherit
+          stdenv
+          rustc
+          cargo
+          cargo-auditable
+          ;
+      };
 
-  buildRustPackage = callPackage ../../../build-support/rust/build-rust-package {
-    git = buildPackages.gitMinimal;
-    inherit stdenv cargoBuildHook cargoCheckHook cargoInstallHook cargoSetupHook
-      fetchCargoTarball importCargoLock rustc;
-  };
+      importCargoLock = buildPackages.callPackage ../../../build-support/rust/import-cargo-lock.nix {
+        inherit cargo;
+      };
 
-  importCargoLock = buildPackages.callPackage ../../../build-support/rust/import-cargo-lock.nix {};
+      rustcSrc = callPackage ./rust-src.nix {
+        inherit runCommand rustc;
+      };
 
-  rustcSrc = callPackage ./rust-src.nix {
-    inherit stdenv rustc;
-  };
+      rustLibSrc = callPackage ./rust-lib-src.nix {
+        inherit runCommand rustc;
+      };
 
-  rustLibSrc = callPackage ./rust-lib-src.nix {
-    inherit stdenv rustc;
-  };
+      # Useful when rebuilding std
+      # e.g. when building wasm with wasm-pack
+      rustVendorSrc = callPackage ./rust-vendor-src.nix {
+        inherit runCommand rustc;
+      };
 
-  # Hooks
-  inherit (callPackage ../../../build-support/rust/hooks {
-    inherit stdenv cargo rustc;
-  }) cargoBuildHook cargoCheckHook cargoInstallHook cargoSetupHook maturinBuildHook;
+      # Hooks
+      inherit
+        (callPackages ../../../build-support/rust/hooks {
+          inherit
+            stdenv
+            ;
+        })
+        cargoBuildHook
+        cargoCheckHook
+        cargoInstallHook
+        cargoNextestHook
+        cargoSetupHook
+        maturinBuildHook
+        bindgenHook
+        ;
+
+      # Let packages reference the build derivations, e.g. for disallowedReferences.
+      # Get rid of the splicing though, so `nativeBuildInputs = [ rustPlatform.rust.rustc ]` works.
+      rust = {
+        rustc = rustc.__spliced.hostTarget or rustc;
+        cargo = cargo.__spliced.hostTarget or cargo;
+      };
+    };
+})
+// lib.optionalAttrs config.allowAliases {
+  # Added in 25.05.
+  fetchCargoTarball = throw "`rustPlatform.fetchCargoTarball` has been removed in 25.05, use `rustPlatform.fetchCargoVendor` instead";
 }

@@ -1,40 +1,75 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27
-, coverage
-, mock
-, pytest
-, pytest-cov
-, setuptools
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  packaging,
+
+  # optional-dependencies
+  eventlet,
+  gevent,
+  tornado,
+  setproctitle,
+
+  # tests
+  pytest-asyncio,
+  pytestCheckHook,
+  pytest-cov-stub,
 }:
 
 buildPythonPackage rec {
   pname = "gunicorn";
-  version = "20.1.0";
-  disabled = isPy27;
+  version = "26.0.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "e0a968b5ba15f8a328fdfd7ab1fcb5af4470c28aaf7e55df02a99bc13138e6e8";
+  src = fetchFromGitHub {
+    owner = "benoitc";
+    repo = "gunicorn";
+    tag = version;
+    hash = "sha256-duq5ghUuiuZL644jHgZ0qXHkcc8POHt7BX91m9F5BGE=";
   };
 
-  propagatedBuildInputs = [ setuptools ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytest mock pytest-cov coverage ];
+  dependencies = [ packaging ];
 
-  prePatch = ''
-    substituteInPlace requirements_test.txt --replace "==" ">=" \
-      --replace "coverage>=4.0,<4.4" "coverage"
-  '';
-
-  # better than no tests
-  checkPhase = ''
-    $out/bin/gunicorn --help > /dev/null
-  '';
+  optional-dependencies = {
+    gevent = [ gevent ];
+    eventlet = [ eventlet ];
+    tornado = [ tornado ];
+    gthread = [ ];
+    setproctitle = [ setproctitle ];
+  };
 
   pythonImportsCheck = [ "gunicorn" ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
+    pytest-cov-stub
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  disabledTests = [
+    # failure while starting a gunicorn instance
+    "TestSignalHandlingIntegration"
+  ];
+
+  disabledTestPaths = [
+    # tries to start gunicorn and fails on import
+    "tests/test_control_socket_integration.py"
+  ];
+
+  meta = {
+    description = "WSGI HTTP Server for UNIX, fast clients and sleepy applications";
     homepage = "https://github.com/benoitc/gunicorn";
-    description = "WSGI HTTP Server for UNIX";
-    license = licenses.mit;
+    changelog = "https://github.com/benoitc/gunicorn/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ getchoo ];
+    mainProgram = "gunicorn";
   };
 }

@@ -1,31 +1,49 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, python
-, isPy27
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  lib,
+  python,
+  setuptools,
+  pyprojectVersionPatchHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "regex";
-  version = "2021.11.10";
+  version = "2026.7.11";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-80HuLfCZm/33qV5EgHXv/g2yEqWTh94acGkOSssD1MY=";
+  src = fetchFromGitHub {
+    owner = "mrabarnett";
+    repo = "mrab-regex";
+    tag = finalAttrs.version;
+    hash = "sha256-x9XjtIUjm1eV0GS0216ZimHx6DNxtxZV5pQ6dbkEfTc=";
   };
 
-  # Sources for different Python releases are located in same folder
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
+
+  build-system = [ setuptools ];
+
+  preCheck = ''
+    rm regex/__init__.py
+  '';
+
   checkPhase = ''
-    rm -r ${if !isPy27 then "regex_2" else "regex_3"}
-    ${python.interpreter} -m unittest
+    runHook preCheck
+
+    ${python.interpreter} -m unittest ./regex/tests/test_regex.py
+
+    runHook postCheck
   '';
 
   pythonImportsCheck = [ "regex" ];
 
-  meta = with lib; {
+  meta = {
     description = "Alternative regular expression module, to replace re";
-    homepage = "https://bitbucket.org/mrabarnett/mrab-regex";
-    license = licenses.psfl;
-    maintainers = with maintainers; [ abbradar ];
+    homepage = "https://github.com/mrabarnett/mrab-regex";
+    license = [
+      lib.licenses.asl20
+      lib.licenses.cnri-python
+    ];
+    maintainers = [ lib.maintainers.dwoffinden ];
   };
-}
+})

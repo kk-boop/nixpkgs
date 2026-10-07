@@ -1,26 +1,29 @@
-{ lib
-, attrs
-, buildPythonPackage
-, fetchFromGitHub
-, voluptuous
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  attrs,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  voluptuous,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hatasmota";
-  version = "0.3.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "0.10.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "emontnemery";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-/am6cRhAdiqMq0u7Ed4qhIA+Em2O0gIt7HfP19+2XHw=";
+    repo = "hatasmota";
+    tag = finalAttrs.version;
+    hash = "sha256-IIOXpgBlXzeOUCvyEYAuEYzvoCKzhWSud1GbgTpa8wU=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiohttp
     attrs
     voluptuous
   ];
@@ -28,14 +31,13 @@ buildPythonPackage rec {
   # Project has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "hatasmota"
-  ];
+  pythonImportsCheck = [ "hatasmota" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to help parse and construct Tasmota MQTT messages";
     homepage = "https://github.com/emontnemery/hatasmota";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/emontnemery/hatasmota/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

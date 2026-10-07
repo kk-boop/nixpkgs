@@ -1,39 +1,57 @@
-{ stdenv, lib, fetchurl, fetchpatch, autoreconfHook, xz, buildPackages }:
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  autoreconfHook,
+  buildPackages,
+  xz,
+  testers,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "libunwind";
-  version = "1.4.0";
+  version = "1.8.3";
 
-  src = fetchurl {
-    url = "mirror://savannah/libunwind/${pname}-${version}.tar.gz";
-    sha256 = "0dc46flppifrv2z0mrdqi60165ghxm1wk0g47vcbyzjdplqwjnfz";
+  src = fetchFromGitHub {
+    owner = "libunwind";
+    repo = "libunwind";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ed+FUPApDxNHxznXMhiTeNr8yRxRDSCyJJdIhouGNho=";
   };
 
-  patches = [
-    ./backtrace-only-with-glibc.patch
-
-    (fetchpatch {
-      # upstream build fix against -fno-common compilers like >=gcc-10
-      url = "https://github.com/libunwind/libunwind/commit/29e17d8d2ccbca07c423e3089a6d5ae8a1c9cb6e.patch";
-      sha256 = "1angwfq6h0jskg6zx8g6w9min38g5mgmrcbppcy5hqn59cgsxbw0";
-    })
-  ];
-
-  postPatch = if stdenv.cc.isClang then ''
-    substituteInPlace configure.ac --replace "-lgcc_s" ""
-  '' else lib.optionalString stdenv.hostPlatform.isMusl ''
-    substituteInPlace configure.ac --replace "-lgcc_s" "-lgcc_eh"
-  '';
+  postPatch =
+    if (stdenv.cc.isClang || stdenv.hostPlatform.isStatic) then
+      ''
+        substituteInPlace configure.ac --replace "-lgcc_s" ""
+      ''
+    else
+      lib.optionalString stdenv.hostPlatform.isMusl ''
+        substituteInPlace configure.ac --replace "-lgcc_s" "-lgcc_eh"
+      '';
 
   nativeBuildInputs = [ autoreconfHook ];
 
-  outputs = [ "out" "dev" "devman" ];
+  strictDeps = true;
 
-  # Without latex2man, no man pages are installed despite being
-  # prebuilt in the source tarball.
-  configureFlags = [ "LATEX2MAN=${buildPackages.coreutils}/bin/true" ];
+  outputs = [
+    "out"
+    "dev"
+    "devman"
+  ];
+
+  configureFlags = [
+    # Starting from 1.8.1 libunwind installs testsuite by default.
+    # As we don't run the tests we disable it (this also fixes circular
+    # reference install failure).
+    "--disable-tests"
+    # Without latex2man, no man pages are installed despite being
+    # prebuilt in the source tarball.
+    "LATEX2MAN=${buildPackages.coreutils}/bin/true"
+  ];
 
   propagatedBuildInputs = [ xz ];
+
+  enableParallelBuilding = true;
 
   postInstall = ''
     find $out -name \*.la | while read file; do
@@ -43,12 +61,45 @@ stdenv.mkDerivation rec {
 
   doCheck = false; # fails
 
-  meta = with lib; {
-    homepage = "https://www.nongnu.org/libunwind";
-    description = "A portable and efficient API to determine the call-chain of a program";
-    maintainers = with maintainers; [ orivej ];
-    platforms = platforms.linux;
-    badPlatforms = [ "riscv32-linux" "riscv64-linux" ];
-    license = licenses.mit;
+  passthru.tests.pkg-config = testers.hasPkgConfigModules {
+    package = finalAttrs.finalPackage;
+    versionCheck = true;
   };
-}
+
+  __structuredAttrs = true;
+
+  meta = {
+    homepage = "https://www.nongnu.org/libunwind";
+    description = "Portable and efficient API to determine the call-chain of a program";
+    maintainers = [ ];
+    pkgConfigModules = [
+      "libunwind"
+      "libunwind-coredump"
+      "libunwind-generic"
+      "libunwind-ptrace"
+      "libunwind-setjmp"
+    ];
+    # https://github.com/libunwind/libunwind#libunwind
+    platforms = [
+      "aarch64-linux"
+      "armv5tel-linux"
+      "armv6l-linux"
+      "armv7a-linux"
+      "armv7l-linux"
+      "i686-freebsd"
+      "i686-linux"
+      "loongarch64-linux"
+      "mips64el-linux"
+      "mipsel-linux"
+      "powerpc-linux"
+      "powerpc64-linux"
+      "powerpc64le-linux"
+      "riscv64-linux"
+      "s390x-linux"
+      "x86_64-freebsd"
+      "x86_64-linux"
+      "x86_64-solaris"
+    ];
+    license = lib.licenses.mit;
+  };
+})

@@ -1,58 +1,82 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, dill
-, filelock
-, fsspec
-, huggingface-hub
-, multiprocess
-, numpy
-, pandas
-, pyarrow
-, requests
-, tqdm
-, xxhash
-}:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  # build-system
+  setuptools,
 
-buildPythonPackage rec {
+  # dependencies
+  dill,
+  filelock,
+  fsspec,
+  httpx,
+  huggingface-hub,
+  multiprocess,
+  numpy,
+  pandas,
+  pyarrow,
+  pyyaml,
+  requests,
+  tqdm,
+  xxhash,
+}:
+buildPythonPackage (finalAttrs: {
   pname = "datasets";
-  version = "1.11.0";
+  version = "4.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "huggingface";
-    repo = pname;
-    rev = version;
-    sha256 = "0pm14cp7xaagpf4j96v0ybi5gn3r9p0if3pc197ckwx6sw3lx29p";
+    repo = "datasets";
+    tag = finalAttrs.version;
+    hash = "sha256-K8JqIbYz3ZfT1t1h5dRGCo9kBQp0E+kElqzaw2InaOI=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
     dill
     filelock
     fsspec
+    httpx
     huggingface-hub
     multiprocess
     numpy
     pandas
     pyarrow
+    pyyaml
     requests
     tqdm
     xxhash
+  ]
+  ++ fsspec.optional-dependencies.http;
+
+  pythonRelaxDeps = [
+    # https://github.com/huggingface/datasets/blob/a256b85cbc67aa3f0e75d32d6586afc507cf535b/setup.py#L117
+    # "pin until dill has official support for determinism"
+    "dill"
+    # https://github.com/huggingface/datasets/blob/4.5.0/setup.py#L127
+    "multiprocess"
+    # https://github.com/huggingface/datasets/blob/4.5.0/setup.py#L130
+    "fsspec"
   ];
 
-  # Tests require pervasive internet access.
+  # Tests require pervasive internet access
   doCheck = false;
 
-  # Module import will attempt to create a cache directory.
+  # Module import will attempt to create a cache directory
   postFixup = "export HF_MODULES_CACHE=$TMPDIR";
 
   pythonImportsCheck = [ "datasets" ];
 
-  meta = with lib; {
+  meta = {
+    description = "Open-access datasets and evaluation metrics for natural language processing";
+    mainProgram = "datasets-cli";
     homepage = "https://github.com/huggingface/datasets";
-    description = "Fast, efficient, open-access datasets and evaluation metrics for natural language processing";
-    changelog = "https://github.com/huggingface/datasets/releases/tag/${version}";
-    license = licenses.asl20;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/huggingface/datasets/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ osbm ];
   };
-}
+})

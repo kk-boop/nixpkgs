@@ -1,20 +1,23 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, enaml
-, pyqtgraph
-, pythonocc-core
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  enaml,
+  pyqtgraph,
+  pythonocc-core,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "enamlx";
-  version = "0.5.0";
+  version = "0.6.4";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "frmdstryr";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1fwfh5h1l68zwkjayf71dmxrhjbscsh87p4mskzkwwaj5cxsva90";
+    repo = "enamlx";
+    tag = "v${version}";
+    hash = "sha256-C3/G0bnu1EQh0elqdrpCwkFPZU4qmkUX7WRSRK9nkM4=";
   };
 
   propagatedBuildInputs = [
@@ -22,6 +25,7 @@ buildPythonPackage rec {
     # Until https://github.com/inkcut/inkcut/issues/105 perhaps
     pyqtgraph
     pythonocc-core
+    typing-extensions
   ];
 
   # qt_occ_viewer test requires enaml.qt.QtOpenGL which got dropped somewhere
@@ -34,10 +38,10 @@ buildPythonPackage rec {
     "enamlx.widgets"
   ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/frmdstryr/enamlx";
     description = "Additional Qt Widgets for Enaml";
-    license = licenses.mit;
-    maintainers = with maintainers; [ raboof ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ raboof ];
   };
 }

@@ -1,25 +1,39 @@
-{ buildPythonPackage, fetchPypi, lib, python-dateutil, requests
-, six, sseclient-py }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  python-dateutil,
+  requests,
+  six,
+  sseclient-py,
+}:
 
 buildPythonPackage rec {
   pname = "python-nest";
-  version = "4.1.0";
+  version = "4.2.0";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "12iyypbl92ybh8w1bf4z0c2g0sb9id2c07c89vzvnlxgjylw3wbi";
+    hash = "sha256-01hoZbDssbJ10NA72gOtlzjZMGjsUBUoVDVM35uAOLU=";
   };
 
-  propagatedBuildInputs = [ python-dateutil requests six sseclient-py ];
-  # has no tests
+  propagatedBuildInputs = [
+    python-dateutil
+    requests
+    six
+    sseclient-py
+  ];
+
+  # Module has no tests
   doCheck = false;
+
   pythonImportsCheck = [ "nest" ];
 
-  meta = with lib; {
-    description =
-      "Python API and command line tool for talking to the Nest™ Thermostat";
+  meta = {
+    description = "Python API and command line tool for talking to the Nest™ Thermostat";
     homepage = "https://github.com/jkoelker/python-nest";
-    license = licenses.cc-by-nc-sa-40;
-    maintainers = with maintainers; [ jamiemagee ];
+    license = lib.licenses.cc-by-nc-sa-40;
+    maintainers = with lib.maintainers; [ jamiemagee ];
   };
 }

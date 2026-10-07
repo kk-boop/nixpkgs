@@ -1,8 +1,21 @@
-{ mkDerivation, extra-cmake-modules, qtbase, qttools }:
+{
+  mkDerivation,
+  cmake,
+  extra-cmake-modules,
+  qtbase,
+  qttools,
+}:
 
 mkDerivation {
-  name = "kconfig";
-  nativeBuildInputs = [ extra-cmake-modules ];
+  pname = "kconfig";
+  outputs = [
+    "out"
+    "dev"
+  ];
+  nativeBuildInputs = [
+    cmake
+    extra-cmake-modules
+  ];
   buildInputs = [ qttools ];
   propagatedBuildInputs = [ qtbase ];
 }

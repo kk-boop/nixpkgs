@@ -1,36 +1,41 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, pyserial-asyncio
-, pytz
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytestCheckHook,
+  pytz,
+  serialx,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "upb-lib";
-  version = "0.4.12";
+  version = "0.7.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "e668055d9c389aefd09203afb96a950a320095f225ef0a1aa611e592db92a71b";
+  src = fetchFromGitHub {
+    owner = "gwww";
+    repo = "upb-lib";
+    tag = finalAttrs.version;
+    hash = "sha256-J7jE/r+NkuzZxI4EnECH0HSnje2RqkZanEL8L5rUP1k=";
   };
 
-  propagatedBuildInputs = [
-    pyserial-asyncio
+  build-system = [ hatchling ];
+
+  dependencies = [
     pytz
+    serialx
   ];
 
-  # no tests on PyPI, no tags on GitHub
-  doCheck = false;
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "upb_lib" ];
 
-  meta = with lib; {
+  meta = {
     description = "Library for interacting with UPB PIM";
     homepage = "https://github.com/gwww/upb-lib";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    changelog = "https://github.com/gwww/upb-lib/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
-}
+})

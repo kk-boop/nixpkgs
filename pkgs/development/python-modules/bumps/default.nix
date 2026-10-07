@@ -1,24 +1,69 @@
-{ lib, buildPythonPackage, fetchPypi, six}:
+{
+  lib,
+  aiohttp,
+  blinker,
+  buildPythonPackage,
+  cloudpickle,
+  dill,
+  fetchPypi,
+  h5py,
+  matplotlib,
+  msgpack,
+  numpy,
+  plotly,
+  python-socketio,
+  python,
+  scipy,
+  setuptools,
+  versioningit,
+}:
 
 buildPythonPackage rec {
   pname = "bumps";
-  version = "0.8.0";
-
-  propagatedBuildInputs = [six];
-
-  # Bumps does not provide its own tests.py, so the test
-  # always fails
-  doCheck = false;
+  version = "1.0.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "9f92c05effd8175763799d19ca55592e89b053318f611148a6725159aea41d67";
+    hash = "sha256-O5GUoyDlB0X2Z/O3JprN3omoOBDIhv0xrKfUSHTgGpM=";
   };
 
-  meta = with lib; {
-    homepage = "https://www.reflectometry.org/danse/software.html";
+  pythonRemoveDeps = [
+    "mpld3" # not packaged
+  ];
+
+  build-system = [
+    setuptools
+    versioningit
+  ];
+
+  dependencies = [
+    aiohttp
+    blinker
+    cloudpickle
+    dill
+    h5py
+    matplotlib
+    msgpack
+    numpy
+    plotly
+    python
+    python-socketio
+    scipy
+    # mpld3 # not packaged
+  ];
+
+  # Module has no tests
+  doCheck = false;
+
+  pythonImportsCheck = [ "bumps" ];
+
+  meta = {
     description = "Data fitting with bayesian uncertainty analysis";
-    maintainers = with maintainers; [ rprospero ];
-    license = licenses.publicDomain;
+    mainProgram = "bumps";
+    homepage = "https://bumps.readthedocs.io/";
+    changelog = "https://github.com/bumps/bumps/releases/tag/v${version}";
+    license = lib.licenses.publicDomain;
+    maintainers = with lib.maintainers; [ rprospero ];
   };
 }

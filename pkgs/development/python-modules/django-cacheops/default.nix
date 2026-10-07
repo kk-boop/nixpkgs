@@ -1,36 +1,74 @@
-{ buildPythonPackage
-, fetchPypi
-, lib
-, django
-, funcy
-, redis
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch,
+  django,
+  funcy,
+  redis,
+  redisTestHook,
+  six,
+  pytestCheckHook,
+  pytest-django,
+  mock,
+  dill,
+  jinja2,
+  before-after,
+  net-tools,
+  pkgs,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "django-cacheops";
-  version = "6.0";
+  version = "7.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "78e161ebd96a32e28e19ec7da31f2afed9e62a79726b8b5f0ed12dd16c2e5841";
+  src = fetchFromGitHub {
+    owner = "Suor";
+    repo = "django-cacheops";
+    tag = finalAttrs.version;
+    hash = "sha256-o0QPBfoYZzBPMjDQt8ck2Tkx3qInyfnN88buire0yc4=";
   };
 
-  propagatedBuildInputs = [
+  patches = [
+    # Fixes failure with python3.14 pickle changes
+    # https://github.com/Suor/django-cacheops/pull/511
+    ./Support-Python-3.14-pickle-changes.patch
+  ];
+
+  pythonRelaxDeps = [ "funcy" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     django
     funcy
     redis
     six
   ];
 
-  # tests need a redis server
-  # pythonImportsCheck not possible since DJANGO_SETTINGS_MODULE needs to be set
-  doCheck = false;
+  __darwinAllowLocalNetworking = true;
 
-  meta = with lib; {
-    description = "A slick ORM cache with automatic granular event-driven invalidation for Django";
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-django
+    mock
+    dill
+    jinja2
+    before-after
+    net-tools
+    pkgs.valkey
+    redisTestHook
+  ];
+
+  env.DJANGO_SETTINGS_MODULE = "tests.settings";
+
+  meta = {
+    description = "Slick ORM cache with automatic granular event-driven invalidation for Django";
     homepage = "https://github.com/Suor/django-cacheops";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ petabyteboy ];
+    changelog = "https://github.com/Suor/django-cacheops/blob/${finalAttrs.version}/CHANGELOG";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ onny ];
   };
-}
+})

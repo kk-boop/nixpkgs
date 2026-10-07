@@ -1,32 +1,84 @@
-{ lib, buildPythonPackage, fetchPypi, pythonOlder
-, attrs
-, sortedcontainers
-, async_generator
-, idna
-, outcome
-, contextvars
-, pytestCheckHook
-, pyopenssl
-, trustme
-, sniffio
-, stdenv
-, jedi
-, pylint
-, astor
-, yapf
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pythonOlder,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  attrs,
+  idna,
+  outcome,
+  sniffio,
+  sortedcontainers,
+
+  # tests
+  astor,
+  jedi,
+  pyopenssl,
+  pytestCheckHook,
+  pytest-trio,
+  pyyaml,
+  trustme,
 }:
 
+let
+  # escape infinite recursion with pytest-trio
+  pytest-trio' = (pytest-trio.override { trio = null; }).overrideAttrs {
+    # `pythonRemoveDeps` is not working properly
+    dontCheckRuntimeDeps = true;
+    doCheck = false;
+    pythonImportsCheck = [ ];
+  };
+in
 buildPythonPackage rec {
   pname = "trio";
-  version = "0.19.0";
-  disabled = pythonOlder "3.6";
+  version = "0.33.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "895e318e5ec5e8cea9f60b473b6edb95b215e82d99556a03eb2d20c5e027efe1";
+  src = fetchFromGitHub {
+    owner = "python-trio";
+    repo = "trio";
+    tag = "v${version}";
+    hash = "sha256-juqlTJPcXpLdzO5OBCcwVR7rckABza9TAhPs9ta5c8U=";
   };
 
-  checkInputs = [ astor pytestCheckHook pyopenssl trustme jedi pylint yapf ];
+  build-system = [ setuptools ];
+
+  dependencies = [
+    attrs
+    idna
+    outcome
+    sniffio
+    sortedcontainers
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
+    astor
+    pyopenssl
+    pytestCheckHook
+    pytest-trio'
+    pyyaml
+    trustme
+  ]
+  # jedi has no compatibility with python 3.14 yet
+  # https://github.com/davidhalter/jedi/issues/2064
+  ++ lib.optional (pythonOlder "3.14") jedi;
+
+  preCheck = ''
+    export HOME=$TMPDIR
+    # $out is first in path which causes "import file mismatch"
+    PYTHONPATH=$PWD/src:$PYTHONPATH
+  '';
+
+  pytestFlags = [
+    "-Wignore::DeprecationWarning"
+  ];
+
   # It appears that the build sandbox doesn't include /etc/services, and these tests try to use it.
   disabledTests = [
     "getnameinfo"
@@ -36,24 +88,22 @@ buildPythonPackage rec {
     "static_tool_sees_all_symbols"
     # tests pytest more than python
     "fallback_when_no_hook_claims_it"
+    # requires mypy
+    "test_static_tool_sees_class_members"
   ];
 
-  propagatedBuildInputs = [
-    attrs
-    sortedcontainers
-    async_generator
-    idna
-    outcome
-    sniffio
-  ] ++ lib.optionals (pythonOlder "3.7") [ contextvars ];
-
-  # tests are failing on Darwin
-  doCheck = !stdenv.isDarwin;
+  disabledTestPaths = [
+    # linters
+    "src/trio/_tests/tools/test_gen_exports.py"
+  ];
 
   meta = {
-    description = "An async/await-native I/O library for humans and snake people";
+    changelog = "https://github.com/python-trio/trio/blob/${src.tag}/docs/source/history.rst";
+    description = "Async/await-native I/O library for humans and snake people";
     homepage = "https://github.com/python-trio/trio";
-    license = with lib.licenses; [ mit asl20 ];
-    maintainers = with lib.maintainers; [ catern ];
+    license = with lib.licenses; [
+      mit
+      asl20
+    ];
   };
 }

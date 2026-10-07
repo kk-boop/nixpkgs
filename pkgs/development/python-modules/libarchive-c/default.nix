@@ -1,46 +1,56 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchFromGitHub
-, libarchive
-, glibcLocales
-, mock
-, pytestCheckHook
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch,
+  libarchive,
+  glibcLocales,
+  mock,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "libarchive-c";
-  version = "3.2";
-  format = "setuptools";
+  version = "5.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "Changaco";
-    repo = "python-${pname}";
-    rev = version;
-    sha256 = "1kj3y9vnsc9m2hvnvgk5inawxfknz5drj3q51hqgcbq8p4dm8vli";
+    repo = "python-libarchive-c";
+    tag = finalAttrs.version;
+    hash = "sha256-JqXTV1aD3k88OlW+8rT3xsDuW34+1xErG7hkupvL7Uo=";
   };
 
-  LC_ALL="en_US.UTF-8";
+  patches = [
+    # https://github.com/Changaco/python-libarchive-c/pull/141
+    (fetchpatch {
+      url = "https://github.com/Changaco/python-libarchive-c/commit/e0e2a47b2403632642ee932dd56acd11e4a79efe.diff";
+      hash = "sha256-C9eD4cGQOIdBYy4ytom49lA/Jaarj7LbSIgjxCk/H84=";
+    })
+  ];
+
+  env.LC_ALL = "en_US.UTF-8";
 
   postPatch = ''
-    substituteInPlace libarchive/ffi.py --replace \
+    substituteInPlace libarchive/ffi.py --replace-fail \
       "find_library('archive')" "'${libarchive.lib}/lib/libarchive${stdenv.hostPlatform.extensions.sharedLibrary}'"
   '';
 
-  pythonImportsCheck = [
-    "libarchive"
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  pythonImportsCheck = [ "libarchive" ];
+
+  nativeCheckInputs = [
     glibcLocales
     mock
     pytestCheckHook
   ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/Changaco/python-libarchive-c";
     description = "Python interface to libarchive";
-    license = licenses.cc0;
+    license = lib.licenses.cc0;
   };
-
-}
+})

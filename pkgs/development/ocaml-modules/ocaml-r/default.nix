@@ -1,42 +1,54 @@
-{ lib, fetchFromGitHub, buildDunePackage, pkg-config, dune-configurator, stdio, R
-, alcotest
+{
+  lib,
+  fetchurl,
+  fetchpatch,
+  buildDunePackage,
+  pkg-config,
+  dune-configurator,
+  stdio,
+  R,
+  alcotest,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "ocaml-r";
-  version = "0.4.0";
+  version = "0.7.0";
 
-  useDune2 = true;
-
-  minimumOCamlVersion = "4.08";
-
-  src = fetchFromGitHub {
-    owner = "pveber";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "10is2s148kfh3g0pwniyzp5mh48k57ldvn8gm86469zvgxyij1ri";
+  src = fetchurl {
+    url = "https://github.com/pveber/ocaml-r/releases/download/v${finalAttrs.version}/ocaml-r-${finalAttrs.version}.tbz";
+    hash = "sha256-nbO36z/bSMb2vQjW5A9O2hjuF2RVzefFN53l/u3KF+o=";
   };
 
-  # Without the following patch, stub generation fails with:
-  # > Fatal error: exception (Failure "not supported: osVersion")
-  preConfigure = ''
-    substituteInPlace stubgen/stubgen.ml --replace  \
-    'failwithf "not supported: %s" name ()' \
-    'sprintf "(* not supported: %s *)" name'
-    substituteInPlace lib/config/discover.ml --replace \
-    ' libRmath"' '"'
-  '';
+  # Compatibility with R 4.6
+  patches = [
+    (fetchpatch {
+      url = "https://github.com/pveber/ocaml-r/commit/c70704dd9ff1ed6b4035beef3316dc95275aaf4f.patch";
+      hash = "sha256-I3SX+6gVo9l7epeFhtae8Ji4q51mr53sv7MPxvRBdJg=";
+    })
+    (fetchpatch {
+      url = "https://github.com/pveber/ocaml-r/commit/c90ce656bd55236e74907f2ef5bc70ff11a0cedc.patch";
+      hash = "sha256-ACU4d8Npq1IXR3hysk6npHHU8ZRcAgRkHg/c+Sb8dkM=";
+    })
+  ];
 
-  buildInputs = [ pkg-config R dune-configurator stdio ];
+  nativeBuildInputs = [
+    pkg-config
+    R
+  ];
+  buildInputs = [
+    dune-configurator
+    stdio
+    R
+  ];
 
   doCheck = true;
   checkInputs = [ alcotest ];
 
   meta = {
     description = "OCaml bindings for the R interpreter";
-    inherit (src.meta) homepage;
+    homepage = "https://github.com/pveber/ocaml-r/";
     license = lib.licenses.gpl3;
     maintainers = [ lib.maintainers.bcdarwin ];
   };
 
-}
+})

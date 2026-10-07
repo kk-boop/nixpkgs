@@ -1,49 +1,38 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchpatch
-, nix-update-script
-, meson
-, ninja
-, pkg-config
-, vala
-, glib
-, granite
-, gtk3
-, libgee
-, libgudev
-, libwacom
-, switchboard
-, xorg
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  gettext,
+  glib,
+  granite7,
+  gtk4,
+  libadwaita,
+  libgee,
+  libgudev,
+  libwacom,
+  switchboard,
+  libxi,
+  libx11,
 }:
 
 stdenv.mkDerivation rec {
   pname = "switchboard-plug-wacom";
-  version = "1.0.0";
+  version = "8.0.2";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = pname;
-    rev = version;
-    sha256 = "1n2yfq4s9xpnfqjikchjp4z2nk8cmfz4g0p18cplzh5w1lvz17lm";
-  };
-
-  patches = [
-    # Upstream code not respecting our localedir
-    # https://github.com/elementary/switchboard-plug-wacom/pull/29
-    (fetchpatch {
-      url = "https://github.com/elementary/switchboard-plug-wacom/commit/2a7dee180d73ffb3521d806efb7028f5a71cb511.patch";
-      sha256 = "06ra5c0f14brmj2mmsqscpc4d1114i4qazgnsazzh2hrp04ilnva";
-    })
-  ];
-
-  passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    repo = "settings-wacom";
+    tag = version;
+    hash = "sha256-LA3sOY5ENaSO99AMLAqPryEfyPsKwcatzZoGOhbvCJY=";
   };
 
   nativeBuildInputs = [
+    gettext # msgfmt
     meson
     ninja
     pkg-config
@@ -52,21 +41,26 @@ stdenv.mkDerivation rec {
 
   buildInputs = [
     glib
-    granite
-    gtk3
+    granite7
+    gtk4
+    libadwaita
     libgee
     libgudev
     libwacom
     switchboard
-    xorg.libX11
-    xorg.libXi
+    libx11
+    libxi
   ];
 
-  meta = with lib; {
+  passthru = {
+    updateScript = nix-update-script { };
+  };
+
+  meta = {
     description = "Switchboard Wacom Plug";
-    homepage = "https://github.com/elementary/switchboard-plug-wacom";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    homepage = "https://github.com/elementary/settings-wacom";
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

@@ -1,49 +1,61 @@
-{ lib
-, buildPythonPackage
-, cherrypy
-, fetchFromGitHub
-, lockfile
-, mock
-, msgpack
-, pytestCheckHook
-, pythonOlder
-, requests
+{
+  lib,
+  buildPythonPackage,
+  cherrypy,
+  fetchFromGitHub,
+  filelock,
+  msgpack,
+  pytestCheckHook,
+  redis,
+  requests,
+  uv-build,
 }:
 
 buildPythonPackage rec {
   pname = "cachecontrol";
-  version = "0.12.10";
-  format = "setuptools";
+  version = "0.14.4";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  __darwinAllowLocalNetworking = true;
 
   src = fetchFromGitHub {
     owner = "ionrock";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-mgvL0q10UbPHY1H3tJprke5p8qNl3HNYoeLAERZTcTs=";
+    repo = "cachecontrol";
+    tag = "v${version}";
+    hash = "sha256-627SqJocVOO0AfI8vswPqOr15MA/Lx7RLAdRAXzWu84=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "uv_build>=0.9.6,<0.10.0" uv_build
+  '';
+
+  build-system = [ uv-build ];
+
+  dependencies = [
     msgpack
     requests
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    filecache = [ filelock ];
+    redis = [ redis ];
+  };
+
+  nativeCheckInputs = [
     cherrypy
-    mock
-    lockfile
     pytestCheckHook
-  ];
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
 
-  pythonImportsCheck = [
-    "cachecontrol"
-  ];
+  pythonImportsCheck = [ "cachecontrol" ];
 
-  meta = with lib; {
+  meta = {
     description = "Httplib2 caching for requests";
+    mainProgram = "doesitcache";
     homepage = "https://github.com/ionrock/cachecontrol";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ costrouc ];
+    changelog = "https://github.com/psf/cachecontrol/releases/tag/${src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

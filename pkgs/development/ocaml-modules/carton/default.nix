@@ -1,21 +1,49 @@
-{ lib, buildDunePackage, fetchurl
-, ke, duff, decompress, cstruct, optint, bigstringaf, stdlib-shims
-, bigarray-compat, checkseum, logs, psq, fmt
-, result, rresult, fpath, base64, bos, digestif, mmap, alcotest
-, crowbar, alcotest-lwt, lwt, findlib, mirage-flow, cmdliner, hxd
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  ke,
+  duff,
+  decompress,
+  cstruct,
+  optint,
+  bigstringaf,
+  checkseum,
+  logs,
+  psq,
+  fmt,
+  result,
+  rresult,
+  fpath,
+  base64,
+  bos,
+  digestif,
+  alcotest,
+  crowbar,
+  alcotest-lwt,
+  lwt,
+  findlib,
+  mirage-flow,
+  cmdliner,
+  hxd,
+  getconf,
+  replaceVars,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "carton";
-  version = "0.4.3";
-
-  useDune2 = true;
-  minimalOCamlVersion = "4.08";
+  version = "0.7.0";
 
   src = fetchurl {
-    url = "https://github.com/mirage/ocaml-git/releases/download/${pname}-v${version}/${pname}-${pname}-v${version}.tbz";
-    sha256 = "sha256:0qz9ds5761wx4m7ly3av843b6dii7lmjpx2nnyijv8rm8aw95jgr";
+    url = "https://github.com/mirage/ocaml-git/releases/download/carton-v${finalAttrs.version}/git-carton-v${finalAttrs.version}.tbz";
+    hash = "sha256-vWkBJdP4ZpRCEwzrFMzsdHay4VyiXix/+1qzk+7yDvk=";
   };
+
+  patches = [
+    (replaceVars ./carton-find-getconf.patch {
+      getconf = "${getconf}";
+    })
+  ];
 
   # remove changelogs for mimic and the git* packages
   postPatch = ''
@@ -25,7 +53,6 @@ buildDunePackage rec {
   buildInputs = [
     cmdliner
     digestif
-    mmap
     result
     rresult
     fpath
@@ -39,29 +66,30 @@ buildDunePackage rec {
     cstruct
     optint
     bigstringaf
-    stdlib-shims
-    bigarray-compat
     checkseum
     logs
     psq
     fmt
   ];
 
-  doCheck = true;
+  # Alcotest depends on cmdliner ≥ 2.0
+  doCheck = false;
+  nativeBuildInputs = [
+    findlib
+  ];
   checkInputs = [
     base64
     alcotest
     alcotest-lwt
     crowbar
     lwt
-    findlib
     mirage-flow
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Implementation of PACKv2 file in OCaml";
-    license = licenses.mit;
+    license = lib.licenses.mit;
     homepage = "https://github.com/mirage/ocaml-git";
-    maintainers = [ maintainers.sternenseemann ];
+    maintainers = [ lib.maintainers.sternenseemann ];
   };
-}
+})

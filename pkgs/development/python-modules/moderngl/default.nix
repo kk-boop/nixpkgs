@@ -1,33 +1,51 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy3k
-, libGL
-, libX11
-, glcontext
+{
+  stdenv,
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  libGL,
+  libx11,
+  setuptools,
+  glcontext,
+  pkgs,
 }:
 
 buildPythonPackage rec {
   pname = "moderngl";
-  version = "5.6.4";
+  version = "5.12.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "8c6d04559f5e3bf75a18525cd46d213c0f3a8409363718978e6de691bdb551fb";
+    hash = "sha256-UpNqmMyy8uHW48sYUospGfaDHn4/kk54i1hzutzlEps=";
   };
 
-  disabled = !isPy3k;
+  postPatch = lib.optionalString (stdenv.hostPlatform.isLinux) ''
+    substituteInPlace _moderngl.py \
+      --replace-fail '"libGL.so"' '"${libGL}/lib/libGL.so"' \
+      --replace-fail '"libEGL.so"' '"${libGL}/lib/libEGL.so"'
+  '';
 
-  buildInputs = [ libGL libX11 glcontext ];
+  build-system = [ setuptools ];
+
+  buildInputs = lib.optionals (stdenv.hostPlatform.isLinux) [
+    libGL
+    libx11
+  ];
+
+  dependencies = [ glcontext ];
 
   # Tests need a display to run.
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [ "moderngl" ];
+
+  meta = {
+    description = "High performance rendering for Python";
     homepage = "https://github.com/moderngl/moderngl";
-    description = "High performance rendering for Python 3";
-    license = licenses.mit;
-    platforms = platforms.linux; # should be mesaPlatforms, darwin build breaks.
-    maintainers = with maintainers; [ c0deaddict ];
+    changelog = "https://github.com/moderngl/moderngl/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ c0deaddict ];
+    inherit (pkgs.mesa.meta) platforms;
   };
 }

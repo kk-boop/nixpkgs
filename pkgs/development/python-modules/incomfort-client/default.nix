@@ -1,34 +1,44 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-aiohttp,
+  pytest-asyncio,
+  pytestCheckHook,
+  poetry-core,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "incomfort-client";
-  version = "0.4.5";
-  disabled = pythonOlder "3.7";
+  version = "0.7.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "zxdavb";
-    repo = pname;
-    rev = version;
-    sha256 = "0r9f15fcjwhrq6ldji1dzbb76wsvinpkmyyaj7n55rl6ibnsyrwp";
+    repo = "incomfort-client";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-OxrsRoP3HLHEE2YVLUEXA+VlYNoAJR+1Uph11M/Zv68=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
+  build-system = [ poetry-core ];
+
+  dependencies = [ aiohttp ];
+
+  nativeCheckInputs = [
+    pytest-aiohttp
+    pytest-asyncio
+    pytestCheckHook
   ];
 
-  # Project has no tests
-  doCheck = false;
   pythonImportsCheck = [ "incomfortclient" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to poll Intergas boilers via a Lan2RF gateway";
     homepage = "https://github.com/zxdavb/incomfort-client";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/jbouwh/incomfort-client/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

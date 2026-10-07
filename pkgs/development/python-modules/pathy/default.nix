@@ -1,42 +1,56 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, typer
-, smart-open
-, mock
-, google-cloud-storage
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  mock,
+  pathlib-abc,
+  pytestCheckHook,
+  setuptools,
+  smart-open,
+  typer,
 }:
 
 buildPythonPackage rec {
   pname = "pathy";
-  version = "0.6.1";
+  version = "0.11.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "838624441f799a06b446a657e4ecc9ebc3fdd05234397e044a7c87e8f6e76b1c";
+    hash = "sha256-uz0OawuL92709jxxkeluCvLtZcj9tfoXSI+ch55jcG0=";
   };
 
-  propagatedBuildInputs = [ smart-open typer google-cloud-storage ];
+  pythonRelaxDeps = [ "smart-open" ];
 
-  postPatch = ''
-    substituteInPlace requirements.txt \
-      --replace "smart-open>=2.2.0,<4.0.0" "smart-open>=2.2.0"
-  '';
+  build-system = [ setuptools ];
 
-  checkInputs = [ pytestCheckHook mock ];
-
-  # Exclude tests that require provider credentials
-  pytestFlagsArray = [
-    "--ignore=pathy/_tests/test_clients.py"
-    "--ignore=pathy/_tests/test_gcs.py"
-    "--ignore=pathy/_tests/test_s3.py"
+  dependencies = [
+    pathlib-abc
+    smart-open
+    typer
   ];
 
-  meta = with lib; {
-    description = "A Path interface for local and cloud bucket storage";
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ];
+
+  disabledTestPaths = [
+    # Exclude tests that require provider credentials
+    "pathy/_tests/test_clients.py"
+    "pathy/_tests/test_gcs.py"
+    "pathy/_tests/test_s3.py"
+  ];
+
+  pythonImportsCheck = [ "pathy" ];
+
+  meta = {
+    # Marked broken 2025-11-28 because it has failed on Hydra for at least one year.
+    broken = true;
+    # https://github.com/justindujardin/pathy/issues/113
+    description = "Path interface for local and cloud bucket storage";
+    mainProgram = "pathy";
     homepage = "https://github.com/justindujardin/pathy";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ melling ];
+    license = lib.licenses.asl20;
   };
 }

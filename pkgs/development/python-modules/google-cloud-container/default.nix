@@ -1,30 +1,48 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, grpc-google-iam-v1
-, libcst
-, mock
-, proto-plus
-, pytestCheckHook
-, pytest-asyncio
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-auth,
+  mock,
+  proto-plus,
+  protobuf,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "google-cloud-container";
-  version = "2.10.1";
+  version = "2.67.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "939970cd09384dde6d6f6758b03648fd8f52fe5c2f83f73300575f7e4e3b2ee0";
+    pname = "google_cloud_container";
+    inherit (finalAttrs) version;
+    hash = "sha256-cndTX//X+06Xx6lDc8GxI9DH+uZ44QjexdfO1yGCxqU=";
   };
 
-  propagatedBuildInputs = [ google-api-core grpc-google-iam-v1 libcst proto-plus ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook pytest-asyncio ];
+  pythonRelaxDeps = [ "protobuf" ];
+
+  dependencies = [
+    google-api-core
+    google-auth
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  nativeCheckInputs = [
+    mock
+    pytest-asyncio
+    pytestCheckHook
+  ];
 
   disabledTests = [
-    # requires credentials
+    # Test requires credentials
     "test_list_clusters"
   ];
 
@@ -34,10 +52,11 @@ buildPythonPackage rec {
     "google.cloud.container_v1beta1"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Container Engine API client library";
-    homepage = "https://github.com/googleapis/python-container";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-container";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-container-v${finalAttrs.version}/packages/google-cloud-container/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

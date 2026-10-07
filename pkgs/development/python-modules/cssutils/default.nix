@@ -1,38 +1,44 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, setuptools-scm
-, toml
-, importlib-metadata
-, cssselect
-, lxml
-, mock
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools-scm,
+  encutils,
+  more-itertools,
+  cssselect,
+  jaraco-test,
+  lxml,
+  mock,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "cssutils";
-  version = "2.3.0";
+  version = "2.15.0";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-stOxYEfKroLlxZADaTW6+htiHPRcLziIWvS+SDjw/QA=";
+  src = fetchFromGitHub {
+    owner = "jaraco";
+    repo = "cssutils";
+    tag = "v${version}";
+    hash = "sha256-K9jbuX7AueSB3AB7PAVjpQhzb3Umn9OoHaL4RrMzKEs=";
   };
 
-  nativeBuildInputs = [
-    setuptools-scm
-    toml
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"coherent.licensed",' ""
+  '';
+
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
+    encutils
+    more-itertools
   ];
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.8") [
-    importlib-metadata
-  ];
-
-  checkInputs = [
+  nativeCheckInputs = [
     cssselect
+    jaraco-test
     lxml
     mock
     pytestCheckHook
@@ -40,23 +46,16 @@ buildPythonPackage rec {
 
   disabledTests = [
     # access network
-    "test_parseUrl"
-    "encutils"
     "website.logging"
-  ] ++ lib.optionals (pythonOlder "3.9") [
-    # AttributeError: module 'importlib.resources' has no attribute 'files'
-    "test_parseFile"
-    "test_parseString"
-    "test_combine"
   ];
 
   pythonImportsCheck = [ "cssutils" ];
 
-  meta = with lib; {
-    description = "A CSS Cascading Style Sheets library for Python";
+  meta = {
+    description = "CSS Cascading Style Sheets library for Python";
     homepage = "https://github.com/jaraco/cssutils";
-    changelog = "https://github.com/jaraco/cssutils/blob/v${version}/CHANGES.rst";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ dotlambda ];
+    changelog = "https://github.com/jaraco/cssutils/blob/${src.tag}/NEWS.rst";
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

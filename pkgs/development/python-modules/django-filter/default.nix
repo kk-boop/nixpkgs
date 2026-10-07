@@ -1,44 +1,50 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, django
-, djangorestframework, python, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flit-core,
+  django,
+  djangorestframework,
+  pytestCheckHook,
+  pytest-django,
+  pytz,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "django-filter";
-  version = "21.1";
+  version = "26.1";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-YyolH6jxqttLjM7/kyu1L+L4Jt19/n8+rEDlxGPWg24=";
+  src = fetchFromGitHub {
+    owner = "carltongibson";
+    repo = "django-filter";
+    tag = finalAttrs.version;
+    hash = "sha256-Sls/imzl2dzUfVcJTUqpCQTDRH9H09uxx27TnU0R0WI=";
   };
 
-  propagatedBuildInputs = [ django ];
+  build-system = [ flit-core ];
 
-  pythonImportsCheck = [
-    "django_filters"
-  ];
+  dependencies = [ django ];
 
-  # Tests fail (needs the 'crispy_forms' module not packaged on nixos)
-  doCheck = false;
+  optional-dependencies.drf = [ djangorestframework ];
 
-  checkInputs = [
-    djangorestframework
-    django
-    mock
-  ];
+  pythonImportsCheck = [ "django_filters" ];
 
-  checkPhase = ''
-    runHook preCheck
-    ${python.interpreter} runtests.py tests
-    runHook postCheck
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-django
+    pytz
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
 
-  meta = with lib; {
+  env.DJANGO_SETTINGS_MODULE = "tests.settings";
+
+  meta = {
     description = "Reusable Django application for allowing users to filter querysets dynamically";
-    homepage = "https://pypi.org/project/django-filter/";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ mmai ];
+    homepage = "https://github.com/carltongibson/django-filter";
+    changelog = "https://github.com/carltongibson/django-filter/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
-}
+})

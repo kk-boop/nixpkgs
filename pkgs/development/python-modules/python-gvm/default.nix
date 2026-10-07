@@ -1,58 +1,59 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, defusedxml
-, fetchFromGitHub
-, lxml
-, paramiko
-, poetry-core
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  defusedxml,
+  fetchFromGitHub,
+  lxml,
+  paramiko,
+  poetry-core,
+  pontos,
+  pytestCheckHook,
+  typing-extensions,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-gvm";
-  version = "21.11.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "26.11.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "greenbone";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-H3cM+4YA6obYbo7qm7BhLlQxW4DKV6A3X0ZKsXWPDBs=";
+    repo = "python-gvm";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-NTUDFZnDavHhl5AELMNj8AkwwVtY+96cMB9uhm4veQg=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "defusedxml" ];
+
+  dependencies = [
     defusedxml
     lxml
     paramiko
+    typing-extensions
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pontos
     pytestCheckHook
   ];
 
   disabledTests = [
     # No running SSH available
     "test_connect_error"
-  ] ++ lib.optionals stdenv.isDarwin [
     "test_feed_xml_error"
-  ];
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ "test_feed_xml_error" ];
 
-  pythonImportsCheck = [
-    "gvm"
-  ];
+  pythonImportsCheck = [ "gvm" ];
 
-  meta = with lib; {
+  meta = {
     description = "Collection of APIs that help with remote controlling a Greenbone Security Manager";
     homepage = "https://github.com/greenbone/python-gvm";
-    license = with licenses; [ gpl3Plus ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/greenbone/python-gvm/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

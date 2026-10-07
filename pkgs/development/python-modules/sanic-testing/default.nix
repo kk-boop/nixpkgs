@@ -1,54 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, httpx
-, pytest-asyncio
-, sanic
-, websockets
+{
+  lib,
+  buildPythonPackage,
+  callPackage,
+  fetchFromGitHub,
+  httpx,
+  sanic,
+  setuptools,
+  websockets,
 }:
 
 buildPythonPackage rec {
   pname = "sanic-testing";
-  version = "0.7.0";
+  version = "24.6.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sanic-org";
     repo = "sanic-testing";
-    rev = "v${version}";
-    sha256 = "0ib6rf1ly1059lfprc3hpmy377c3wfgfhnar6n4jgbxiyin7vzm7";
+    tag = "v${version}";
+    hash = "sha256-biUgxa0sINHAYzyKimVD8+/mPUq2dlnCl2BN+UeUaEo=";
   };
 
-  postPatch = ''
-    # https://github.com/sanic-org/sanic-testing/issues/19
-    substituteInPlace setup.py \
-      --replace '"websockets==8.1",' '"websockets>=9.1",' \
-      --replace "httpx==0.18.*" "httpx"
-  '';
+  outputs = [
+    "out"
+    "testsout"
+  ];
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     httpx
     sanic
     websockets
   ];
 
-  checkInputs = [
-    pytest-asyncio
-    pytestCheckHook
-  ];
+  postInstall = ''
+    mkdir $testsout
+    cp -R tests $testsout/tests
+  '';
 
-  # `sanic` is explicitly set to null when building `sanic` itself
-  # to prevent infinite recursion.  In that case we skip running
-  # the package at all.
-  doCheck = sanic != null;
-  dontUsePythonImportsCheck = sanic == null;
+  # Check in passthru.tests.pytest to escape infinite recursion with sanic
+  doCheck = false;
 
-  pythonImportsCheck = [ "sanic_testing" ];
+  doInstallCheck = false;
 
-  meta = with lib; {
+  passthru.tests = {
+    pytest = callPackage ./tests.nix { };
+  };
+
+  meta = {
     description = "Core testing clients for the Sanic web framework";
     homepage = "https://github.com/sanic-org/sanic-testing";
-    license = licenses.mit;
-    maintainers = with maintainers; [ AluisioASG ];
+    changelog = "https://github.com/sanic-org/sanic-testing/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

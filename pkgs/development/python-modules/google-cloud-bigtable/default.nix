@@ -1,33 +1,63 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, google-cloud-core
-, grpc-google-iam-v1
-, libcst
-, mock
-, proto-plus
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  google-api-core,
+  google-cloud-core,
+  google-crc32c,
+  grpc-google-iam-v1,
+  proto-plus,
+  protobuf,
+
+  # optional dependencies
+  libcst,
+
+  # testing
+  grpcio,
+  mock,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-bigtable";
-  version = "2.4.0";
+  version = "2.35.0";
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "b8472c91b05159f20121fcca6ebdc2a3b5648d68158ec747860914279b6b983b";
+  src = fetchFromGitHub {
+    owner = "googleapis";
+    repo = "python-bigtable";
+    tag = "v${version}";
+    hash = "sha256-rvw7mHWifJ6+g89DXtV0pOFwbbGQNlK1J+IRhy/7W5o=";
   };
 
-  propagatedBuildInputs = [
-    google-api-core
-    google-cloud-core
-    grpc-google-iam-v1
-    libcst
-    proto-plus
+  pyproject = true;
+
+  build-system = [ setuptools ];
+
+  pythonRelaxDeps = [
+    "protobuf"
   ];
 
-  checkInputs = [
+  dependencies = [
+    google-api-core
+    google-cloud-core
+    google-crc32c
+    grpc-google-iam-v1
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  optional-dependencies = {
+    libcst = [ libcst ];
+  };
+
+  nativeCheckInputs = [
+    grpcio
     mock
     pytestCheckHook
   ];
@@ -37,9 +67,7 @@ buildPythonPackage rec {
     rm -r google
   '';
 
-  disabledTests = [
-    "policy"
-  ];
+  disabledTests = [ "policy" ];
 
   pythonImportsCheck = [
     "google.cloud.bigtable_admin_v2"
@@ -47,10 +75,11 @@ buildPythonPackage rec {
     "google.cloud.bigtable"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Bigtable API client library";
     homepage = "https://github.com/googleapis/python-bigtable";
-    license = licenses.asl20;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/googleapis/python-bigtable/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ lib.maintainers.sarahec ];
   };
 }

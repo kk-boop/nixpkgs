@@ -1,56 +1,66 @@
-{ lib
-, aiohttp
-, aioresponses
-, buildPythonPackage
-, dacite
-, fetchFromGitHub
-, pytest-asyncio
-, pytest-error-for-skips
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  aiointercept,
+  aioresponses,
+  aqipy-atmotech,
+  buildPythonPackage,
+  dacite,
+  fetchFromGitHub,
+  pyprojectVersionPatchHook,
+  pytest-asyncio,
+  pytest-error-for-skips,
+  pytestCheckHook,
+  setuptools,
+  syrupy,
+  tenacity,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "nettigo-air-monitor";
-  version = "1.2.1";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "5.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "bieniu";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-hKEXTzJMSVBRDiqrN90/fETEhirwSWLdgRULRvlQjbY=";
+    repo = "nettigo-air-monitor";
+    tag = finalAttrs.version;
+    hash = "sha256-CW3Z9AI0ncS+U14s3MnokPdcag90o/yrCOp+2lfQ3CM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
+
+  dependencies = [
     aiohttp
+    aqipy-atmotech
     dacite
+    tenacity
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    aiointercept
     aioresponses
     pytest-asyncio
     pytest-error-for-skips
     pytestCheckHook
+    syrupy
   ];
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "pytest-runner" ""
-    substituteInPlace setup.cfg \
-      --replace "--cov --cov-report term-missing " ""
-  '';
-
-  pythonImportsCheck = [
-    "nettigo_air_monitor"
+  disabledTests = [
+    # stuck in epoll
+    "test_retry_fail"
+    "test_retry_success"
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "nettigo_air_monitor" ];
+
+  meta = {
     description = "Python module to get air quality data from Nettigo Air Monitor devices";
     homepage = "https://github.com/bieniu/nettigo-air-monitor";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/bieniu/nettigo-air-monitor/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

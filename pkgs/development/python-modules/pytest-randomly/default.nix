@@ -1,40 +1,54 @@
-{ lib, buildPythonPackage, fetchFromGitHub, pythonOlder
-, factory_boy, faker, numpy, importlib-metadata
-, pytestCheckHook, pytest-xdist
+{
+  lib,
+  buildPythonPackage,
+  factory-boy,
+  faker,
+  fetchFromGitHub,
+  model-bakery,
+  numpy,
+  pytest,
+  pytest-xdist,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-randomly";
-  version = "3.10.1";
+  version = "4.0.1";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  # fetch from GitHub as pypi tarball doesn't include tests
   src = fetchFromGitHub {
-    repo = pname;
+    repo = "pytest-randomly";
     owner = "pytest-dev";
-    rev = version;
-    sha256 = "10z7hsr8yd80sf5113i61p0g1c0nqkx7p4xi19v3d133f6vjbh3k";
+    tag = version;
+    hash = "sha256-UQ1G9o4dsVEEo4y2u1TYYurJPfih7QlbilkwPqi39H0=";
   };
 
-  propagatedBuildInputs = lib.optionals (pythonOlder "3.10") [
-    importlib-metadata
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-    pytest-xdist
-    numpy
-    factory_boy
+  buildInputs = [ pytest ];
+
+  nativeCheckInputs = [
+    factory-boy
     faker
+    model-bakery
+    numpy
+    pytest-xdist
+    pytestCheckHook
   ];
-  # needs special invocation, copied from tox.ini
-  pytestFlagsArray = [ "-p" "no:randomly" ];
 
-  meta = with lib; {
+  # needs special invocation, copied from tox.ini
+  pytestFlags = [
+    "-pno:randomly"
+  ];
+
+  pythonImportsCheck = [ "pytest_randomly" ];
+
+  meta = {
+    changelog = "https://github.com/pytest-dev/pytest-randomly/blob/${src.tag}/CHANGELOG.rst";
     description = "Pytest plugin to randomly order tests and control random.seed";
     homepage = "https://github.com/pytest-dev/pytest-randomly";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.sternenseemann ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ sternenseemann ];
   };
 }

@@ -1,63 +1,66 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, meson
-, ninja
-, pkg-config
-, vala
-, gtk3
-, glib
-, granite
-, libgee
-, libhandy
-, libcanberra-gtk3
-, python3
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  gtk4,
+  glib,
+  granite7,
+  libadwaita,
+  libcanberra,
+  wayland-scanner,
+  wrapGAppsHook4,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-notifications";
-  version = "6.0.0";
-
-  repoName = "notifications";
+  version = "8.1.2";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = repoName;
-    rev = version;
-    sha256 = "0jfppafbc8jwhhnillylicz4zfds789d8b31ifsx0qijlxa7kji9";
+    repo = "notifications";
+    tag = version;
+    hash = "sha256-qod76RSsCO9NvjnYTLRW6P1UyR1K6Uu9fEjU2WgHUWk=";
   };
+
+  strictDeps = true;
+
+  depsBuildBuild = [
+    pkg-config
+  ];
 
   nativeBuildInputs = [
     glib # for glib-compile-schemas
     meson
     ninja
     pkg-config
-    python3
     vala
-    wrapGAppsHook
+    wayland-scanner
+    wrapGAppsHook4
   ];
 
   buildInputs = [
     glib
-    granite
-    gtk3
-    libcanberra-gtk3
-    libgee
-    libhandy
+    granite7
+    gtk4
+    libadwaita
+    libcanberra
   ];
 
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
+  passthru = {
+    updateScript = nix-update-script { };
+  };
 
-  meta = with lib; {
+  meta = {
     description = "GTK notification server for Pantheon";
     homepage = "https://github.com/elementary/notifications";
-    license = licenses.gpl3Plus;
-    maintainers = teams.pantheon.members;
-    platforms = platforms.linux;
+    license = lib.licenses.gpl3Plus;
+    teams = [ lib.teams.pantheon ];
+    platforms = lib.platforms.linux;
     mainProgram = "io.elementary.notifications";
   };
 }

@@ -1,62 +1,64 @@
-{ lib, stdenv, fetchFromGitHub, coreutils, ocaml-ng, zlib, pcre, neko, mbedtls, Security }:
-
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  coreutils,
+  ocaml-ng,
+  dune,
+  zlib,
+  pcre2,
+  neko,
+  mbedtls,
+}:
 let
-  ocamlDependencies = version:
-    if lib.versionAtLeast version "4.2"
-    then with ocaml-ng.ocamlPackages; [
+  ocamlDependencies =
+    version: with ocaml-ng.ocamlPackages; [
       ocaml
       findlib
-      sedlex_2
+      sedlex
       xml-light
       ptmap
       camlp5
       sha
-      dune_2
       luv
-      ocaml_extlib
-    ] else if lib.versionAtLeast version "4.0"
-    then with ocaml-ng.ocamlPackages_4_10; [
-      ocaml
-      findlib
-      sedlex_2
-      xml-light
-      ptmap
-      camlp5
-      sha
-      dune_2
-      luv
-      ocaml_extlib-1-7-7
-    ] else with ocaml-ng.ocamlPackages_4_05; [
-      ocaml
-      camlp4
+      extlib
     ];
 
-  defaultPatch = ''
-    substituteInPlace extra/haxelib_src/src/haxelib/client/Main.hx \
-      --replace '"neko"' '"${neko}/bin/neko"'
-  '';
-
-  generic = { sha256, version, prePatch ? defaultPatch }:
+  generic =
+    {
+      hash,
+      version,
+    }:
     stdenv.mkDerivation {
       pname = "haxe";
       inherit version;
 
-      buildInputs = [ zlib pcre neko ]
-        ++ lib.optional (lib.versionAtLeast version "4.1") mbedtls
-        ++ lib.optional (lib.versionAtLeast version "4.1" && stdenv.isDarwin) Security
-        ++ ocamlDependencies version;
+      buildInputs = [
+        zlib
+        neko
+        dune
+        pcre2
+        mbedtls
+      ]
+      ++ ocamlDependencies version;
 
       src = fetchFromGitHub {
         owner = "HaxeFoundation";
         repo = "haxe";
         rev = version;
         fetchSubmodules = true;
-        inherit sha256;
+        inherit hash;
       };
 
-      inherit prePatch;
+      prePatch = ''
+        substituteInPlace extra/haxelib_src/src/haxelib/client/Main.hx \
+          --replace-fail '"neko"' '"${neko}/bin/neko"'
+      '';
 
-      buildFlags = [ "all" "tools" ];
+      buildFlags = [
+        "all"
+        "tools"
+      ];
 
       installPhase = ''
         install -vd "$out/bin" "$out/lib/haxe/std"
@@ -111,43 +113,25 @@ let
         popd > /dev/null
       '';
 
-      meta = with lib; {
+      meta = {
         description = "Programming language targeting JavaScript, Flash, NekoVM, PHP, C++";
         homepage = "https://haxe.org";
-        license = with licenses; [ gpl2Plus mit ]; # based on upstream opam file
-        maintainers = [ maintainers.marcweber maintainers.locallycompact ];
-        platforms = platforms.linux ++ platforms.darwin;
+        license = with lib.licenses; [
+          gpl2Plus
+          mit
+        ]; # based on upstream opam file
+        maintainers = [
+          lib.maintainers.locallycompact
+          lib.maintainers.logo
+          lib.maintainers.bwkam
+        ];
+        platforms = lib.platforms.linux ++ lib.platforms.darwin;
       };
     };
-in {
-  # this old version is required to compile some libraries
-  haxe_3_2 = generic {
-    version = "3.2.1";
-    sha256 = "1x9ay5a2llq46fww3k07jxx8h1vfpyxb522snc6702a050ki5vz3";
-    prePatch = ''
-      sed -i -e 's|"/usr/lib/haxe/std/";|"'"$out/lib/haxe/std/"'";\n&|g' main.ml
-      substituteInPlace extra/haxelib_src/src/tools/haxelib/Main.hx \
-        --replace '"neko"' '"${neko}/bin/neko"'
-    '';
-  };
-  haxe_3_4 = generic {
-    version = "3.4.6";
-    sha256 = "1myc4b8fwp0f9vky17wv45n34a583f5sjvajsc93f5gm1wanp4if";
-    prePatch = ''
-      ${defaultPatch}
-      sed -i -re 's!(let +prefix_path += +).*( +in)!\1"'"$out/"'"\2!' src/main.ml
-    '';
-  };
-  haxe_4_0 = generic {
-    version = "4.0.5";
-    sha256 = "0f534pchdx0m057ixnk07ab4s518ica958pvpd0vfjsrxg5yjkqa";
-  };
-  haxe_4_1 = generic {
-    version = "4.1.5";
-    sha256 = "0rns6d28qzkbai6yyws08yzbyvxfn848nj0fsji7chdi0y7pzzj0";
-  };
-  haxe_4_2 = generic {
-    version = "4.2.1";
-    sha256 = "sha256-0j6M21dh8DB1gC/bPYNJrVuDbJyqQbP+61ItO5RBUcA=";
+in
+{
+  haxe_4_3 = generic {
+    version = "4.3.7";
+    hash = "sha256-sQb7MCoH2dZOvNmDQ9P0yFYrSXYOMn4FS/jlyjth39Y=";
   };
 }

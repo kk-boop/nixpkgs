@@ -1,37 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, georss-client
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  georss-client,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "georss-nrcan-earthquakes-client";
-  version = "0.3";
-  disabled = pythonOlder "3.7";
+  version = "2026.6.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "exxamalte";
     repo = "python-georss-nrcan-earthquakes-client";
-    rev = "v${version}";
-    sha256 = "1brn6ycsw3d3znbqi2w2cxjw8hyfb44p2lra18rx2gyvgnkxg19l";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-JRU+ncPRbkA/fQ6aIOX6J09ErMpgH2Rk8AF+eWR5WXg=";
   };
 
-  propagatedBuildInputs = [
-    georss-client
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  dependencies = [ georss-client ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "georss_nrcan_earthquakes_client" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for accessing Natural Resources Canada Earthquakes feed";
     homepage = "https://github.com/exxamalte/python-georss-nrcan-earthquakes-client";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/exxamalte/python-georss-nrcan-earthquakes-client/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

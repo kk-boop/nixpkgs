@@ -1,18 +1,29 @@
-{ lib, buildDunePackage, ocaml, alcotest, cstruct, sexplib }:
+{
+  lib,
+  buildDunePackage,
+  ocaml,
+  alcotest,
+  crowbar,
+  cstruct,
+  sexplib,
+}:
 
-if !lib.versionAtLeast (cstruct.version or "1") "3"
-then cstruct
+if lib.versionOlder (cstruct.version or "1") "3" then
+  cstruct
 else
 
-buildDunePackage rec {
-  pname = "cstruct-sexp";
-  inherit (cstruct) version src useDune2 meta;
+  buildDunePackage {
+    pname = "cstruct-sexp";
+    inherit (cstruct) version src meta;
 
-  minimumOCamlVersion = "4.03";
+    doCheck = true;
+    checkInputs = [
+      alcotest
+      crowbar
+    ];
 
-  # alcotest is only available on OCaml >= 4.05 due to fmt
-  doCheck = lib.versionAtLeast ocaml.version "4.05";
-  checkInputs = [ alcotest ];
-
-  propagatedBuildInputs = [ cstruct sexplib ];
-}
+    propagatedBuildInputs = [
+      cstruct
+      sexplib
+    ];
+  }

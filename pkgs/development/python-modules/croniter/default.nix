@@ -1,39 +1,68 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, python-dateutil
-, pytestCheckHook
-, pytz
-, natsort
-, tzlocal
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  packaging,
+  pytestCheckHook,
+  python,
+  python-dateutil,
+  pytz,
+  trove-classifiers,
+  tzlocal,
+  versionCheckHook,
+  which,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "croniter";
-  version = "1.0.15";
+  version = "6.2.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "06c2smrjskd9di8lcpymcxmygncxr14932qjhslc37yyaafzq3d7";
+  src = fetchFromGitHub {
+    owner = "pallets-eco";
+    repo = "croniter";
+    tag = "${finalAttrs.version}";
+    hash = "sha256-Ff6fHFBOBQmrf8OLPNuhHjRqyPuS1sStd5hWh4oI0cI=";
   };
 
-  propagatedBuildInputs = [
-    python-dateutil
-    natsort
+  build-system = [
+    hatchling
+    packaging
+    trove-classifiers
   ];
 
-  checkInputs = [
+  dependencies = [ python-dateutil ];
+
+  nativeCheckInputs = [
     pytestCheckHook
     pytz
     tzlocal
   ];
 
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "hatchling==1.30.1" "hatchling>=1.30.1"
+  '';
+
   pythonImportsCheck = [ "croniter" ];
 
-  meta = with lib; {
-    description = "croniter provides iteration for datetime object with cron like format";
+  nativeInstallCheckInputs = [
+    versionCheckHook
+    which
+  ];
+
+  versionCheckProgramArg = "${placeholder "out"}/${python.sitePackages}";
+
+  preInstallCheck = ''
+    versionCheckProgram="$(which ls)"
+  '';
+
+  meta = {
+    description = "Library to iterate over datetime object with cron like format";
     homepage = "https://github.com/kiorky/croniter";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/kiorky/croniter/blob/${finalAttrs.version}/CHANGELOG.rst";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

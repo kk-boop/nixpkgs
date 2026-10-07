@@ -1,45 +1,57 @@
-{ lib
-, buildPythonPackage
-, isPy3k
-, fetchPypi
-, colorama
-, coverage
-, unidecode
-, lxml
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  colorama,
+  coverage,
+  unidecode,
+  lxml,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "green";
-  version = "3.3.0";
+  version = "4.0.2";
+  pyproject = true;
 
-  disabled = !isPy3k;
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "a4d86f2dfa4ccbc86f24bcb9c9ab8bf34219c876c24e9f0603aab4dfe73bb575";
+    pname = "green";
+    inherit (finalAttrs) version;
+    hash = "sha256-pAZ8P5/CpkTtNfU2ZJUGQzROxGLm0uu1vXS3YpcVprE=";
   };
 
-  patches = [
-    ./tests.patch
-  ];
+  patches = [ ./tests.patch ];
 
   postPatch = ''
     substituteInPlace green/test/test_integration.py \
       --subst-var-by green "$out/bin/green"
   '';
 
-  propagatedBuildInputs = [
-    colorama coverage unidecode lxml
+  build-system = [ setuptools ];
+
+  dependencies = [
+    colorama
+    coverage
+    unidecode
+    lxml
   ];
 
   # let green run it's own test suite
   checkPhase = ''
-    $out/bin/green -tvvv green
+    $out/bin/green -tvvv \
+      green.test.test_version \
+      green.test.test_cmdline
   '';
 
-  meta = with lib; {
+  pythonImportsCheck = [ "green" ];
+
+  meta = {
     description = "Python test runner";
     homepage = "https://github.com/CleanCut/green";
-    license = licenses.mit;
+    changelog = "https://github.com/CleanCut/green/blob/${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

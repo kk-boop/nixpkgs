@@ -1,40 +1,42 @@
-{ lib
-, buildPythonPackage
-, isPy27
-, fetchFromGitHub
-, pymeeus
-, pytz
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pymeeus,
+  pytz,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "convertdate";
-  version = "2.3.2";
-  disabled = isPy27;
+  version = "2.5.1";
+  pyproject = true;
 
-  # Tests are not available in the PyPI tarball so use GitHub instead.
   src = fetchFromGitHub {
     owner = "fitnr";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "0k7j59sbqwyi72vcjx5vsh3qb6hxfnkfjkd2i6f6lckdr1bkh7fz";
+    repo = "convertdate";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-zxcEIqCdEIG+tRGGFqeZDy2DNLbq/CNifK35bRyqEcU=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     pymeeus
     pytz
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "convertdate" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/fitnr/convertdate";
+  meta = {
     description = "Utils for converting between date formats and calculating holidays";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jluttine ];
+    homepage = "https://github.com/fitnr/convertdate";
+    changelog = "https://github.com/fitnr/convertdate/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ jluttine ];
+    mainProgram = "censusgeocode";
   };
-}
+})

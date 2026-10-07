@@ -1,26 +1,56 @@
-{ lib, buildPythonPackage, isPy3k, fetchPypi, cmake, numpy, pytestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+
+  # build-system
+  cmake,
+  scikit-build-core,
+  pybind11,
+  pathspec,
+  ninja,
+  pyproject-metadata,
+
+  # dependencies
+  numpy,
+
+  # tests
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "iminuit";
-  version = "2.8.4";
-  disabled = !isPy3k;
+  version = "2.32.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "4b09189f3094896cfc68596adc95b7f1d92772e1de1424e5dc4dd81def56e8b0";
+    hash = "sha256-oys00YZllZvnWta9sd2ARZu5RGbGK0VWMcAFaKzN99I=";
   };
 
-  nativeBuildInputs = [ cmake ];
-  propagatedBuildInputs = [ numpy ];
+  build-system = [
+    cmake
+    scikit-build-core
+    pybind11
+    pathspec
+    ninja
+    pyproject-metadata
+  ];
+
+  dependencies = [ numpy ];
 
   dontUseCmakeConfigure = true;
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/scikit-hep/iminuit";
+    changelog = "https://github.com/scikit-hep/iminuit/releases/tag/v${version}";
     description = "Python interface for the Minuit2 C++ library";
-    license = with licenses; [ mit lgpl2Only ];
-    maintainers = with maintainers; [ veprbl ];
+    license = with lib.licenses; [
+      mit
+      lgpl2Only
+    ];
+    maintainers = with lib.maintainers; [ veprbl ];
   };
 }

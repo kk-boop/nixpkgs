@@ -1,48 +1,75 @@
-{ lib
-, buildPythonPackage
-, isPy3k
-, fetchPypi
-, substituteAll
-, graphviz
-, coreutils
-, pkg-config
-, pytest
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  replaceVars,
+  graphviz,
+  coreutils,
+  pkg-config,
+  setuptools,
+  swig,
+  pytest,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pygraphviz";
-  version = "1.7";
+  version = "2.0.3";
+  pyproject = true;
 
-  disabled = !isPy3k;
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "a7bec6609f37cf1e64898c59f075afd659106cf9356c5f387cecaa2e0cdb2304";
-    extension = "zip";
+  src = fetchFromGitHub {
+    owner = "pygraphviz";
+    repo = "pygraphviz";
+    tag = "pygraphviz-${finalAttrs.version}";
+    hash = "sha256-RG3XIV0CF2pXdqJIfSWQzpfYBCl6D5AjMA4Z0zxqtxM=";
   };
 
   patches = [
     # pygraphviz depends on graphviz executables and wc being in PATH
-    (substituteAll {
-      src = ./path.patch;
-      path = lib.makeBinPath [ graphviz coreutils ];
+    (replaceVars ./path.patch {
+      path = lib.makeBinPath [
+        graphviz
+        coreutils
+      ];
     })
   ];
 
-  nativeBuildInputs = [ pkg-config ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "swig>4.1.0"' ""
+  '';
+
+  env.GRAPHVIZ_PREFIX = graphviz;
+
+  build-system = [
+    setuptools
+  ];
+
+  nativeBuildInputs = [
+    graphviz # for dot
+    pkg-config
+    swig
+  ];
 
   buildInputs = [ graphviz ];
 
-  checkInputs = [ pytest ];
+  nativeCheckInputs = [ pytest ];
 
   checkPhase = ''
+    runHook preCheck
     pytest --pyargs pygraphviz
+    runHook postCheck
   '';
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pygraphviz" ];
+
+  meta = {
+    changelog = "https://github.com/pygraphviz/pygraphviz/releases/tag/pygraphviz-${finalAttrs.version}";
     description = "Python interface to Graphviz graph drawing package";
     homepage = "https://github.com/pygraphviz/pygraphviz";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ matthiasbeyer dotlambda ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [
+      matthiasbeyer
+      dotlambda
+    ];
   };
-}
+})

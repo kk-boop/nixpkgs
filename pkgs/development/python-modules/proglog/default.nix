@@ -1,19 +1,28 @@
-{ lib, fetchPypi, buildPythonPackage, tqdm }:
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  setuptools,
+  tqdm,
+}:
 
 buildPythonPackage rec {
   pname = "proglog";
-  version = "0.1.9";
+  version = "0.1.12";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "13diln950wk6nnn4rpmzx37rvrnpa7f803gwygiwbq1q46zwri6q";
+    hash = "sha256-Nh7gdHIcJ3uJt1wGEzbLjF8ofJKwQ++lYsz3hmzakxw=";
   };
 
-  propagatedBuildInputs = [ tqdm ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  dependencies = [ tqdm ];
+
+  meta = {
     description = "Logs and progress bars manager for Python";
     homepage = "https://github.com/Edinburgh-Genome-Foundry/Proglog";
-    license = licenses.mit;
+    license = lib.licenses.mit;
   };
 }

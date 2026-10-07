@@ -1,30 +1,71 @@
-{ lib, buildPythonPackage, fetchPypi, pytest, flask, werkzeug, setuptools-scm, isPy27 }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
 
-buildPythonPackage rec {
+  # build-system
+  setuptools-scm,
+
+  # buildInputs
+  pytest,
+
+  # dependencies
+  flask,
+  werkzeug,
+
+  # tests
+  pytestCheckHook,
+  pythonAtLeast,
+}:
+
+buildPythonPackage (finalAttrs: {
   pname = "pytest-flask";
-  version = "1.2.0";
-  disabled = isPy27;
+  version = "1.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "46fde652f77777bf02dc91205aec4ce20cdf2acbbbd66a918ab91f5c14693d3d";
+  src = fetchFromGitHub {
+    owner = "pytest-dev";
+    repo = "pytest-flask";
+    tag = finalAttrs.version;
+    hash = "sha256-mcBHpP6A+ehqowDccfcn+wv6WXRrF0cY9ez7kqkb3Hc=";
   };
 
-  doCheck = false;
+  build-system = [ setuptools-scm ];
 
   buildInputs = [ pytest ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     flask
     werkzeug
   ];
 
-  nativeBuildInputs = [ setuptools-scm ];
+  pythonImportsCheck = [ "pytest_flask" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/pytest-dev/pytest-flask/";
-    license = licenses.mit;
-    description = "A set of py.test fixtures to test Flask applications";
-    maintainers = with maintainers; [ vanschelven ];
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = lib.optionals (pythonAtLeast "3.14") [
+    # Failed: nomatch: '*PASSED*'
+    "test_add_endpoint_to_live_server"
+    "test_clean_stop_live_server"
+    "test_live_server_fixed_host"
+    "test_live_server_fixed_port"
+    "test_rewrite_application_server_name"
+    "test_start_live_server"
+
+    # _pickle.PicklingError: Can't pickle local object
+    "test_init"
+    "test_server_is_alive"
+    "test_server_listening"
+    "test_set_application_server_name"
+    "test_stop_cleanly_join_exception"
+    "test_url_for"
+  ];
+
+  meta = {
+    description = "Set of pytest fixtures to test Flask applications";
+    homepage = "https://pytest-flask.readthedocs.io/";
+    changelog = "https://github.com/pytest-dev/pytest-flask/blob/${finalAttrs.src.tag}/docs/changelog.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ vanschelven ];
   };
-}
+})

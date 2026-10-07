@@ -1,24 +1,30 @@
-{ stdenv, lib, fetchurl
-, ocaml, findlib
+{
+  buildDunePackage,
+  ocaml,
+  lib,
+  fetchurl,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "ocaml${ocaml.version}-stdcompat";
-  version = "15";
+buildDunePackage rec {
+  pname = "stdcompat";
+  version = "21.1";
+
+  minimalOCamlVersion = "4.11";
 
   src = fetchurl {
-    url = "https://github.com/thierry-martinez/stdcompat/releases/download/v${version}/stdcompat-${version}.tar.gz";
-    sha256 = "1xcwb529m4lg9cbnxa9m3x2nnl9nxzz1x5lxpvdfflg4zxl6yx2y";
+    url = "https://github.com/ocamllibs/stdcompat/archive/refs/tags/${version}.tar.gz";
+    sha256 = "sha256-RSJ9AgUEmt23QZCk60ETIXmkJhG7knQe+s8wNxxIHm4=";
   };
 
-  buildInputs = [ ocaml findlib ];
+  patches = [ ./ocaml-4_14_3.patch ];
 
-  configureFlags = "--libdir=$(OCAMLFIND_DESTDIR)";
+  # Otherwise ./configure script will run and create files conflicting with dune.
+  dontConfigure = true;
 
   meta = {
-    homepage = "https://github.com/thierry-martinez/stdcompat";
+    homepage = "https://github.com/ocamllibs/stdcompat";
     license = lib.licenses.bsd2;
     maintainers = [ lib.maintainers.vbgl ];
-    inherit (ocaml.meta) platforms;
+    broken = lib.versionAtLeast ocaml.version "5.4";
   };
 }

@@ -1,22 +1,21 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, setuptools
-, websockets
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  websockets,
 }:
 
 buildPythonPackage rec {
   pname = "graphql-subscription-manager";
-  version = "0.4.3";
-
-  disabled = pythonOlder "3.7";
+  version = "0.7.1";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "Danielhiversen";
     repo = "PyGraphqlWebsocketManager";
-    rev = version;
-    sha256 = "sha256-+LP+MDeHo0svoN/o0in6xtIqrfxs+UCBQRtBe4lZt+4=";
+    tag = version;
+    hash = "sha256-6/REvY5QxsAPV41Pvg8vrJPYbDrGUrpOPn0vzIcCu0k=";
   };
 
   propagatedBuildInputs = [
@@ -29,10 +28,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "graphql_subscription_manager" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python3 library for graphql subscription manager";
     homepage = "https://github.com/Danielhiversen/PyGraphqlWebsocketManager";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

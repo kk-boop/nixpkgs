@@ -1,31 +1,59 @@
-{ buildOctavePackage
-, lib
-, fetchurl
-, gfortran
-, lapack, blas
+{
+  buildOctavePackage,
+  lib,
+  fetchFromGitHub,
+  gfortran,
+  lapack,
+  blas,
+  autoreconfHook,
+  nix-update-script,
 }:
 
 buildOctavePackage rec {
   pname = "control";
-  version = "3.3.1";
+  version = "4.2.3";
 
-  src = fetchurl {
-    url = "mirror://sourceforge/octave/${pname}-${version}.tar.gz";
-    sha256 = "0vndbzix34vfzdlsz57bgkyg31as4kv6hfg9pwrcqn75bzzjsivw";
+  src = fetchFromGitHub {
+    owner = "gnu-octave";
+    repo = "pkg-control";
+    tag = "${pname}-${version}";
+    fetchSubmodules = true;
+    sha256 = "sha256-go7ylTl1jitLwVo5ozi2hjUKFjOCnHOasRM4/EqqAaw=";
   };
+
+  # Running autoreconfHook inside the src directory fixes a compile issue about
+  # the config.h header for control missing.
+  # This is supposed to be handled by control's top-level Makefile, but does not
+  # appear to be working. This manually forces it instead.
+  preAutoreconf = ''
+    pushd src
+  '';
+
+  postAutoreconf = ''
+    popd
+  '';
 
   nativeBuildInputs = [
     gfortran
+    autoreconfHook
   ];
 
   buildInputs = [
-    lapack blas
+    lapack
+    blas
   ];
 
-  meta = with lib; {
-    homepage = "https://octave.sourceforge.io/control/index.html";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ KarlJoad ];
+  passthru.updateScript = nix-update-script {
+    extraArgs = [
+      "--version-regex"
+      "control-(.*)"
+    ];
+  };
+
+  meta = {
+    homepage = "https://gnu-octave.github.io/packages/control/";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ ravenjoad ];
     description = "Computer-Aided Control System Design (CACSD) Tools for GNU Octave, based on the proven SLICOT Library";
   };
 }

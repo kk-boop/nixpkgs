@@ -1,33 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, websockets
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  websockets,
+  requests,
 }:
 
 buildPythonPackage rec {
   pname = "mattermostdriver";
-  version = "7.3.1";
-
-  disabled = pythonOlder "3.5";
+  version = "7.3.2";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "bf629c4b8f825bd7196208aa93995ac5077bd60939ba67cca314a7f13c1dbcea";
+    sha256 = "2e4d7b4a17d3013e279c6f993746ea18cd60b45d8fa3be24f47bc2de22b9b3b4";
   };
 
-  propagatedBuildInputs = [ websockets requests ];
+  propagatedBuildInputs = [
+    websockets
+    requests
+  ];
 
   pythonImportsCheck = [ "mattermostdriver" ];
 
   # no tests
   doCheck = false;
 
-  meta = with lib; {
-    description = "A Python Mattermost Driver";
+  meta = {
+    description = "Python Mattermost Driver";
     homepage = "https://github.com/Vaelor/python-mattermost-driver";
-    license = licenses.mit;
-    maintainers = with maintainers; [ globin lheckemann ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

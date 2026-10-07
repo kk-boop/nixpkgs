@@ -1,30 +1,42 @@
-{ lib, fetchPypi, isPy27, buildPythonPackage, pythonOlder
-, numpy, hdf5, cython, six, pkgconfig, unittest2
-, mpi4py ? null, openssh, pytestCheckHook, cached-property }:
+{
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  setuptools,
+  numpy,
+  hdf5,
+  cython,
+  pkgconfig,
+  mpi4py ? null,
+  openssh,
+  pytestCheckHook,
+  pytest-mpi,
+}:
 
 assert hdf5.mpiSupport -> mpi4py != null && hdf5.mpi == mpi4py.mpi;
 
 let
   mpi = hdf5.mpi;
   mpiSupport = hdf5.mpiSupport;
-in buildPythonPackage rec {
-  version = "3.4.0";
+in
+buildPythonPackage rec {
+  version = "3.16.0";
   pname = "h5py";
-  disabled = isPy27;
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "ee1c683d91ab010d5e85cb61e8f9e7ee0d8eab545bf3dd50a9618f1d0e8f615e";
+    hash = "sha256-oNuq15aEDMqmekwUSg0MgIAHPDTHbVppQdaBhnjvJzg=";
   };
 
-  # avoid strict pinning of numpy
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "numpy ==" "numpy >="
-  '';
+  pythonRelaxDeps = [ "mpi4py" ];
 
-  HDF5_DIR = "${hdf5}";
-  HDF5_MPI = if mpiSupport then "ON" else "OFF";
+  env = {
+    HDF5_DIR = "${hdf5}";
+    HDF5_MPI = if mpiSupport then "ON" else "OFF";
+    # See discussion at https://github.com/h5py/h5py/issues/2560
+    H5PY_SETUP_REQUIRES = 0;
+  };
 
   postConfigure = ''
     # Needed to run the tests reliably. See:
@@ -32,24 +44,51 @@ in buildPythonPackage rec {
     ${lib.optionalString mpiSupport "export OMPI_MCA_rmaps_base_oversubscribe=yes"}
   '';
 
-  preBuild = if mpiSupport then "export CC=${mpi}/bin/mpicc" else "";
+  preBuild = lib.optionalString mpiSupport "export CC=${lib.getDev mpi}/bin/mpicc";
 
-  # tests now require pytest-mpi, which isn't available and difficult to package
-  doCheck = false;
-  checkInputs = lib.optional isPy27 unittest2 ++ [ pytestCheckHook openssh ];
-  nativeBuildInputs = [ pkgconfig cython ];
-  buildInputs = [ hdf5 ]
-    ++ lib.optional mpiSupport mpi;
-  propagatedBuildInputs = [ numpy six]
-    ++ lib.optionals mpiSupport [ mpi4py openssh ]
-    ++ lib.optionals (pythonOlder "3.8") [ cached-property ];
+  build-system = [
+    cython
+    numpy
+    pkgconfig
+    setuptools
+  ];
+
+  buildInputs = [ hdf5 ] ++ lib.optional mpiSupport mpi;
+
+  dependencies = [
+    numpy
+  ]
+  ++ lib.optionals mpiSupport [
+    mpi4py
+    openssh
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-mpi
+    openssh
+  ];
+  # https://github.com/NixOS/nixpkgs/issues/255262
+  preCheck = ''
+    cd $out
+  '';
+  # For some reason these fail when mpi support is enabled, due to concurrent
+  # writings. There are a few open issues about this in the bug tracker, but
+  # not related to the tests.
+  disabledTests = lib.optionals mpiSupport [ "TestPageBuffering" ];
 
   pythonImportsCheck = [ "h5py" ];
 
-  meta = with lib; {
+  passthru = {
+    # To evaluate more easily *Support flags of it from within Python Packages.
+    inherit hdf5;
+  };
+
+  meta = {
+    changelog = "https://github.com/h5py/h5py/blob/${version}/docs/whatsnew/${lib.versions.majorMinor version}.rst";
     description = "Pythonic interface to the HDF5 binary data format";
     homepage = "http://www.h5py.org/";
-    license = licenses.bsd3;
-    maintainers = [ ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
 }

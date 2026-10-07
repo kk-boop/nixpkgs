@@ -1,26 +1,52 @@
-{ buildOctavePackage
-, lib
-, fetchurl
-, netcdf
+{
+  buildOctavePackage,
+  lib,
+  fetchFromGitHub,
+  netcdf,
+  nix-update-script,
+  pkg-config,
+  autoreconfHook,
 }:
 
 buildOctavePackage rec {
   pname = "netcdf";
-  version = "1.0.14";
+  version = "1.0.21";
 
-  src = fetchurl {
-    url = "mirror://sourceforge/octave/${pname}-${version}.tar.gz";
-    sha256 = "1wdwl76zgcg7kkdxjfjgf23ylzb0x4dyfliffylyl40g6cjym9lf";
+  src = fetchFromGitHub {
+    owner = "gnu-octave";
+    repo = "octave-netcdf";
+    tag = "v${version}";
+    sha256 = "sha256-k3LXfogxaYHYrKtedCyVgsid2AKnYgJxscAEPaAya6o=";
   };
 
-  buildInputs = [
+  nativeBuildInputs = [
+    pkg-config
+    autoreconfHook
+  ];
+
+  propagatedBuildInputs = [
     netcdf
   ];
 
-  meta = with lib; {
-    homepage = "https://octave.sourceforge.io/netcdf/index.html";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ KarlJoad ];
-    description = "A NetCDF interface for Octave";
+  # autoreconfHook provides an autoreconfPhase that is run as a
+  # preconfigurePhase, which means it runs AFTER the source is un-tarred, and
+  # before buildOctavePackage's buildPhase re-tars it up into a format for later
+  # consumption by Octave's "pkg build" command.
+  preAutoreconf = ''
+    pushd src
+    # Upstream's bootstrap script uses wget to fetch config.guess & config.sub
+    # and has them committed to the repository. We must remove them so autoreconf
+    # actually fires for our environment.
+    rm config.*
+  '';
+  postAutoreconf = ''
+    popd
+  '';
+
+  meta = {
+    homepage = "https://gnu-octave.github.io/packages/netcdf/";
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ ravenjoad ];
+    description = "NetCDF interface for Octave";
   };
 }

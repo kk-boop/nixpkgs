@@ -1,34 +1,36 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, pytestCheckHook
-, uc-micro-py
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  uc-micro-py,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "linkify-it-py";
-  version = "1.0.2";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.6";
+  version = "2.0.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "tsutsu3";
-    repo = pname;
-    rev = "v${version}";
-    hash = "sha256-i48B5qNufuhGp9a/46rWRgPawYkMA0ryRSyR+JhUmmw=";
+    repo = "linkify-it-py";
+    tag = "v${version}";
+    hash = "sha256-BLwIityUZDVdSbvTpLf6QUlZUavWzG/45Nfffn18/vU=";
   };
+
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [ uc-micro-py ];
 
-  checkInputs = [ pytestCheckHook ];
   pythonImportsCheck = [ "linkify_it" ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Links recognition library with full unicode support";
     homepage = "https://github.com/tsutsu3/linkify-it-py";
-    license = licenses.mit;
-    maintainers = with maintainers; [ AluisioASG ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

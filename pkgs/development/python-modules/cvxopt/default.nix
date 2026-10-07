@@ -1,60 +1,84 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPyPy
-, python
-, blas, lapack # build segfaults with 64-bit blas
-, suitesparse
-, glpk ? null
-, gsl ? null
-, fftw ? null
-, withGlpk ? true
-, withGsl ? true
-, withFftw ? true
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  isPyPy,
+  blas,
+  lapack,
+  setuptools-scm,
+  suitesparse,
+  unittestCheckHook,
+  glpk ? null,
+  gsl ? null,
+  fftw ? null,
+  withGlpk ? true,
+  withGsl ? true,
+  withFftw ? true,
 }:
 
 assert (!blas.isILP64) && (!lapack.isILP64);
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cvxopt";
-  version = "1.2.7";
+  version = "1.3.3";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   disabled = isPyPy; # hangs at [translation:info]
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "3f9db1f4d4e820aaea81d6fc21054c89dc6327c84f935dd5a1eda1af11e1d504";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-gFnO9B8fEVyHvJt1/sn4bblefwr88DpS1hm6Qz5EO8s=";
   };
 
-  buildInputs = [ blas lapack ];
+  buildInputs = [
+    blas
+    lapack
+  ];
+
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
   # similar to Gsl, glpk, fftw there is also a dsdp interface
   # but dsdp is not yet packaged in nixpkgs
-  preConfigure = ''
-    export CVXOPT_BLAS_LIB=blas
-    export CVXOPT_LAPACK_LIB=lapack
-    export CVXOPT_SUITESPARSE_LIB_DIR=${lib.getLib suitesparse}/lib
-    export CVXOPT_SUITESPARSE_INC_DIR=${lib.getDev suitesparse}/include
-  '' + lib.optionalString withGsl ''
-    export CVXOPT_BUILD_GSL=1
-    export CVXOPT_GSL_LIB_DIR=${gsl}/lib
-    export CVXOPT_GSL_INC_DIR=${gsl}/include
-  '' + lib.optionalString withGlpk ''
-    export CVXOPT_BUILD_GLPK=1
-    export CVXOPT_GLPK_LIB_DIR=${glpk}/lib
-    export CVXOPT_GLPK_INC_DIR=${glpk}/include
-  '' + lib.optionalString withFftw ''
-    export CVXOPT_BUILD_FFTW=1
-    export CVXOPT_FFTW_LIB_DIR=${fftw}/lib
-    export CVXOPT_FFTW_INC_DIR=${fftw.dev}/include
-  '';
+  env = {
+    CVXOPT_BLAS_LIB = "blas";
+    CVXOPT_LAPACK_LIB = "lapack";
+    CVXOPT_BUILD_DSDP = "0";
+    CVXOPT_SUITESPARSE_LIB_DIR = "${lib.getLib suitesparse}/lib";
+    CVXOPT_SUITESPARSE_INC_DIR = "${lib.getDev suitesparse}/include";
+  }
+  // lib.optionalAttrs withGsl {
+    CVXOPT_BUILD_GSL = "1";
+    CVXOPT_GSL_LIB_DIR = "${lib.getLib gsl}/lib";
+    CVXOPT_GSL_INC_DIR = "${lib.getDev gsl}/include";
+  }
+  // lib.optionalAttrs withGlpk {
+    CVXOPT_BUILD_GLPK = "1";
+    CVXOPT_GLPK_LIB_DIR = "${lib.getLib glpk}/lib";
+    CVXOPT_GLPK_INC_DIR = "${lib.getDev glpk}/include";
+  }
+  // lib.optionalAttrs withFftw {
+    CVXOPT_BUILD_FFTW = "1";
+    CVXOPT_FFTW_LIB_DIR = "${lib.getLib fftw}/lib";
+    CVXOPT_FFTW_INC_DIR = "${lib.getDev fftw}/include";
+  };
 
-  checkPhase = ''
-    ${python.interpreter} -m unittest discover -s tests
-  '';
+  nativeCheckInputs = [ unittestCheckHook ];
 
-  meta = with lib; {
-    homepage = "http://cvxopt.org/";
+  unittestFlagsArray = [
+    "-s"
+    "tests"
+  ];
+
+  pythonImportsCheck = [ "cvxopt" ];
+
+  meta = {
+    homepage = "https://cvxopt.org/";
     description = "Python Software for Convex Optimization";
     longDescription = ''
       CVXOPT is a free software package for convex optimization based on the
@@ -66,7 +90,7 @@ buildPythonPackage rec {
       standard library and on the strengths of Python as a high-level
       programming language.
     '';
-    maintainers = with maintainers; [ edwtjo ];
-    license = licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ edwtjo ];
+    license = lib.licenses.gpl3Plus;
   };
-}
+})

@@ -1,27 +1,41 @@
-{ lib
-, buildPythonPackage
-, fetchdarcs
-, eventlib
-, application
-, gnutls
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  unstableGitUpdater,
 }:
 
-buildPythonPackage rec {
-  pname = "python-msrplib";
-  version = "0.19.2";
+buildPythonPackage {
+  pname = "msrplib";
+  version = "0.21.0-unstable-2026-07-09";
+  pyproject = true;
 
-  src = fetchdarcs {
-    url = "http://devel.ag-projects.com/repositories/${pname}";
-    rev = "release-${version}";
-    sha256 = "0d0krwv4hhspjgppnvh0iz51bvdbz23cjasgrppip7x8b00514gz";
+  src = fetchFromGitHub {
+    owner = "AGProjects";
+    repo = "python3-msrplib";
+    # no tag pushed for version 0.21.1 release, and commit title is wrong
+    rev = "1b50e00b2b242be41287b3e3ae3ef02c5a7b96e6";
+    hash = "sha256-HmIuJl/H94GX0caT+uKriz8RMkpzuFgsPPyPhwo3kHM=";
   };
 
-  propagatedBuildInputs = [ eventlib application gnutls ];
+  build-system = [
+    setuptools
+  ];
 
-  meta = with lib; {
-    homepage = "https://github.com/AGProjects/python-msrplib";
-    description = "Client library for MSRP protocol and its relay extension (RFC 4975 and RFC4976)";
-    license = licenses.lgpl3;
+  # only test requires networking
+  doCheck = false;
+
+  pythonImportsCheck = [ "msrplib" ];
+
+  passthru.updateScript = unstableGitUpdater { };
+
+  meta = {
+    description = "MSRP (RFC4975) client library";
+    homepage = "https://github.com/AGProjects/python3-msrplib";
+    license = lib.licenses.lgpl21Plus;
+    teams = [
+      lib.teams.ngi
+    ];
   };
-
 }

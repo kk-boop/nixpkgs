@@ -1,14 +1,14 @@
-{ lib
-, buildPythonPackage
-, isPy27
-, setuptools-scm
-, libdeltachat
-, cffi
-, imapclient
-, pluggy
-, requests
-, setuptools
-, pytestCheckHook
+{
+  buildPythonPackage,
+  pkg-config,
+  pkgconfig,
+  setuptools-scm,
+  libdeltachat,
+  cffi,
+  imap-tools,
+  requests,
+  pluggy,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
@@ -16,29 +16,25 @@ buildPythonPackage rec {
   inherit (libdeltachat) version src;
   sourceRoot = "${src.name}/python";
 
-  disabled = isPy27;
+  pyproject = true;
 
   nativeBuildInputs = [
+    cffi
+    pkg-config
+    pkgconfig
     setuptools-scm
   ];
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  buildInputs = [
-    libdeltachat
-  ];
+  buildInputs = [ libdeltachat ];
 
   propagatedBuildInputs = [
     cffi
-    imapclient
+    imap-tools
     pluggy
     requests
-    setuptools
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [
     "deltachat"
@@ -48,11 +44,8 @@ buildPythonPackage rec {
     "deltachat.message"
   ];
 
-  meta = with lib; {
+  meta = libdeltachat.meta // {
     description = "Python bindings for the Delta Chat Core library";
     homepage = "https://github.com/deltachat/deltachat-core-rust/tree/master/python";
-    changelog = "https://github.com/deltachat/deltachat-core-rust/blob/${version}/python/CHANGELOG";
-    license = licenses.mpl20;
-    maintainers = with maintainers; [ dotlambda ];
   };
 }

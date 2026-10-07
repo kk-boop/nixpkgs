@@ -1,35 +1,53 @@
-{ buildPythonPackage
-, lib
-, fetchPypi
-, pytest
-, httpbin
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  httpbin,
+  pytest,
+  pytestCheckHook,
+  requests,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-httpbin";
-  version = "1.0.0";
+  version = "2.1.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0wlvw5qgkax7f0i5ks1562s37h2hdmn5yxnp1rajcc2289zm9knq";
+  src = fetchFromGitHub {
+    owner = "kevin1024";
+    repo = "pytest-httpbin";
+    tag = "v${version}";
+    hash = "sha256-gESU1SDpqSQs8GRcGJclWM0WpS4DZicfdtwxk2sQubQ=";
   };
 
-  checkInputs = [ pytest ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ httpbin six ];
+  buildInputs = [ pytest ];
 
-  checkPhase = ''
-    py.test
-  '';
+  propagatedBuildInputs = [ httpbin ];
 
-  # https://github.com/kevin1024/pytest-httpbin/pull/51
-  doCheck = false;
+  nativeCheckInputs = [
+    pytestCheckHook
+    requests
+  ];
+
+  disabledTests = [
+    # incompatible with flask 2.3
+    "test_redirect_location_is_https_for_secure_server"
+    # Timeout on Hydra
+    "test_dont_crash_on_handshake_timeout"
+  ];
+
+  __darwinAllowLocalNetworking = true;
+
+  pythonImportsCheck = [ "pytest_httpbin" ];
 
   meta = {
-    description = "Easily test your HTTP library against a local copy of httpbin.org";
+    description = "Test your HTTP library against a local copy of httpbin.org";
     homepage = "https://github.com/kevin1024/pytest-httpbin";
+    changelog = "https://github.com/kevin1024/pytest-httpbin/releases/tag/v${version}";
     license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }
-

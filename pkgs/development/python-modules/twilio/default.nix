@@ -1,46 +1,74 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, mock
-, nose
-, pyjwt
-, pythonOlder
-, pytz
-, requests
+{
+  lib,
+  aiohttp-retry,
+  aiohttp,
+  buildPythonPackage,
+  cryptography,
+  django,
+  fetchFromGitHub,
+  mock,
+  multidict,
+  pyjwt,
+  pyngrok,
+  pytestCheckHook,
+  pytz,
+  requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "twilio";
-  version = "7.2.0";
-
-  disabled = pythonOlder "3.6";
+  version = "9.11.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "twilio";
     repo = "twilio-python";
-    rev = version;
-    sha256 = "sha256-lhRlLZ9RpOpNIPEgrO7+JO8CnqeC3gqgGqXjznsA9ls=";
+    tag = finalAttrs.version;
+    hash = "sha256-RbamHPCGYGZgkipYf8Wz0D7cOB7AsGhxPRJC/BXR1qE=";
   };
 
-  propagatedBuildInputs = [
+  # https://github.com/twilio/twilio-python/pull/919
+  patches = [ ./remove-aiounittest.patch ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    aiohttp
+    aiohttp-retry
     pyjwt
+    pyngrok
     pytz
     requests
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    cryptography
+    django
     mock
-    nose
+    multidict
+    pytestCheckHook
   ];
 
-  pythonImportsCheck = [
-    "twilio"
+  disabledTests = [
+    # Tests require network access
+    "test_set_default_user_agent"
+    "test_set_user_agent_extensions"
   ];
 
-  meta = with lib; {
+  disabledTestPaths = [
+    # Tests require API token
+    "tests/cluster/test_webhook.py"
+    "tests/cluster/test_cluster.py"
+  ];
+
+  pythonImportsCheck = [ "twilio" ];
+
+  meta = {
     description = "Twilio API client and TwiML generator";
     homepage = "https://github.com/twilio/twilio-python/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/twilio/twilio-python/blob/${finalAttrs.src.tag}/CHANGES.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

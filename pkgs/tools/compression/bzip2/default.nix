@@ -1,6 +1,11 @@
-{ lib, stdenv, fetchurl
-, linkStatic ? with stdenv.hostPlatform; isStatic || isCygwin
-, autoreconfHook
+{
+  lib,
+  stdenv,
+  fetchurl,
+  enableStatic ? with stdenv.hostPlatform; isStatic || isCygwin,
+  enableShared ? true,
+  autoreconfHook,
+  testers,
 }:
 
 # Note: this package is used for bootstrapping fetchurl, and thus
@@ -8,48 +13,77 @@
 # cgit) that are needed here should be included directly in Nixpkgs as
 # files.
 
-stdenv.mkDerivation rec {
-  pname = "bzip2";
-  version = "1.0.6.0.2";
+stdenv.mkDerivation (
+  finalAttrs:
+  let
+    inherit (finalAttrs) version;
+  in
+  {
+    pname = "bzip2";
+    version = "1.0.8";
 
-  /* We use versions patched to use autotools style properly,
-      saving lots of trouble. */
-  src = fetchurl {
-    urls = map
-      (prefix: prefix + "/people/sbrabec/bzip2/tarballs/${pname}-${version}.tar.gz")
-      [
-        "http://ftp.uni-kl.de/pub/linux/suse"
-        "ftp://ftp.hs.uni-hamburg.de/pub/mirrors/suse"
-        "ftp://ftp.mplayerhq.hu/pub/linux/suse"
-        "http://ftp.suse.com/pub" # the original patched version but slow
-      ];
-    sha256 = "sha256-FnhwNy4OHe8d5M6iYCClkxzcB/EHXg0veXwv43ZlxbA=";
-  };
+    src = fetchurl {
+      url = "https://sourceware.org/pub/bzip2/bzip2-${version}.tar.gz";
+      hash = "sha256-q1oDF27hBtPw+pDjgdpHjdrkBZGBU8yiSOaCzQxKImk=";
+    };
 
-  nativeBuildInputs = [ autoreconfHook ];
+    patchFlags = [ "-p0" ];
 
-  patches = [
-    ./CVE-2016-3189.patch
-    ./cve-2019-12900.patch
-  ];
+    patches = [
+      # https://sourceware.org/cgit/bzip2/patch/?id=35d122a3df8b0cc4082a4d89fdc6ee99f375fe67
+      ./patches/CVE-2026-42250.patch
 
-  postPatch = ''
-    sed -i -e '/<sys\\stat\.h>/s|\\|/|' bzip2.c
-  '';
+      ./patches/bzip2-1.0.6.2-autoconfiscated.patch
+    ];
+    # Fix up hardcoded version from the above patch, e.g. seen in bzip2.pc or libbz2.so.1.0.N
+    postPatch = ''
+      patch <<-EOF
+        --- configure.ac
+        +++ configure.ac
+        @@ -3,3 +3,3 @@
+        -AC_INIT([bzip2], [1.0.6], [Julian Seward <jseward@bzip.org>])
+        +AC_INIT([bzip2], [${version}], [Julian Seward <jseward@bzip.org>])
+         BZIP2_LT_CURRENT=1
+        -BZIP2_LT_REVISION=6
+        +BZIP2_LT_REVISION=${lib.versions.patch version}
+      EOF
+    '';
 
-  outputs = [ "bin" "dev" "out" "man" ];
+    strictDeps = true;
+    nativeBuildInputs = [ autoreconfHook ];
 
-  configureFlags =
-    lib.optionals linkStatic [ "--enable-static" "--disable-shared" ];
+    outputs = [
+      "bin"
+      "dev"
+      "out"
+      "man"
+    ];
 
-  enableParallelBuilding = true;
+    configureFlags = lib.concatLists [
+      (lib.optional enableStatic "--enable-static")
+      (lib.optional (!enableShared) "--disable-shared")
+    ];
 
-  meta = with lib; {
-    description = "High-quality data compression program";
-    homepage = "https://www.sourceware.org/bzip2";
-    changelog = "https://sourceware.org/git/?p=bzip2.git;a=blob;f=CHANGES;hb=HEAD";
-    license = licenses.bsdOriginal;
-    platforms = platforms.all;
-    maintainers = with maintainers; [ mic92 ];
-  };
-}
+    dontDisableStatic = enableStatic;
+
+    enableParallelBuilding = true;
+
+    postInstall = ''
+      ln -s $out/lib/libbz2.so.1.0.* $out/lib/libbz2.so.1.0
+    '';
+
+    passthru.tests.pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
+
+    __structuredAttrs = true;
+
+    meta = {
+      description = "High-quality data compression program";
+      homepage = "https://www.sourceware.org/bzip2";
+      changelog = "https://sourceware.org/git/?p=bzip2.git;a=blob;f=CHANGES;hb=HEAD";
+      license = lib.licenses.bzip2;
+      pkgConfigModules = [ "bzip2" ];
+      platforms = lib.platforms.all;
+      maintainers = with lib.maintainers; [ mic92 ];
+    };
+  }
+)

@@ -1,46 +1,66 @@
-{ stdenv
-, fetchurl
-, meson
-, ninja
-, pkg-config
-, gettext
-, gobject-introspection
-, bison
-, flex
-, python3
-, glib
-, makeWrapper
-, libcap
-, libunwind
-, darwin
-, elfutils # for libdw
-, bash-completion
-, lib
-, CoreServices
+{
+  stdenv,
+  fetchurl,
+  meson,
+  ninja,
+  pkg-config,
+  gettext,
+  bison,
+  flex,
+  python3,
+  glib,
+  makeWrapper,
+  libcap,
+  elfutils, # for libdw
+  bash-completion,
+  lib,
+  testers,
+  rustc,
+  withRust ?
+    lib.any (lib.meta.platformMatch stdenv.hostPlatform) rustc.targetPlatforms
+    && lib.all (p: !lib.meta.platformMatch stdenv.hostPlatform p) rustc.badTargetPlatforms,
+  gobject-introspection,
+  buildPackages,
+  withIntrospection ?
+    lib.meta.availableOn stdenv.hostPlatform gobject-introspection
+    && stdenv.hostPlatform.emulatorAvailable buildPackages,
+  libunwind,
+  withLibunwind ?
+    lib.meta.availableOn stdenv.hostPlatform libunwind
+    && lib.elem "libunwind" libunwind.meta.pkgConfigModules or [ ],
+  # Checks meson.is_cross_build(), so even canExecute isn't enough.
+  enableDocumentation ? stdenv.hostPlatform == stdenv.buildPlatform,
+  hotdoc,
+  directoryListingUpdater,
+  apple-sdk_gstreamer,
 }:
 
-stdenv.mkDerivation rec {
+let
+  hasElfutils = lib.meta.availableOn stdenv.hostPlatform elfutils;
+in
+stdenv.mkDerivation (finalAttrs: {
   pname = "gstreamer";
-  version = "1.18.4";
+  version = "1.28.7";
 
   outputs = [
+    "bin"
     "out"
     "dev"
-    # "devdoc" # disabled until `hotdoc` is packaged in nixpkgs, see:
-    # - https://github.com/NixOS/nixpkgs/pull/98767
-    # - https://github.com/NixOS/nixpkgs/issues/98769#issuecomment-702296551
   ];
-  outputBin = "dev";
+
+  separateDebugInfo = true;
 
   src = fetchurl {
-    url = "https://gstreamer.freedesktop.org/src/${pname}/${pname}-${version}.tar.xz";
-    sha256 = "1igv9l4hm21kp1jmlwlagzs7ly1vaxv1sbda29q8247372dwkvls";
+    url = "https://gstreamer.freedesktop.org/src/gstreamer/gstreamer-${finalAttrs.version}.tar.xz";
+    hash = "sha256-eHMpssV1jiKKcdkmptz5YLzqrMo8rdY4dLpmXfzaAT4=";
   };
 
-  patches = [
-    ./fix_pkgconfig_includedir.patch
+  depsBuildBuild = [
+    pkg-config
   ];
 
+  __structuredAttrs = true;
+  strictDeps = true;
   nativeBuildInputs = [
     meson
     ninja
@@ -51,21 +71,35 @@ stdenv.mkDerivation rec {
     python3
     makeWrapper
     glib
-    gobject-introspection
     bash-completion
-
-    # documentation
-    # TODO add hotdoc here
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
+    libcap # for setcap binary
+  ]
+  ++ lib.optionals withIntrospection [
+    gobject-introspection
+  ]
+  ++ lib.optionals withRust [
+    rustc
+  ]
+  ++ lib.optionals enableDocumentation [
+    hotdoc
   ];
 
   buildInputs = [
     bash-completion
-  ] ++ lib.optionals stdenv.isLinux [
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [
     libcap
-    libunwind
+  ]
+  ++ lib.optionals hasElfutils [
     elfutils
-  ] ++ lib.optionals stdenv.isDarwin [
-    CoreServices
+  ]
+  ++ lib.optionals withLibunwind [
+    libunwind
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    apple-sdk_gstreamer
   ];
 
   propagatedBuildInputs = [
@@ -73,15 +107,14 @@ stdenv.mkDerivation rec {
   ];
 
   mesonFlags = [
+    "-Dglib_debug=disabled" # cast checks should be disabled on stable releases
     "-Ddbghelp=disabled" # not needed as we already provide libunwind and libdw, and dbghelp is a fallback to those
     "-Dexamples=disabled" # requires many dependencies and probably not useful for our users
-    "-Ddoc=disabled" # `hotdoc` not packaged in nixpkgs as of writing
-  ] ++ lib.optionals (stdenv.buildPlatform != stdenv.hostPlatform) [
-    "-Dintrospection=disabled"
-  ] ++ lib.optionals stdenv.isDarwin [
-    # darwin.libunwind doesn't have pkg-config definitions so meson doesn't detect it.
-    "-Dlibunwind=disabled"
-    "-Dlibdw=disabled"
+    (lib.mesonEnable "ptp-helper" withRust)
+    (lib.mesonEnable "introspection" withIntrospection)
+    (lib.mesonEnable "doc" enableDocumentation)
+    (lib.mesonEnable "libunwind" withLibunwind)
+    (lib.mesonEnable "libdw" (withLibunwind && hasElfutils))
   ];
 
   postPatch = ''
@@ -90,27 +123,62 @@ stdenv.mkDerivation rec {
       gst/parse/gen_grammar.py.in \
       gst/parse/gen_lex.py.in \
       libs/gst/helpers/ptp_helper_post_install.sh \
-      scripts/extract-release-date-from-doap-file.py
+      scripts/extract-release-date-from-doap-file.py \
+      docs/gst-plugins-doc-cache-generator.py
   '';
 
   postInstall = ''
-    for prog in "$dev/bin/"*; do
+    for prog in "$bin/bin/"*; do
         # We can't use --suffix here due to quoting so we craft the export command by hand
         wrapProgram "$prog" --run 'export GST_PLUGIN_SYSTEM_PATH_1_0=$GST_PLUGIN_SYSTEM_PATH_1_0''${GST_PLUGIN_SYSTEM_PATH_1_0:+:}$(unset _tmp; for profile in $NIX_PROFILES; do _tmp="$profile/lib/gstreamer-1.0''${_tmp:+:}$_tmp"; done; printf '%s' "$_tmp")'
     done
   '';
 
   preFixup = ''
-    moveToOutput "share/bash-completion" "$dev"
+    moveToOutput "lib/gstreamer-1.0/pkgconfig" "$dev"
+    moveToOutput "share/bash-completion" "$bin"
   '';
 
   setupHook = ./setup-hook.sh;
 
-  meta = with lib ;{
+  passthru = {
+    tests = {
+      pkg-config = testers.testMetaPkgConfig finalAttrs.finalPackage;
+    };
+    updateScript = directoryListingUpdater { odd-unstable = true; };
+
+    # From around version 1.12.0 on, there is a single CPE identifier for all of GStreamer.
+    # FIXME: Should gst-plugins-rs follow the main GStreamer versioning or its own deviating version?
+    gstreamerCpeParts =
+      let
+        commonGstreamerVersion = finalAttrs.version;
+      in
+      version:
+      lib.warnIf (version != commonGstreamerVersion)
+        ''
+          Detected mismatch between common GStreamer version (${commonGstreamerVersion}) and version used for gstreamerCpeParts (${version}).
+          Note that GStreamer uses a common CPE identifier for its components.
+          Having a deviating version is unusual, but may occur e.g. if overriding a subset of GStreamer libraries.
+        ''
+        (
+          lib.meta.cpeFullVersionWithVendor "gstreamer" version
+          // {
+            product = "gstreamer";
+          }
+        );
+  };
+
+  meta = {
     description = "Open source multimedia framework";
     homepage = "https://gstreamer.freedesktop.org";
-    license = licenses.lgpl2Plus;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ ttuegel matthewbauer ];
+    license = lib.licenses.lgpl2Plus;
+    pkgConfigModules = [
+      "gstreamer-controller-1.0"
+    ];
+    platforms = lib.platforms.unix;
+    maintainers = with lib.maintainers; [
+      tmarkus
+    ];
+    identifiers.cpeParts = finalAttrs.passthru.gstreamerCpeParts finalAttrs.version;
   };
-}
+})

@@ -1,105 +1,72 @@
-{ stdenv, lib, fetchurl, fetchpatch
-, zlib, xz, libintl, python, gettext, ncurses, findXMLCatalogs
-, libiconv
-, pythonSupport ? enableShared && stdenv.buildPlatform == stdenv.hostPlatform
-, icuSupport ? false, icu ? null
-, enableShared ? stdenv.hostPlatform.libc != "msvcrt" && !stdenv.hostPlatform.isStatic
-, enableStatic ? !enableShared
+{
+  lib,
+  callPackage,
+  fetchFromGitLab,
+  fetchpatch,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "libxml2";
-  version = "2.9.12";
+let
+  packages = {
+    libxml2_13 = callPackage ./common.nix {
+      version = "2.13.9";
+      src = fetchFromGitLab {
+        domain = "gitlab.gnome.org";
+        owner = "GNOME";
+        repo = "libxml2";
+        tag = "v${packages.libxml2_13.version}";
+        hash = "sha256-1qrgoMu702MglErNH9N2eCWFqxQnNHepR13m53GJb58=";
+      };
+      extraPatches = [
+        # Unmerged ABI-breaking patch required to fix the following security issues:
+        # - https://gitlab.gnome.org/GNOME/libxslt/-/issues/139
+        # - https://gitlab.gnome.org/GNOME/libxslt/-/issues/140
+        # See also https://gitlab.gnome.org/GNOME/libxml2/-/issues/906
+        # Source: https://github.com/chromium/chromium/blob/4fb4ae8ce3daa399c3d8ca67f2dfb9deffcc7007/third_party/libxml/chromium/xml-attr-extra.patch
+        ./xml-attr-extra.patch
 
-  src = fetchurl {
-    url = "http://xmlsoft.org/sources/${pname}-${version}.tar.gz";
-    sha256 = "14hxwzmf5xqppx77z7i0ni9lpzg1a84dqpf8j8l1fvy570g6imn8";
+        (fetchpatch {
+          name = "CVE-2026-0990.patch";
+          url = "https://gitlab.gnome.org/GNOME/libxml2/-/commit/1961208e958ca22f80a0b4e4c9d71cfa050aa982.patch";
+          hash = "sha256-Df2WLCTsP/ItSzgnVkNjRpLKkBP4xUOXEfCUV9o/Yks=";
+        })
+
+        # Based on https://gitlab.gnome.org/GNOME/libxml2/-/commit/f75abfcaa419a740a3191e56c60400f3ff18988d
+        # Vendored, because there is no xmlCatalogPrintDebug in 2.13.9, use fprintf instead
+        ./2.13-CVE-2026-0992.patch
+
+        # Based on https://gitlab.gnome.org/GNOME/libxml2/-/commit/19549c61590c1873468c53e0026a2fbffae428ef.patch
+        # There are only whitespace differences from upstream.
+        ./2.13-CVE-2026-0989.patch
+
+        (fetchpatch {
+          name = "CVE-2026-11979.patch";
+          url = "https://gitlab.gnome.org/GNOME/libxml2/-/commit/c2e233fc1b341685fc99621b2768b503f777a72e.patch";
+          hash = "sha256-DcPZl6rOuP6aycK+1EHUgPX4YWDAH+ctAZtOI48QO2Q=";
+          excludes = [ "test/catalogs/test.sh" ];
+        })
+      ];
+      freezeUpdateScript = true;
+      extraMeta = {
+        maintainers = with lib.maintainers; [
+          gepbird
+        ];
+      };
+    };
+    libxml2 = callPackage ./common.nix {
+      version = "2.15.4";
+      src = fetchFromGitLab {
+        domain = "gitlab.gnome.org";
+        owner = "GNOME";
+        repo = "libxml2";
+        tag = "v${packages.libxml2.version}";
+        hash = "sha256-NHk5HIGBRmWwRbX2JMBmMDiIDdee2atZEfhz3QTgcOo=";
+      };
+      extraMeta = {
+        maintainers = with lib.maintainers; [
+          jtojnar
+        ];
+      };
+    };
   };
-  patches = [
-    # Upstream bugs:
-    #   https://bugzilla.gnome.org/show_bug.cgi?id=789714
-    #   https://gitlab.gnome.org/GNOME/libxml2/issues/64
-    # Patch from https://bugzilla.opensuse.org/show_bug.cgi?id=1065270 ,
-    # but only the UTF-8 part.
-    # Can also be mitigated by fixing malformed XML inputs, such as in
-    # https://gitlab.gnome.org/GNOME/gnumeric/merge_requests/3 .
-    # Other discussion:
-    #   https://github.com/itstool/itstool/issues/22
-    #   https://github.com/NixOS/nixpkgs/pull/63174
-    #   https://github.com/NixOS/nixpkgs/pull/72342
-    ./utf8-xmlErrorFuncHandler.patch
-
-    # Work around lxml API misuse.
-    # https://gitlab.gnome.org/GNOME/libxml2/issues/255
-    (fetchpatch {
-      url = "https://gitlab.gnome.org/GNOME/libxml2/commit/85b1792e37b131e7a51af98a37f92472e8de5f3f.patch";
-      sha256 = "epqlNs2S0Zczox3KyCB6R2aJKh87lXydlZ0x6tLHweE=";
-    })
-  ];
-
-  outputs = [ "bin" "dev" "out" "man" "doc" ]
-    ++ lib.optional pythonSupport "py"
-    ++ lib.optional (enableStatic && enableShared) "static";
-
-  strictDeps = true;
-
-  buildInputs = lib.optional pythonSupport python
-    ++ lib.optional (pythonSupport && python?isPy2 && python.isPy2) gettext
-    ++ lib.optional (pythonSupport && python?isPy3 && python.isPy3) ncurses
-    ++ lib.optional (stdenv.isDarwin &&
-                     pythonSupport && python?isPy2 && python.isPy2) libintl
-    # Libxml2 has an optional dependency on liblzma.  However, on impure
-    # platforms, it may end up using that from /usr/lib, and thus lack a
-    # RUNPATH for that, leading to undefined references for its users.
-    ++ lib.optional stdenv.isFreeBSD xz;
-
-  propagatedBuildInputs = [ zlib findXMLCatalogs ]
-    ++ lib.optional stdenv.isDarwin libiconv
-    ++ lib.optional icuSupport icu;
-
-  configureFlags = [
-    "--exec_prefix=$dev"
-    (lib.enableFeature enableStatic "static")
-    (lib.enableFeature enableShared "shared")
-    (lib.withFeature icuSupport "icu")
-    (lib.withFeatureAs pythonSupport "python" python)
-  ];
-
-  preConfigure = lib.optionalString (lib.versionAtLeast stdenv.hostPlatform.darwinMinVersion "11") ''
-    MACOSX_DEPLOYMENT_TARGET=10.16
-  '';
-
-  enableParallelBuilding = true;
-
-  # disable test that's problematic with newer pythons: see
-  # https://mail.gnome.org/archives/xml/2017-August/msg00014.html
-  preCheck = lib.optionalString (pythonSupport && !(python?pythonOlder && python.pythonOlder "3.5")) ''
-    echo "" > python/tests/tstLastError.py
-  '';
-
-  doCheck = (stdenv.hostPlatform == stdenv.buildPlatform) && !stdenv.isDarwin &&
-    stdenv.hostPlatform.libc != "musl";
-
-  preInstall = lib.optionalString pythonSupport
-    ''substituteInPlace python/libxml2mod.la --replace "${python}" "$py"'';
-  installFlags = lib.optional pythonSupport
-    "pythondir=\"${placeholder "py"}/lib/${python.libPrefix}/site-packages\"";
-
-  postFixup = ''
-    moveToOutput bin/xml2-config "$dev"
-    moveToOutput lib/xml2Conf.sh "$dev"
-    moveToOutput share/man/man1 "$bin"
-  '' + lib.optionalString (enableStatic && enableShared) ''
-    moveToOutput lib/libxml2.a "$static"
-  '';
-
-  passthru = { inherit version; pythonSupport = pythonSupport; };
-
-  meta = {
-    homepage = "http://xmlsoft.org/";
-    description = "An XML parsing library for C";
-    license = lib.licenses.mit;
-    platforms = lib.platforms.all;
-    maintainers = [ lib.maintainers.eelco ];
-  };
-}
+in
+packages

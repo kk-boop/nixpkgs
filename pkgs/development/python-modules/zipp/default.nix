@@ -1,30 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, setuptools-scm
-, more-itertools
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  func-timeout,
+  jaraco-itertools,
+  setuptools,
+  setuptools-scm,
 }:
 
-buildPythonPackage rec {
-  pname = "zipp";
-  version = "3.6.0";
+let
+  zipp = buildPythonPackage rec {
+    pname = "zipp";
+    version = "4.1.0";
+    pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "71c644c5369f4a6e07636f0aa966270449561fcea2e3d6747b8d23efaa9d7832";
+    src = fetchFromGitHub {
+      owner = "jaraco";
+      repo = "zipp";
+      tag = "v${version}";
+      hash = "sha256-qFsCud+fKDULbIF3LLGh6su/Sm1YjcvKe0+R9GH/Ies=";
+    };
+
+    postPatch = ''
+      # Downloads license text at build time
+      sed -i "/coherent\.licensed/d" pyproject.toml
+    '';
+
+    build-system = [
+      setuptools
+      setuptools-scm
+    ];
+
+    # Prevent infinite recursion with pytest
+    doCheck = false;
+
+    nativeCheckInputs = [
+      func-timeout
+      jaraco-itertools
+    ];
+
+    pythonImportsCheck = [ "zipp" ];
+
+    passthru.tests = {
+      check = zipp.overridePythonAttrs (_: {
+        doCheck = true;
+      });
+    };
+
+    meta = {
+      description = "Pathlib-compatible object wrapper for zip files";
+      homepage = "https://github.com/jaraco/zipp";
+      license = lib.licenses.mit;
+      maintainers = [ ];
+    };
   };
-
-  nativeBuildInputs = [ setuptools-scm ];
-
-  propagatedBuildInputs = [ more-itertools ];
-
-  # Prevent infinite recursion with pytest
-  doCheck = false;
-
-  meta = with lib; {
-    description = "Pathlib-compatible object wrapper for zip files";
-    homepage = "https://github.com/jaraco/zipp";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
-  };
-}
+in
+zipp

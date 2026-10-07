@@ -1,37 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, pytest
-, pytz
-, glibcLocales
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  rapidjson,
+  pytestCheckHook,
+  pytz,
+  setuptools,
+  replaceVars,
 }:
 
 buildPythonPackage rec {
-  version = "1.5";
+  version = "1.25";
   pname = "python-rapidjson";
-  disabled = pythonOlder "3.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "04323e63cf57f7ed927fd9bcb1861ef5ecb0d4d7213f2755969d4a1ac3c2de6f";
+  src = fetchFromGitHub {
+    owner = "python-rapidjson";
+    repo = "python-rapidjson";
+    tag = "v${version}";
+    hash = "sha256-4KIC7hXZBvdKZc/p7OQyrxzIRnpZvMDrLyWsPfPwm5I=";
   };
 
-  LC_ALL="en_US.utf-8";
-  buildInputs = [ glibcLocales ];
+  patches = [
+    (replaceVars ./rapidjson-include-dir.patch {
+      rapidjson = lib.getDev rapidjson;
+    })
+  ];
 
-  # buildInputs = [ ];
-  checkInputs = [ pytest pytz ];
-  # propagatedBuildInputs = [ ];
+  build-system = [ setuptools ];
 
-  checkPhase = ''
-    pytest tests
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytz
+  ];
 
-  meta = with lib; {
+  disabledTestPaths = [ "benchmarks" ];
+
+  meta = {
+    changelog = "https://github.com/python-rapidjson/python-rapidjson/blob/${src.tag}/CHANGES.rst";
     homepage = "https://github.com/python-rapidjson/python-rapidjson";
-    description = "Python wrapper around rapidjson ";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    description = "Python wrapper around rapidjson";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

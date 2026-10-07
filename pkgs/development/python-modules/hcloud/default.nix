@@ -1,40 +1,39 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, future
-, requests
-, python-dateutil
-, flake8
-, isort
-, mock
-, pytest
-, isPy27
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  python-dateutil,
+  requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "hcloud";
-  version = "1.16.0";
-  disabled = isPy27;
+  version = "2.26.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "c8b94557d93bcfe437f20a8176693ea4f54358b74986cc19d94ebc23f48e40cc";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-xGMsB4nbWzrz38kniJ5Za2kHeUAmqhOibEboFY+vvtk=";
   };
 
-  propagatedBuildInputs = [ future requests python-dateutil ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ flake8 isort mock pytest ];
+  dependencies = [
+    requests
+    python-dateutil
+  ];
 
-  # Skip integration tests since they require a separate external fake API endpoint.
-  checkPhase = ''
-    pytest --ignore=tests/integration
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    description = "Official Hetzner Cloud python library";
+  pythonImportsCheck = [ "hcloud" ];
+
+  meta = {
+    description = "Library for the Hetzner Cloud API";
     homepage = "https://github.com/hetznercloud/hcloud-python";
-    license = licenses.mit;
-    platforms = platforms.all;
-    maintainers = with maintainers; [ liff ];
+    changelog = "https://github.com/hetznercloud/hcloud-python/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ liff ];
   };
-}
+})

@@ -1,42 +1,40 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, gevent
-, isPy27
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "yappi";
-  version = "1.3.2";
-
-  disabled = isPy27; # invalid syntax
+  version = "1.7.7";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sumerc";
-    repo = pname;
-    rev = "8bf7a650066f104f59c3cae4a189ec15e7d51c8c";
-    sha256 = "1q8lr9n0lny2g3mssy3mksbl9m4k1kqn1a4yv1hfqsahxdvpw2dp";
+    repo = "yappi";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-sY5USlhJiopKdnobsL47bcfzKY6bB3TpdmIhfjnKuis=";
   };
 
-  patches = [ ./tests.patch ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    gevent
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  checkPhase = ''
-    ${python.interpreter} run_tests.py
+  preCheck = ''
+    export PYTHONPATH=$PYTHONPATH:$PWD/tests
+    export PATH=$PATH:$out/bin
   '';
 
-  pythonImportsCheck = [
-    "yappi"
-  ];
+  pythonImportsCheck = [ "yappi" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/sumerc/yappi";
+  meta = {
     description = "Python profiler that supports multithreading and measuring CPU time";
-    license = licenses.mit;
-    maintainers = with maintainers; [ orivej ];
+    mainProgram = "yappi";
+    changelog = "https://github.com/sumerc/yappi/releases/tag/${finalAttrs.src.tag}";
+    homepage = "https://github.com/sumerc/yappi";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

@@ -1,29 +1,32 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "parts";
-  version = "1.2.2";
-  format = "setuptools";
+  version = "4.0.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "6463d5c49142d14029196a6a781b57bc98ba5b3d93244f4ed637f534d08129c1";
+    hash = "sha256-uw/bo+Y24KIgKH+hfc4iUboH8jJKeaoQGHBv6KjZixU=";
   };
+
+  build-system = [ setuptools ];
 
   # Project has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "parts"
-  ];
+  pythonImportsCheck = [ "parts" ];
 
-  meta = with lib; {
-    description = "Python library for common list functions related to partitioning lists";
+  meta = {
+    description = "Library for common list functions related to partitioning lists";
     homepage = "https://github.com/lapets/parts";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/lapets/parts/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

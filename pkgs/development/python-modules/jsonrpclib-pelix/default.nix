@@ -1,23 +1,28 @@
-{ buildPythonPackage
-, fetchPypi
-, lib
+{
+  buildPythonPackage,
+  hatchling,
+  fetchPypi,
+  lib,
 }:
 
 buildPythonPackage rec {
   pname = "jsonrpclib-pelix";
-  version = "0.4.3.1";
+  version = "1.1.0";
+  pyproject = true;
+  build-system = [ hatchling ];
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "f6f376c72ec1c0dfd69fcc2721d711f6ca1fe22bf71f99e6884c5e43e9b58c95";
+    pname = "jsonrpclib_pelix";
+    inherit version;
+    hash = "sha256-N5o8mz3UeHJ0GVh6p88Uu2/w5kMB3swP+pj3EPa/7B4=";
   };
 
   doCheck = false; # test_suite="tests" in setup.py but no tests in pypi.
 
-  meta = with lib; {
+  meta = {
     description = "JSON RPC client library - Pelix compatible fork";
-    homepage = "https://pypi.python.org/pypi/jsonrpclib-pelix/";
+    homepage = "https://pypi.org/project/jsonrpclib-pelix/";
     license = lib.licenses.asl20;
-    maintainers = with maintainers; [ ];
+    maintainers = [ ];
   };
 }

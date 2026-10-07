@@ -1,30 +1,42 @@
-{ lib
-, buildPythonPackage, fetchPypi
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "kivy-garden";
-  version = "0.1.4";
+  version = "0.1.5";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0wkcpr2zc1q5jb0bi7v2dgc0vs5h1y7j42mviyh764j2i0kz8mn2";
+  src = fetchFromGitHub {
+    owner = "kivy-garden";
+    repo = "garden";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-xOMBPFKV7mTa51Q0VKja7b0E509IaWjwlJVlSRVdct8=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  patches = [
+    # See https://github.com/kivy-garden/garden/commit/6257325da4b91c8cd288bfb107c366703f9f17c2
+    ./fix-name.diff
+    ./remove-import-pkg-resources.diff
+  ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [ requests ];
 
   pythonImportsCheck = [ "garden" ];
 
-  # There are no tests in the Pypi archive and building from source is not
-  # easily feasible because the build is done using buildozer and multiple
-  # repositories.
+  # There are no tests
   doCheck = false;
 
-  meta = with lib; {
-    description = "The kivy garden installation script, split into its own package for convenient use in buildozer.";
-    homepage = "https://pypi.python.org/pypi/kivy-garden";
-    license = licenses.mit;
-    maintainers = with maintainers; [ risson ];
+  meta = {
+    description = "Kivy garden installation script, split into its own package for convenient use in buildozer";
+    homepage = "https://github.com/kivy-garden/garden";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ risson ];
   };
-}
+})

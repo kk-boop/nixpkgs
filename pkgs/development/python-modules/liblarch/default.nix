@@ -1,48 +1,53 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, python
-, pygobject3
-, xvfb-run
-, gobject-introspection
-, gtk3
-, pythonOlder
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  pygobject3,
+  xvfb-run,
+  gobject-introspection,
+  gtk3,
+  pytest,
+  setuptools,
 }:
 
 buildPythonPackage rec {
-  version = "3.0.1";
   pname = "liblarch";
-  disabled = pythonOlder "3.5.0";
+  version = "3.2.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "getting-things-gnome";
     repo = "liblarch";
     rev = "v${version}";
-    sha256 = "0xv2mfvyzipbny3iz8vll77wsqxfwh28xj6bj1ff0l452waph45m";
+    hash = "sha256-A2qChe2z6rAhjRVX5VoHQitebf/nMATdVZQgtlquuYg=";
   };
 
-  checkInputs = [
-    gobject-introspection # for setup hook
-    gtk3
+  build-system = [
+    setuptools
   ];
 
-  propagatedBuildInputs = [
-    pygobject3
+  nativeCheckInputs = [
+    gobject-introspection # for setup hook
+    gtk3
+    pytest
   ];
+
+  buildInputs = [ gtk3 ];
+
+  propagatedBuildInputs = [ pygobject3 ];
 
   checkPhase = ''
     runHook preCheck
-    ${xvfb-run}/bin/xvfb-run -s '-screen 0 800x600x24' \
-      ${python.interpreter} nix_run_setup test
+    ${xvfb-run}/bin/xvfb-run -s '-screen 0 800x600x24' pytest
     runHook postCheck
   '';
 
-  meta = with lib; {
-    description = "A python library built to easily handle data structure such are lists, trees and acyclic graphs";
+  meta = {
+    description = "Python library built to easily handle data structure such are lists, trees and acyclic graphs";
     homepage = "https://github.com/getting-things-gnome/liblarch";
     downloadPage = "https://github.com/getting-things-gnome/liblarch/releases";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ oyren ];
-    platforms = platforms.linux;
+    license = lib.licenses.lgpl3Plus;
+    maintainers = with lib.maintainers; [ oyren ];
+    platforms = lib.platforms.linux;
   };
 }

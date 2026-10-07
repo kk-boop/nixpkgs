@@ -1,61 +1,84 @@
-{ lib, stdenv, fetchPypi, writeText, buildPythonPackage, isPy3k, pycairo
-, which, cycler, python-dateutil, numpy, pyparsing, sphinx, tornado, kiwisolver
-, freetype, qhull, libpng, pkg-config, mock, pytz, pygobject3, gobject-introspection
-, certifi, pillow
-, enableGhostscript ? true, ghostscript, gtk3
-, enableGtk3 ? false, cairo
-# darwin has its own "MacOSX" backend
-, enableTk ? !stdenv.isDarwin, tcl, tk, tkinter
-, enableQt ? false, pyqt5
-# required for headless detection
-, libX11, wayland
-, Cocoa
+{
+  lib,
+  stdenv,
+  fetchPypi,
+  buildPythonPackage,
+  isPyPy,
+
+  # build-system
+  certifi,
+  pkg-config,
+  pybind11,
+  meson-python,
+  setuptools-scm,
+  pytestCheckHook,
+  python,
+
+  # native libraries
+  ffmpeg-headless,
+  freetype,
+  qhull,
+  libraqm,
+
+  # propagates
+  contourpy,
+  cycler,
+  fonttools,
+  kiwisolver,
+  numpy,
+  packaging,
+  pillow,
+  pyparsing,
+  python-dateutil,
+
+  # GTK3
+  enableGtk3 ? false,
+  cairo,
+  gobject-introspection,
+  gtk3,
+  pycairo,
+  pygobject3,
+
+  # Tk
+  # Darwin has its own "MacOSX" backend, PyPy has tkagg backend and does not support tkinter
+  enableTk ? (!stdenv.hostPlatform.isDarwin && !isPyPy),
+  tkinter,
+
+  # Qt
+  enableQt ? false,
+  pyqt5,
+
+  # Webagg
+  enableWebagg ? false,
+  tornado,
+
+  # nbagg
+  enableNbagg ? false,
+  ipykernel,
+
+  # required for headless detection
+  libx11,
+  wayland,
+
+  # Reverse dependency
+  sage,
 }:
 
 let
   interactive = enableTk || enableGtk3 || enableQt;
 in
 
-buildPythonPackage rec {
-  version = "3.4.3";
+buildPythonPackage (finalAttrs: {
+  version = "3.11.1";
   pname = "matplotlib";
-
-  disabled = !isPy3k;
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "06032j0ccjxldx4z9kf97qps2g36mfgvy1nap3b9n75kzmnm4kzw";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-aWR9tXRpQceT1uRFpM00kyP/uH2cyVjCrYSmWbSDLTA=";
   };
 
-  XDG_RUNTIME_DIR = "/tmp";
-
-  nativeBuildInputs = [ pkg-config ];
-
-  buildInputs = [ which sphinx ]
-    ++ lib.optional enableGhostscript ghostscript
-    ++ lib.optional stdenv.isDarwin [ Cocoa ];
-
-  propagatedBuildInputs =
-    [ cycler python-dateutil numpy pyparsing tornado freetype qhull
-      kiwisolver certifi libpng mock pytz pillow ]
-    ++ lib.optionals enableGtk3 [ cairo pycairo gtk3 gobject-introspection pygobject3 ]
-    ++ lib.optionals enableTk [ tcl tk tkinter libX11 ]
-    ++ lib.optionals enableQt [ pyqt5 ];
-
-  passthru.config = {
-    directories = { basedirlist = "."; };
-    libs = {
-      system_freetype = true;
-      system_qhull = true;
-    } // lib.optionalAttrs stdenv.isDarwin {
-      # LTO not working in darwin stdenv, see #19312
-      enable_lto = false;
-    };
-  };
-  setup_cfg = writeText "setup.cfg" (lib.generators.toINI {} passthru.config);
-  preBuild = ''
-    cp "$setup_cfg" ./setup.cfg
-  '';
+  env.XDG_RUNTIME_DIR = "/tmp";
 
   # Matplotlib tries to find Tcl/Tk by opening a Tk window and asking the
   # corresponding interpreter object for its library paths. This fails if
@@ -64,27 +87,114 @@ buildPythonPackage rec {
   # With the following patch we just hard-code these paths into the install
   # script.
   postPatch =
-    let
-      tcl_tk_cache = ''"${tk}/lib", "${tcl}/lib", "${lib.strings.substring 0 3 tk.version}"'';
-    in
-    lib.optionalString enableTk ''
-      sed -i '/self.tcl_tk_cache = None/s|None|${tcl_tk_cache}|' setupext.py
-    '' + lib.optionalString (stdenv.isLinux && interactive) ''
+    lib.optionalString isPyPy ''
+      substituteInPlace tools/generate_matplotlibrc.py \
+        --replace-fail "/usr/bin/env python3" "/usr/bin/env pypy3"
+    ''
+    + ''
+      substituteInPlace pyproject.toml \
+        --replace-fail "setuptools_scm>=7,<10" setuptools_scm
+
+      patchShebangs tools
+    ''
+    + lib.optionalString (stdenv.hostPlatform.isLinux && interactive) ''
       # fix paths to libraries in dlopen calls (headless detection)
-      substituteInPlace src/_c_internal_utils.c \
-        --replace libX11.so.6 ${libX11}/lib/libX11.so.6 \
-        --replace libwayland-client.so.0 ${wayland}/lib/libwayland-client.so.0
+      substituteInPlace src/_c_internal_utils.cpp \
+        --replace-fail libX11.so.6 ${libx11}/lib/libX11.so.6 \
+        --replace-fail libwayland-client.so.0 ${wayland}/lib/libwayland-client.so.0
     '';
 
-  # Matplotlib needs to be built against a specific version of freetype in
-  # order for all of the tests to pass.
-  doCheck = false;
+  nativeBuildInputs = [ pkg-config ] ++ lib.optionals enableGtk3 [ gobject-introspection ];
 
-  meta = with lib; {
-    description = "Python plotting library, making publication quality plots";
-    homepage    = "https://matplotlib.org/";
-    license     = with licenses; [ psfl bsd0 ];
-    maintainers = with maintainers; [ lovek323 veprbl ];
+  buildInputs = [
+    ffmpeg-headless
+    freetype
+    qhull
+    pybind11
+    libraqm
+  ]
+  ++ lib.optionals enableGtk3 [
+    cairo
+    gtk3
+  ];
+
+  # clang-11: error: argument unused during compilation: '-fno-strict-overflow' [-Werror,-Wunused-command-line-argument]
+  hardeningDisable = lib.optionals stdenv.hostPlatform.isDarwin [ "strictoverflow" ];
+
+  build-system = [
+    certifi
+    numpy
+    meson-python
+    setuptools-scm
+  ];
+
+  dependencies = [
+    # explicit
+    contourpy
+    cycler
+    fonttools
+    kiwisolver
+    numpy
+    packaging
+    pillow
+    pyparsing
+    python-dateutil
+  ]
+  ++ lib.optionals enableGtk3 [
+    pycairo
+    pygobject3
+  ]
+  ++ lib.optionals enableQt [ pyqt5 ]
+  ++ lib.optionals enableWebagg [ tornado ]
+  ++ lib.optionals enableNbagg [ ipykernel ]
+  ++ lib.optionals enableTk [ tkinter ];
+
+  mesonFlags = lib.mapAttrsToList lib.mesonBool {
+    system-freetype = true;
+    system-qhull = true;
+    system-libraqm = true;
+    # Otherwise GNU's `ar` binary fails to put symbols from libagg into the
+    # matplotlib shared objects. See:
+    # -https://github.com/matplotlib/matplotlib/issues/28260#issuecomment-2146243663
+    # -https://github.com/matplotlib/matplotlib/issues/28357#issuecomment-2155350739
+    b_lto = false;
   };
 
-}
+  passthru.tests = {
+    inherit sage;
+  };
+
+  pythonImportsCheck = [ "matplotlib" ];
+  # Running the tests requires a specific freetype version, so pixel-to-pixel
+  # comparisons will pass. Since matplotlib depends directly & indirectly on
+  # freetype, this would be too expensive to even test this (correctly) in
+  # `passthru.tests`.
+  doCheck = false;
+  nativeCheckInputs = [ pytestCheckHook ];
+  preCheck = ''
+    # https://matplotlib.org/devdocs/devel/testing.html#obtain-the-reference-images
+    find lib -name baseline_images -printf '%P\n' | while read p; do
+      cp -r lib/"$p" $out/${python.sitePackages}/"$p"
+    done
+    # Tests will fail without these files as well
+    cp \
+      lib/matplotlib/tests/{mpltest.ttf,cmr10.pfb,Courier10PitchBT-Bold.pfb} \
+      $out/${python.sitePackages}/matplotlib/tests/
+    # https://github.com/NixOS/nixpkgs/issues/255262
+    cd $out
+  '';
+
+  meta = {
+    description = "Python plotting library, making publication quality plots";
+    homepage = "https://matplotlib.org/";
+    changelog = "https://github.com/matplotlib/matplotlib/releases/tag/v${finalAttrs.version}";
+    license = with lib.licenses; [
+      psfl
+      bsd0
+    ];
+    maintainers = with lib.maintainers; [
+      veprbl
+      doronbehar
+    ];
+  };
+})

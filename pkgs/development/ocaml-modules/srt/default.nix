@@ -1,30 +1,40 @@
-{ lib, buildDunePackage, fetchFromGitHub
-, dune-configurator
-, posix-socket
-, srt
+{
+  lib,
+  buildDunePackage,
+  fetchFromGitHub,
+  dune-configurator,
+  posix-socket,
+  srt,
+  ctypes-foreign,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "srt";
-  version = "0.1.1";
+  version = "0.3.4";
+
+  minimalOCamlVersion = "4.12";
 
   src = fetchFromGitHub {
     owner = "savonet";
     repo = "ocaml-srt";
-    rev = "v${version}";
-    sha256 = "0xh89w4j7lljvpy2n08x6m9kw88f82snmzf23kp0gw637sjnrj6f";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-+1/TffqssRA9YR3KLfbAr/ZpDF5XUKw24gj4HWrhObU=";
   };
 
-  useDune2 = true;
-
   buildInputs = [ dune-configurator ];
-  propagatedBuildInputs = [ posix-socket srt ];
+  propagatedBuildInputs = [
+    ctypes-foreign
+    posix-socket
+    srt
+  ];
 
   meta = {
     description = "OCaml bindings for the libsrt library";
-    license = lib.licenses.gpl2Only;
-    inherit (src.meta) homepage;
-    maintainers = [ lib.maintainers.vbgl ];
+    license = lib.licenses.gpl2Plus;
+    homepage = "https://github.com/savonet/ocaml-srt";
+    maintainers = with lib.maintainers; [
+      vbgl
+      dandellion
+    ];
   };
-
-}
+})

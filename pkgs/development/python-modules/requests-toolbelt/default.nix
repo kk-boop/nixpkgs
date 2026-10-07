@@ -1,38 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, requests
-, betamax
-, mock
-, pytest
-, pyopenssl
+{
+  lib,
+  betamax,
+  buildPythonPackage,
+  fetchPypi,
+  pyopenssl,
+  pytestCheckHook,
+  requests,
+  setuptools,
+  trustme,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "requests-toolbelt";
-  version = "0.9.1";
+  version = "1.0.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "968089d4584ad4ad7c171454f0a5c6dac23971e9472521ea3b6d49d610aa6fc0";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-doGgo9BHAStb3A7jfX+PB+vnarCMrsz8OSHOI8iNW8Y=";
   };
 
-  checkInputs = [ pyopenssl betamax mock pytest ];
-  propagatedBuildInputs = [ requests ];
+  build-system = [ setuptools ];
+  dependencies = [ requests ];
 
-  checkPhase = ''
-    # disabled tests access the network
-    py.test tests -k "not test_no_content_length_header \
-                  and not test_read_file \
-                  and not test_reads_file_from_url_wrapper \
-                  and not test_x509_der \
-                  and not test_x509_pem"
-  '';
+  nativeCheckInputs = [
+    betamax
+    pyopenssl
+    pytestCheckHook
+    trustme
+  ];
+
+  disabledTests = [
+    # incompatible with urllib3 2.0
+    "test_dump_response"
+    "test_dump_all"
+    "test_prepared_request_override_base"
+    "test_prepared_request_with_base"
+    "test_request_override_base"
+    "test_request_with_base"
+  ];
+
+  pythonImportsCheck = [ "requests_toolbelt" ];
 
   meta = {
-    description = "A toolbelt of useful classes and functions to be used with python-requests";
+    description = "Toolbelt of useful classes and functions to be used with requests";
     homepage = "http://toolbelt.rtfd.org";
+    changelog = "https://github.com/requests/toolbelt/blob/${finalAttrs.version}/HISTORY.rst";
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ matthiasbeyer ];
   };
-}
+})

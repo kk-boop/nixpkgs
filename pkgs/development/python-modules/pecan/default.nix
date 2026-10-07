@@ -1,68 +1,59 @@
-{ lib
-, fetchPypi
-, fetchpatch
-, buildPythonPackage
-, isPy27
-# Python deps
-, logutils
-, Mako
-, singledispatch ? null
-, six
-, webtest
-# Test Inputs
-, pytestCheckHook
-, genshi
-, gunicorn
-, jinja2
-, Kajiki
-, mock
-, sqlalchemy
-, virtualenv
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  genshi,
+  gunicorn,
+  jinja2,
+  mako,
+  pytestCheckHook,
+  setuptools,
+  sqlalchemy,
+  virtualenv,
+  webob,
+  webtest,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pecan";
-  version = "1.4.0";
+  version = "1.8.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "4b2acd6802a04b59e306d0a6ccf37701d24376f4dc044bbbafba3afdf9d3389a";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-L5+86obo2/Gi0olUIlVHY0oonbcgHndkUWpdzobBFt4=";
   };
 
-  patches = [
-    (fetchpatch {
-      name = "Support-SQLAlchemy-1.4x.patch";
-      url = "https://github.com/pecan/pecan/commit/a520bd544c0b02a02dbf692b8d6e2f7a503ee6d4.patch";
-      sha256 = "sha256-QCHRjwnpy8ndCvcuyE5Y65BybKYthJXDySUtmpJD8gY=";
-    })
+  build-system = [ setuptools ];
+
+  dependencies = [
+    mako
+    setuptools
+    webob
   ];
 
-  propagatedBuildInputs = [
-    logutils
-    Mako
-    singledispatch
-    six
-    webtest
-  ];
-
-  checkInputs = [
-    pytestCheckHook
+  nativeCheckInputs = [
     genshi
     gunicorn
     jinja2
-    mock
+    pytestCheckHook
     sqlalchemy
     virtualenv
-  ] ++ lib.optionals isPy27 [ Kajiki ];
-
-  pytestFlagsArray = [
-    "--pyargs pecan "
+    webtest
   ];
 
-  meta = with lib; {
-    description = "WSGI object-dispatching web framework, designed to be lean and fast";
+  pytestFlags = [
+    "--pyargs"
+    "pecan"
+  ];
+
+  pythonImportsCheck = [ "pecan" ];
+
+  meta = {
+    description = "WSGI object-dispatching web framework";
     homepage = "https://www.pecanpy.org/";
-    changelog = "https://pecan.readthedocs.io/en/latest/changes.html";
-    maintainers = with maintainers; [ applePrincess ];
+    changelog = "https://github.com/pecan/pecan/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ applePrincess ];
   };
-}
+})

@@ -1,35 +1,73 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, python
-, numba
-, numpy
-, pandas
-, cramjam
-, fsspec
-, thrift
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  setuptools,
+  setuptools-scm,
+
+  # nativeBuildInputs
+  gitMinimal,
+
+  # dependencies
+  cramjam,
+  fsspec,
+  numpy,
+  packaging,
+  pandas,
+
+  # optional-dependencies
+  python-lzo,
+
+  # tests
+  pytestCheckHook,
+  python,
 }:
 
 buildPythonPackage rec {
   pname = "fastparquet";
-  version = "0.7.1";
+  version = "2026.5.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dask";
-    repo = pname;
-    rev = version;
-    hash = "sha256-xV0AXNZSy4LSrHf11OP/+KDbeDQu8yF1ugX+W4mie1E=";
+    repo = "fastparquet";
+    tag = version;
+    hash = "sha256-thvoMXXiGtHGcJ0/IrGujjhVAvSmTMGmrlDHjG8R7PQ=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.py \
-      --replace "'pytest-runner'," "" \
-      --replace "oldest-supported-numpy" "numpy"
-  '';
+  build-system = [
+    cython
+    setuptools
+    setuptools-scm
+  ];
 
-  propagatedBuildInputs = [ cramjam fsspec numba numpy pandas thrift ];
-  checkInputs = [ pytestCheckHook ];
+  nativeBuildInputs = [
+    gitMinimal
+  ];
+
+  dependencies = [
+    cramjam
+    fsspec
+    numpy
+    packaging
+    pandas
+  ];
+
+  optional-dependencies = {
+    lzo = [ python-lzo ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = [
+    # DeprecationWarning: The 'generic' unit for NumPy timedelta is deprecated,
+    # and will raise an error in the future. This includes implicit conversion of bare
+    # integers (e.g. `+ 1`).Please use a specific unit instead.
+    "test_import_without_warning"
+  ];
 
   # Workaround https://github.com/NixOS/nixpkgs/issues/123561
   preCheck = ''
@@ -45,10 +83,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "fastparquet" ];
 
-  meta = with lib; {
-    description = "A python implementation of the parquet format";
+  meta = {
+    description = "Implementation of the parquet format";
     homepage = "https://github.com/dask/fastparquet";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ veprbl ];
+    changelog = "https://github.com/dask/fastparquet/blob/${version}/docs/source/releasenotes.rst";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ veprbl ];
   };
 }

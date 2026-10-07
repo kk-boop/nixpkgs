@@ -1,22 +1,22 @@
-{ lib, buildDunePackage, fetchFromGitHub }:
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "bigarray-compat";
-  version = "1.0.0";
+  version = "1.1.0";
 
-  useDune2 = true;
-
-  src = fetchFromGitHub {
-    owner = "mirage";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "06j1dwlpisxshdd0nab4n4x266gg1s1n8na16lpgw3fvcznwnimz";
+  src = fetchurl {
+    url = "https://github.com/mirage/bigarray-compat/releases/download/v${finalAttrs.version}/bigarray-compat-${finalAttrs.version}.tbz";
+    hash = "sha256-Q0RppI1chOgNYhsT2V6wZ/gTjBZQof1a5gCaGbk3GNU=";
   };
 
   meta = {
     description = "Compatibility library to use Stdlib.Bigarray when possible";
-    inherit (src.meta) homepage;
+    homepage = "https://github.com/mirage/bigarray-compat";
     license = lib.licenses.isc;
     maintainers = [ lib.maintainers.vbgl ];
   };
-}
+})

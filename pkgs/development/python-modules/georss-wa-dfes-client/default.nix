@@ -1,37 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, georss-client
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  georss-client,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "georss-wa-dfes-client";
-  version = "0.3";
-  disabled = pythonOlder "3.7";
+  version = "2026.6.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "exxamalte";
     repo = "python-georss-wa-dfes-client";
-    rev = "v${version}";
-    sha256 = "01fk67kc6ww88yzsans8g81i6j7s0276gma5fk76la1c8vj2ifs7";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-9wkGwuO8FV3ZJWq0LqdUFFwW4WQw+f826mTPFp+LMpw=";
   };
 
-  propagatedBuildInputs = [
-    georss-client
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  dependencies = [ georss-client ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "georss_wa_dfes_client" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for accessing WA Department of Fire and Emergency Services (DFES) feed";
     homepage = "https://github.com/exxamalte/python-georss-wa-dfes-client";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/exxamalte/python-georss-wa-dfes-client/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

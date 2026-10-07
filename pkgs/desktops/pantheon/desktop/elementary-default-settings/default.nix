@@ -1,63 +1,49 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, ninja
-, nixos-artwork
-, glib
-, pkg-config
-, dbus
-, polkit
-, accountsservice
-, python3
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  nixos-artwork,
+  glib,
+  pkg-config,
+  dbus,
+  polkit,
+  accountsservice,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-default-settings";
-  version = "6.0.2";
-
-  repoName = "default-settings";
+  version = "8.1.1";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = repoName;
-    rev = version;
-    sha256 = "sha256-qaPj/Qp7RYzHgElFdM8bHV42oiPUbCMTC9Q+MUj4Q6Y=";
+    repo = "default-settings";
+    tag = version;
+    hash = "sha256-eH8bnfncyBMD7qPkdBy3zSBb79s1ALDLM58wae9hzPg=";
   };
 
   nativeBuildInputs = [
-    accountsservice
-    dbus
-    glib # polkit requires
+    glib # glib-compile-schemas
     meson
     ninja
     pkg-config
+  ];
+
+  buildInputs = [
+    accountsservice
+    dbus
     polkit
-    python3
   ];
 
   mesonFlags = [
     "--sysconfdir=${placeholder "out"}/etc"
     "-Ddefault-wallpaper=${nixos-artwork.wallpapers.simple-dark-gray.gnomeFilePath}"
-    "-Dplank-dockitems=false"
+    # Do not ship elementary OS specific config files.
+    "-Dapparmor-profiles=false"
+    "-Dgeoclue=false"
   ];
-
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
-
-  preInstall = ''
-    # Install our override for plank dockitems as Appcenter is not ready to be preinstalled.
-    # See: https://github.com/NixOS/nixpkgs/issues/70214.
-    schema_dir=$out/share/glib-2.0/schemas
-    install -D ${./overrides/plank-dockitems.gschema.override} $schema_dir/plank-dockitems.gschema.override
-
-    # Our launchers that use paths at /run/current-system/sw/bin
-    mkdir -p $out/etc/skel/.config/plank/dock1
-    cp -avr ${./launchers} $out/etc/skel/.config/plank/dock1/launchers
-  '';
 
   postFixup = ''
     # https://github.com/elementary/default-settings/issues/55
@@ -66,16 +52,14 @@ stdenv.mkDerivation rec {
   '';
 
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Default settings and configuration files for elementary";
     homepage = "https://github.com/elementary/default-settings";
-    license = licenses.gpl2Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.gpl2Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

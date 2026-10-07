@@ -1,38 +1,86 @@
-import ./make-test-python.nix ({ pkgs, lib, ... }: {
+test@{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
+{
   name = "containers-imperative";
   meta = {
-    maintainers = with lib.maintainers; [ aristid aszlig eelco kampfschlaefer ];
+    maintainers = with lib.maintainers; [
+      aszlig
+    ];
   };
+  imports = [
+    {
+      options.test-nix-in-container = lib.mkOption {
+        type = lib.types.bool;
+        description = ''
+          Whether to test nix inside the container.
+          We also run this test without daemon, in which case that won't work.
+          Activated by `./containers-imperative-no-daemon.nix`.
+        '';
+        default = true;
+      };
+    }
+  ];
 
-  machine =
-    { config, pkgs, lib, ... }:
-    { imports = [ ../modules/installer/cd-dvd/channel.nix ];
+  nodes.machine =
+    {
+      config,
+      pkgs,
+      lib,
+      ...
+    }:
+    {
+      imports = [ ../modules/installer/cd-dvd/channel.nix ];
 
+      boot.enableContainers = true;
+
+      nix.enable = true; # disabled by default. See all-tests.nix / tag(no-nix-by-default)
       # XXX: Sandbox setup fails while trying to hardlink files from the host's
       #      store file system into the prepared chroot directory.
-      nix.useSandbox = false;
-      nix.binaryCaches = []; # don't try to access cache.nixos.org
+      nix.settings.sandbox = false;
+      nix.settings.substituters = [ ]; # don't try to access cache.nixos.org
 
+      virtualisation.memorySize = 2048;
       virtualisation.writableStore = true;
       # Make sure we always have all the required dependencies for creating a
       # container available within the VM, because we don't have network access.
-      virtualisation.additionalPaths = let
-        emptyContainer = import ../lib/eval-config.nix {
-          inherit (config.nixpkgs.localSystem) system;
-          modules = lib.singleton {
-            containers.foo.config = {
-              system.stateVersion = "18.03";
+      virtualisation.additionalPaths =
+        let
+          emptyContainer = import ../lib/eval-config.nix {
+            modules = lib.singleton {
+              nixpkgs.hostPlatform = { inherit (pkgs.stdenv.hostPlatform) system; };
+
+              containers.foo.config = { };
             };
+
+            # The system is inherited from the host above.
+            # Set it to null, to remove the "legacy" entrypoint's non-hermetic default.
+            system = null;
           };
-        };
-      in with pkgs; [
-        stdenv stdenvNoCC emptyContainer.config.containers.foo.path
-        libxslt desktop-file-utils texinfo docbook5 libxml2
-        docbook_xsl_ns xorg.lndir documentation-highlighter
-      ];
+        in
+        with pkgs;
+        [
+          stdenv
+          stdenvNoCC
+          emptyContainer.config.containers.foo.path
+          libcap-text-verifier
+          libxslt
+          desktop-file-utils
+          texinfo
+          docbook5
+          libxml2
+          docbook_xsl_ns
+          lndir
+          documentation-highlighter
+          perlPackages.ConfigIniFiles
+        ];
     };
 
-  testScript = let
+  testScript =
+    let
       tmpfilesContainerConfig = pkgs.writeText "container-config-tmpfiles" ''
         {
           systemd.tmpfiles.rules = [ "d /foo - - - - -" ];
@@ -52,7 +100,8 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
           ];
         }
       '';
-    in ''
+    in
+    ''
       with subtest("Make sure we have a NixOS tree (required by ‘nixos-container create’)"):
           machine.succeed("PAGER=cat nix-env -qa -A nixos.hello >&2")
 
@@ -69,8 +118,8 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
 
       with subtest(f"Put the root of {id2} into a bind mount"):
           machine.succeed(
-              f"mv /var/lib/containers/{id2} /id2-bindmount",
-              f"mount --bind /id2-bindmount /var/lib/containers/{id1}",
+              f"mv /var/lib/nixos-containers/{id2} /id2-bindmount",
+              f"mount --bind /id2-bindmount /var/lib/nixos-containers/{id1}",
           )
 
           ip1 = machine.succeed(f"nixos-container show-ip {id1}").rstrip()
@@ -88,7 +137,7 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
           "Create a directory with a dummy file and bind-mount it into both containers."
       ):
           for id in id1, id2:
-              important_path = f"/var/lib/containers/{id}/very/important/data"
+              important_path = f"/var/lib/nixos-containers/{id}/very/important/data"
               machine.succeed(
                   f"mkdir -p {important_path}",
                   f"mount --bind /nested-bindmount {important_path}",
@@ -100,11 +149,13 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
       with subtest("Execute commands via the root shell"):
           assert "Linux" in machine.succeed(f"nixos-container run {id1} -- uname")
 
-      with subtest("Execute a nix command via the root shell. (regression test for #40355)"):
-          machine.succeed(
-              f"nixos-container run {id1} -- nix-instantiate -E "
-              + '\'derivation { name = "empty"; builder = "false"; system = "false"; }\' '
-          )
+      ${lib.optionalString test.config.test-nix-in-container ''
+        with subtest("Execute a nix command via the root shell. (regression test for #40355)"):
+            machine.succeed(
+                f"nixos-container run {id1} -- nix-instantiate -E "
+                + '\'derivation { name = "empty"; builder = "false"; system = "false"; }\' '
+            )
+      ''}
 
       with subtest("Stop and start (regression test for #4989)"):
           machine.succeed(f"nixos-container stop {id1}")
@@ -154,13 +205,13 @@ import ./make-test-python.nix ({ pkgs, lib, ... }: {
           machine.succeed("grep -qF 'important data' /nested-bindmount/dummy")
 
       with subtest("Ensure that the container path is gone"):
-          print(machine.succeed("ls -lsa /var/lib/containers"))
-          machine.succeed(f"test ! -e /var/lib/containers/{id1}")
+          print(machine.succeed("ls -lsa /var/lib/nixos-containers"))
+          machine.succeed(f"test ! -e /var/lib/nixos-containers/{id1}")
 
       with subtest("Ensure that a failed container creation doesn'leave any state"):
           machine.fail(
               "nixos-container create b0rk --config-file ${brokenCfg}"
           )
-          machine.succeed("test ! -e /var/lib/containers/b0rk")
+          machine.succeed("test ! -e /var/lib/nixos-containers/b0rk")
     '';
-})
+}

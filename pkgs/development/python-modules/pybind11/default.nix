@@ -1,72 +1,121 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchFromGitHub
-, cmake
-, eigen
-, python
-, catch
-, numpy
-, pytest
+{
+  stdenv,
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  cmake,
+  ninja,
+  scikit-build-core,
+  boost,
+  eigen,
+  python,
+  catch2,
+  numpy,
+  pytest,
+  makeSetupHook,
+  # Build tests to verify cross-compilation works, but only when CPU bit
+  # depth matches (otherwise Python headers cause LONG_BIT mismatch errors)
+  buildTests ? stdenv.hostPlatform.parsed.cpu.bits == stdenv.buildPlatform.parsed.cpu.bits,
 }:
-
-buildPythonPackage rec {
+let
+  setupHook = makeSetupHook {
+    name = "pybind11-setup-hook";
+    substitutions = {
+      pythonInterpreter = python.pythonOnBuildForHost.interpreter;
+      pythonIncludeDir = "${python}/include/${python.libPrefix}";
+      pythonSitePackages = "${python}/${python.sitePackages}";
+    };
+    meta.license = lib.licenses.mit;
+  } ./setup-hook.sh;
+in
+buildPythonPackage (finalAttrs: {
   pname = "pybind11";
-  version = "2.8.0";
+  version = "3.0.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pybind";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-kmyfRNZM9AtF0QA1MnWEPwWb6BebkkpanTvQwsraSJo=";
+    repo = "pybind11";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QZKnIOopEDsiRFkc1qQ+DaDHoTNuEEgQVeiAL0sQqak=";
   };
 
-  nativeBuildInputs = [ cmake ];
-
-  dontUseCmakeBuildDir = true;
-
-  cmakeFlags = [
-    "-DEIGEN3_INCLUDE_DIR=${eigen}/include/eigen3"
-    "-DBUILD_TESTING=on"
-  ] ++ lib.optionals (python.isPy3k && !stdenv.cc.isClang) [
-    "-DPYBIND11_CXX_STANDARD=-std=c++17"
+  build-system = [
+    cmake
+    ninja
+    finalAttrs.passthru.scikit-build-core-no-tests
   ];
 
-  postBuild = ''
-    # build tests
-    make
-  '';
+  buildInputs = lib.optionals buildTests [
+    catch2
+    boost
+    eigen
+  ];
 
-  postInstall = ''
-    make install
-    # Symlink the CMake-installed headers to the location expected by setuptools
-    mkdir -p $out/include/${python.libPrefix}
-    ln -sf $out/include/pybind11 $out/include/${python.libPrefix}/pybind11
-  '';
+  propagatedNativeBuildInputs = [ setupHook ];
 
-  checkInputs = [
-    catch
+  nativeCheckInputs = [
     numpy
     pytest
   ];
 
-  checkPhase = ''
-    runHook preCheck
+  pypaBuildFlags = [
+    # Keep the build directory around to run the tests.
+    "-Cbuild-dir=build"
+  ];
 
-    make check
+  cmakeFlags = [
+    (lib.cmakeBool "BUILD_TESTING" buildTests)
 
-    runHook postCheck
+    # Override the `PYBIND11_NOPYTHON = true` in `pyproject.toml`. This
+    # is required to build the tests.
+    (lib.cmakeBool "PYBIND11_NOPYTHON" (!buildTests))
+  ];
+
+  dontUseCmakeConfigure = true;
+
+  ninjaFlags = [
+    "-C"
+    "build"
+  ];
+
+  checkTarget = "check";
+
+  checkPhase = "ninjaCheckPhase";
+
+  # Make the headers and CMake/pkg-config files inside the wheel
+  # discoverable. This simulates the effect of the `pybind11[global]`
+  # installation but works better for our build.
+  postInstall = ''
+    ln -s $out/${python.sitePackages}/pybind11/{include,share} $out/
   '';
 
-  meta = with lib; {
+  passthru = {
+    # scikit-build-core's tests depend upon pybind11, and hence introduce
+    # infinite recursion. To avoid this, we define here a scikit-build-core
+    # derivation that doesn't depend on pybind11, and use it for pybind11's
+    # build-system.
+    scikit-build-core-no-tests = scikit-build-core.overridePythonAttrs {
+      doCheck = false;
+    };
+  };
+
+  hardeningDisable = lib.optional stdenv.hostPlatform.isMusl "fortify";
+
+  meta = {
     homepage = "https://github.com/pybind/pybind11";
+    changelog = "https://github.com/pybind/pybind11/blob/${finalAttrs.src.tag}/docs/changelog.md";
     description = "Seamless operability between C++11 and Python";
+    mainProgram = "pybind11-config";
     longDescription = ''
       Pybind11 is a lightweight header-only library that exposes
       C++ types in Python and vice versa, mainly to create Python
       bindings of existing C++ code.
     '';
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ yuriaisaka dotlambda ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [
+      yuriaisaka
+      dotlambda
+    ];
   };
-}
+})

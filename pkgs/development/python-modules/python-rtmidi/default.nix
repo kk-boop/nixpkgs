@@ -1,29 +1,59 @@
-{ lib, buildPythonPackage, fetchPypi, isPy27
-, pkg-config, alsa-lib, libjack2, tox, flake8, alabaster
+{
+  lib,
+  stdenv,
+  alabaster,
+  alsa-lib,
+  buildPythonPackage,
+  cython,
+  fetchPypi,
+  flake8,
+  libjack2,
+  meson-python,
+  ninja,
+  pkg-config,
+  tox,
+  wheel,
 }:
 
 buildPythonPackage rec {
   pname = "python-rtmidi";
-  version = "1.4.9";
-  disabled = isPy27;
+  version = "1.5.8";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "bfeb4ed99d0cccf6fa2837566907652ded7adc1c03b69f2160c9de4082301302";
+    pname = "python_rtmidi";
+    inherit version;
+    hash = "sha256-f5reaLBorgkADstWKulSHaOiNDYa1USeg/xzRUTQBPo=";
   };
 
-  nativeBuildInputs = [ pkg-config ];
-  buildInputs = [ alsa-lib libjack2 ];
-  checkInputs = [
+  nativeBuildInputs = [
+    cython
+    meson-python
+    ninja
+    pkg-config
+    wheel
+  ];
+
+  buildInputs =
+    [ ]
+    ++ lib.optionals stdenv.hostPlatform.isLinux [
+      libjack2
+      alsa-lib
+    ];
+
+  nativeCheckInputs = [
     tox
     flake8
     alabaster
   ];
 
-  meta = with lib; {
-    description = "A Python binding for the RtMidi C++ library implemented using Cython";
-    homepage = "https://chrisarndt.de/projects/python-rtmidi/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ hexa ];
+  pythonImportsCheck = [ "rtmidi" ];
+
+  meta = {
+    description = "Python binding for the RtMidi C++ library implemented using Cython";
+    homepage = "https://github.com/SpotlightKid/python-rtmidi";
+    changelog = "https://github.com/SpotlightKid/python-rtmidi/blob/${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

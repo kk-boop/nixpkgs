@@ -1,41 +1,50 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, six
-, cryptography
-, mock
-, pyfakefs
+{
+  lib,
+  buildPythonPackage,
+  cryptography,
+  fetchPypi,
+  poetry-core,
+  pyscard,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "fido2";
-  version = "0.9.3";
+  version = "2.2.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "b45e89a6109cfcb7f1bb513776aa2d6408e95c4822f83a253918b944083466ec";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-hXh0KKlMP46vcvD/MK+6mDtVmhsbeVyTMYyBtK1AYsQ=";
   };
 
-  propagatedBuildInputs = [ six cryptography ];
+  build-system = [ poetry-core ];
 
-  checkInputs = [ mock pyfakefs ];
+  pythonRelaxDeps = [ "cryptography" ];
 
-  # Testing with `python setup.py test` doesn't work:
-  # https://github.com/Yubico/python-fido2/issues/108#issuecomment-763513576
-  checkPhase = ''
-    runHook preCheck
+  dependencies = [ cryptography ];
 
-    python -m unittest discover -v
+  optional-dependencies = {
+    pcsc = [ pyscard ];
+  };
 
-    runHook postCheck
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  pytestFlags = [
+    "-v"
+    "--no-device"
+  ];
 
   pythonImportsCheck = [ "fido2" ];
 
-  meta = with lib; {
-    description = "Provides library functionality for FIDO 2.0, including communication with a device over USB.";
+  meta = {
+    description = "Provides library functionality for FIDO 2.0, including communication with a device over USB";
     homepage = "https://github.com/Yubico/python-fido2";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ prusnak ];
+    changelog = "https://github.com/Yubico/python-fido2/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ prusnak ];
   };
-}
+})

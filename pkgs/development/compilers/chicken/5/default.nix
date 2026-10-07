@@ -1,21 +1,31 @@
-{ lib, newScope } :
-let
-  callPackage = newScope self;
+{ callPackage }:
 
-  self = {
-    pkgs = self;
+(callPackage ../common {
+  version = "5.4.0";
+  hash = "sha256-PF1KphwRZ79tm/nq+JHadjC6n188Fb8JUVpwOb/N7F8=";
+  binaryVersion = 11;
 
-    fetchegg = callPackage ./fetchegg { };
+  # Disable two broken tests: "static link" and "linking tests"
+  postPatch = ''
+    sed -i tests/runtests.sh -e "/static link/,+4 { s/^/# / }"
+    sed -i tests/runtests.sh -e "/linking tests/,+11 { s/^/# / }"
+  '';
 
-    eggDerivation = callPackage ./eggDerivation.nix { };
+  depsFile = ./deps.toml;
+  overridesFile = ./overrides.nix;
 
-    chicken = callPackage ./chicken.nix {
-      bootstrap-chicken = self.chicken.override { bootstrap-chicken = null; };
-    };
-
-    chickenEggs = callPackage ./eggs.nix { };
-
-    egg2nix = callPackage ./egg2nix.nix { };
-  };
-
-in lib.recurseIntoAttrs self
+  # cond-expand shows up because read-egg.scm flattens conditional dependency
+  # forms to their head.
+  invalidDependencies = [
+    "srfi-4"
+    "cond-expand"
+    "http-curl"
+  ];
+}).overrideScope
+  (
+    final: prev: {
+      # egg2nix generates the hand-curated CHICKEN 4 egg set, but is itself a
+      # CHICKEN 5 program.
+      egg2nix = final.callPackage ./egg2nix.nix { };
+    }
+  )

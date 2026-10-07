@@ -1,23 +1,58 @@
-{ lib, buildPythonPackage, fetchPypi, django, python }:
+{
+  lib,
+  buildPythonPackage,
+  django,
+  fetchFromGitHub,
+  setuptools,
+  setuptools-scm,
+  pytestCheckHook,
+  pytest-django,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "django-formtools";
-  version = "2.2";
+  version = "2.7";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1chkbl188yj6hvhh1wgjpfgql553k6hrfwxzb8vv4lfdq41jq9y5";
+  src = fetchFromGitHub {
+    owner = "jazzband";
+    repo = "django-formtools";
+    tag = finalAttrs.version;
+    hash = "sha256-/985+Q2o3BoxxicyDFTYl4m4++d/4Vc+y5qQFpUc9RM=";
   };
 
-  propagatedBuildInputs = [ django ];
-  checkPhase = ''
-    ${python.interpreter} -m django test --settings=tests.settings
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
+
+  dependencies = [ django ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-django
+  ];
+
+  preCheck = ''
+    export DJANGO_SETTINGS_MODULE=tests.settings
   '';
 
-  meta = with lib; {
-    description = "A set of high-level abstractions for Django forms";
+  disabledTests = [
+    # mismatch between test collection of django and pytest-django
+    "TestStorage"
+  ]
+  ++ lib.optionals (lib.versionAtLeast django.version "6.1") [
+    # https://github.com/jazzband/django-formtools/issues/303
+    "test_manipulated_cookie"
+  ];
+
+  pythonImportsCheck = [ "formtools" ];
+
+  meta = {
+    description = "High-level abstractions for Django forms";
     homepage = "https://github.com/jazzband/django-formtools";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ greizgh schmittlauch ];
+    changelog = "https://github.com/jazzband/django-formtools/blob/${finalAttrs.src.tag}/docs/changelog.rst";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
-}
+})

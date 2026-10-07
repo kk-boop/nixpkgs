@@ -1,39 +1,40 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, poetry-core
-, pytestCheckHook
-, pytest-mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pydantic,
+  pytestCheckHook,
+  pytest-mock,
 }:
 
 buildPythonPackage rec {
   pname = "pykka";
-  version = "3.0.2";
-  format = "pyproject";
-  disabled = pythonOlder "3.6.1";
+  version = "4.4.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jodal";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1cy4pr05xlsny9g573q7njsv7jaaysi1qzafm6f82y57jqnmziks";
+    repo = "pykka";
+    tag = "v${version}";
+    hash = "sha256-ij5djc+6CjIC9HLxOJorMFdNRnxOoS37+oAmI8Lo5pc=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ hatchling ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pydantic
     pytestCheckHook
     pytest-mock
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pykka" ];
+
+  meta = {
     homepage = "https://www.pykka.org/";
-    description = "A Python implementation of the actor model";
-    changelog = "https://github.com/jodal/pykka/blob/v${version}/docs/changes.rst";
-    maintainers = with maintainers; [ marsam ];
-    license = licenses.asl20;
+    description = "Python implementation of the actor model";
+    changelog = "https://github.com/jodal/pykka/releases/tag/${src.tag}";
+    maintainers = [ ];
+    license = lib.licenses.asl20;
   };
 }

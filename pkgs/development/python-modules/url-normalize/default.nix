@@ -1,45 +1,43 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, poetry
-, pytest-cov
-, pytest-flakes
-, pytest-mock
-, pytest-socket
-, pytestCheckHook
-, six
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  idna,
+  pytest-cov-stub,
+  pytest-socket,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "url-normalize";
-  version = "1.4.3";
-  format = "pyproject";
+  version = "3.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "niksite";
-    repo = pname;
-    rev = version;
-    sha256 = "09nac5nh94x0n4bfazjfxk96b20mfsx6r1fnvqv85gkzs0rwqkaq";
+    repo = "url-normalize";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-RZORbZfeRfzGJFsLXJUuqXVFsD8TfcHzjBGb80cTetQ=";
   };
 
-  nativeBuildInputs = [ poetry ];
+  build-system = [ setuptools ];
 
-  propagatedBuildInputs = [ six ];
+  dependencies = [ idna ];
 
-  checkInputs = [
-    pytest-cov
-    pytest-flakes
-    pytest-mock
+  nativeCheckInputs = [
+    pytest-cov-stub
     pytest-socket
     pytestCheckHook
   ];
 
   pythonImportsCheck = [ "url_normalize" ];
 
-  meta = with lib; {
+  meta = {
     description = "URL normalization for Python";
     homepage = "https://github.com/niksite/url-normalize";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/niksite/url-normalize/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

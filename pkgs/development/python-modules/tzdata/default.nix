@@ -1,33 +1,34 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, pytestCheckHook
-, pytest-subtests
-, importlib-resources
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "tzdata";
-  version = "2021.1";
-  format = "pyproject";
+  version = "2026.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "sha256-4ZxzUfiHUioaxznSEEHlkt3ebdG3ZP3vqPeys1UdPTg=";
+    hash = "sha256-ShUYuJkwhqeYJSPgcWQ/PA5fIT51shMY54vKv/+dFBU=";
   };
 
-  checkInputs = [
+  nativeBuildInputs = [ setuptools ];
+
+  nativeCheckInputs = [
     pytestCheckHook
-    pytest-subtests
-  ] ++ lib.optional (pythonOlder "3.7") importlib-resources;
+  ];
 
   pythonImportsCheck = [ "tzdata" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/python/tzdata/blob/${version}/NEWS.md";
     description = "Provider of IANA time zone data";
     homepage = "https://github.com/python/tzdata";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ mdaniels5757 ];
   };
 }

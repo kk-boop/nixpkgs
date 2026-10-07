@@ -1,61 +1,72 @@
-{ lib
-, aiohttp
-, aresponses
-, buildPythonPackage
-, fetchFromGitHub
-, poetry-core
-, pydantic
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, yarl
+{
+  lib,
+  aiohttp,
+  aioresponses,
+  buildPythonPackage,
+  fetchFromGitHub,
+  mashumaro,
+  orjson,
+  poetry-core,
+  pytest-asyncio,
+  pytest-cov-stub,
+  pytestCheckHook,
+  rich,
+  syrupy,
+  typer,
+  yarl,
 }:
 
 buildPythonPackage rec {
   pname = "vehicle";
-  version = "0.3.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "3.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "frenck";
     repo = "python-vehicle";
-    rev = "v${version}";
-    sha256 = "0blpyh246l16bn6jy8ifym2br13k8qxagggbwpzwrwfxkb3kdz5x";
+    tag = "v${version}";
+    hash = "sha256-gmLBm3ru525cayhdRJ0Ccwsq+juZRQAAjCQQq7g0m+0=";
   };
-
-  nativeBuildInputs = [
-    poetry-core
-  ];
-
-  propagatedBuildInputs = [
-    aiohttp
-    pydantic
-    yarl
-  ];
-
-  checkInputs = [
-    aresponses
-    pytest-asyncio
-    pytestCheckHook
-  ];
 
   postPatch = ''
     # Upstream doesn't set a version for the pyproject.toml
     substituteInPlace pyproject.toml \
-      --replace "0.0.0" "${version}" \
-      --replace "--cov" ""
+      --replace "0.0.0" "${version}"
   '';
 
-  pythonImportsCheck = [
-    "vehicle"
+  build-system = [ poetry-core ];
+
+  dependencies = [
+    aiohttp
+    mashumaro
+    orjson
+    yarl
   ];
 
-  meta = with lib; {
+  optional-dependencies = {
+    cli = [
+      rich
+      typer
+    ];
+  };
+
+  nativeCheckInputs = [
+    aioresponses
+    pytest-asyncio
+    pytest-cov-stub
+    pytestCheckHook
+    syrupy
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  pythonImportsCheck = [ "vehicle" ];
+
+  meta = {
     description = "Python client providing RDW vehicle information";
     homepage = "https://github.com/frenck/python-vehicle";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/frenck/python-vehicle/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    mainProgram = "vehicle";
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

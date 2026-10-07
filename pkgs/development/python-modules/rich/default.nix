@@ -1,50 +1,75 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, CommonMark
-, colorama
-, dataclasses
-, poetry-core
-, pygments
-, typing-extensions
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  poetry-core,
+
+  # dependencies
+  markdown-it-py,
+  pygments,
+
+  # optional-dependencies
+  ipywidgets,
+
+  # tests
+  attrs,
+  pytestCheckHook,
+  which,
+
+  # for passthru.tests
+  enrich,
+  httpie,
+  rich-rst,
+  textual,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "rich";
-  version = "10.12.0";
-  format = "pyproject";
-  disabled = pythonOlder "3.6";
+  version = "15.0.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "willmcgugan";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1qq4k0pxq3r0463z4h65i9rb8cvilpnqmparklj5y5qk6svz0y2n";
+    owner = "Textualize";
+    repo = "rich";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-Uk3r6aYhrjYJ8GrMKfdlv3/muK/uUynd4pd1yWCwSOM=";
   };
 
-  nativeBuildInputs = [ poetry-core ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
-    CommonMark
-    colorama
+  dependencies = [
+    markdown-it-py
     pygments
-    typing-extensions
-  ] ++ lib.optional (pythonOlder "3.7") [
-    dataclasses
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    jupyter = [ ipywidgets ];
+  };
+
+  nativeCheckInputs = [
+    attrs
     pytestCheckHook
+    which
   ];
 
   pythonImportsCheck = [ "rich" ];
 
-  meta = with lib; {
-    description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal";
-    homepage = "https://github.com/willmcgugan/rich";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ris ];
+  passthru.tests = {
+    inherit
+      enrich
+      httpie
+      rich-rst
+      textual
+      ;
   };
-}
+
+  meta = {
+    description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal";
+    homepage = "https://github.com/Textualize/rich";
+    changelog = "https://github.com/Textualize/rich/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ ris ];
+  };
+})

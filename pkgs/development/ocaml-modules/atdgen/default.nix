@@ -1,26 +1,45 @@
-{ buildDunePackage, atd, biniou, yojson }:
-
-let runtime =
-  buildDunePackage {
-    pname = "atdgen-runtime";
-    inherit (atd) version useDune2 src;
-
-    propagatedBuildInputs = [ biniou yojson ];
-
-    meta = { inherit (atd.meta) license; };
-  }
-; in
+{
+  lib,
+  buildDunePackage,
+  ocaml,
+  alcotest,
+  atd,
+  atd-jsonlike,
+  atd-yamlx,
+  atdgen-codec-runtime,
+  atdgen-runtime,
+  atdml,
+  biniou,
+  re,
+  yamlx,
+}:
 
 buildDunePackage {
   pname = "atdgen";
-  inherit (atd) version useDune2 src;
+  inherit (atdgen-codec-runtime) version src;
 
-  buildInputs = [ atd ];
+  buildInputs = [
+    atd
+    re
+  ];
 
-  propagatedBuildInputs = [ runtime ];
+  propagatedBuildInputs = [ atdgen-runtime ];
 
-  meta = {
+  doCheck = lib.versionAtLeast ocaml.version "4.14";
+  nativeCheckInputs = [
+    atd
+    atdml
+    biniou
+  ];
+  checkInputs = [
+    alcotest
+    atdgen-codec-runtime
+    yamlx
+    atd-jsonlike
+    atd-yamlx
+  ];
+
+  meta = (removeAttrs atd.meta [ "mainProgram" ]) // {
     description = "Generates efficient JSON serializers, deserializers and validators";
-    inherit (atd.meta) license;
   };
 }

@@ -1,56 +1,79 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, aiocontextvars
-, boltons
-, hypothesis
-, pyrsistent
-, pytest
-, setuptools
-, six
-, testtools
-, zope_interface
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+  setuptools-scm,
+  versioneer,
+
+  # dependencies
+  boltons,
+  orjson,
+  pyrsistent,
+  zope-interface,
+
+  # tests
+  addBinToPathHook,
+  dask,
+  distributed,
+  hypothesis,
+  pandas,
+  pytestCheckHook,
+  testtools,
+  twisted,
+  daemontools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "eliot";
-  version = "1.13.0";
-  disabled = pythonOlder "3.6";
+  version = "1.18.0";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "5760194b308a7ab35514ae1b942d88e9f2359071556d82580383f09ca586fff7";
+  src = fetchFromGitHub {
+    owner = "itamarst";
+    repo = "eliot";
+    tag = finalAttrs.version;
+    hash = "sha256-YUvHdnpWtsy2NlrVLaaewcUPKGLfdfX/zvowV0jcXuw=";
   };
 
-  checkInputs = [
-    hypothesis
-    testtools
-    pytest
-   ];
-
-  propagatedBuildInputs = [
-    aiocontextvars
-    boltons
-    pyrsistent
+  build-system = [
     setuptools
-    six
-    zope_interface
+    setuptools-scm
+    versioneer
   ];
+
+  dependencies = [
+    boltons
+    orjson
+    pyrsistent
+    zope-interface
+  ];
+
+  nativeCheckInputs = [
+    addBinToPathHook
+    dask
+    distributed
+    hypothesis
+    pandas
+    pytestCheckHook
+    testtools
+    twisted
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isLinux [ daemontools ];
+
+  __darwinAllowLocalNetworking = true;
 
   pythonImportsCheck = [ "eliot" ];
 
-  # Tests run eliot-prettyprint in out/bin.
-  # test_parse_stream is broken, skip it.
-  checkPhase = ''
-    export PATH=$out/bin:$PATH
-    pytest -k 'not test_parse_stream'
-  '';
-
-  meta = with lib; {
-    homepage = "https://eliot.readthedocs.io";
+  meta = {
     description = "Logging library that tells you why it happened";
-    license = licenses.asl20;
-    maintainers = [ maintainers.dpausp ];
+    homepage = "https://eliot.readthedocs.io";
+    changelog = "https://github.com/itamarst/eliot/blob/${finalAttrs.version}/docs/source/news.rst";
+    mainProgram = "eliot-prettyprint";
+    license = lib.licenses.asl20;
   };
-}
+})

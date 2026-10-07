@@ -1,7 +1,13 @@
-{ stdenvNoCC, lndir, newlib, msp430GccSupport }:
+{
+  stdenvNoCC,
+  lndir,
+  newlib,
+  msp430GccSupport,
+}:
 
 stdenvNoCC.mkDerivation {
-  name = "msp430-${newlib.name}";
+  pname = "msp430-${newlib.pname}";
+  inherit (newlib) version;
   inherit newlib;
   inherit msp430GccSupport;
 

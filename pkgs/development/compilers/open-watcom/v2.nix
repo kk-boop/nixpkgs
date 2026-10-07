@@ -1,61 +1,83 @@
-{ stdenv
-, lib
-, fetchFromGitHub
-, unstableGitUpdater
+{
+  stdenv,
+  lib,
+  fetchFromGitHub,
+  unstableGitUpdater,
 
-# Docs cause an immense increase in build time, up to 2 additional hours
-, withDocs ? false
-, dosbox
-, ghostscript
-, withGUI ? false
+  # Docs cause an immense increase in build time, up to 2 additional hours
+  withDocs ? false,
+  dosbox,
+  mesa,
+  ghostscript,
+
+  # GUI tools aren't ported to non-MS platforms, building them usually just wastes time
+  withGUI ? stdenv.hostPlatform.isWindows,
 }:
 
-stdenv.mkDerivation rec {
-  pname = "open-watcom-v2";
-  version = "unstable-2021-12-10";
-  name = "${pname}-unwrapped-${version}";
+stdenv.mkDerivation (finalAttrs: {
+  pname = "${finalAttrs.passthru.prettyName}-unwrapped";
+  # nixpkgs-update: no auto update
+  version = "0-unstable-2026-04-11";
 
   src = fetchFromGitHub {
     owner = "open-watcom";
     repo = "open-watcom-v2";
-    rev = "ca685c1b780149f7210426f0bb78dd7b67b19e6d";
-    sha256 = "1nmmj94z5hips2426rcdqdcsm8015jjj51rm9fnx81qagdj52j5d";
+    rev = "e724d4a0e7cc1593ae2430e07a62352b7852dd68";
+    hash = "sha256-Xu0oCNO8WyIwe12CjDWXP+2LUzexZcw6Rgzpb80M5cA=";
   };
 
   postPatch = ''
     patchShebangs *.sh
-
-    for dateSource in cmnvars.sh bld/wipfc/configure; do
-      substituteInPlace $dateSource \
-        --replace '`date ' '`date -ud "@$SOURCE_DATE_EPOCH" '
-    done
+  ''
+  # Patch references to current time & date into SOURCE_DATE_EPOCH-respecting ones
+  + ''
+    substituteInPlace bld/wipfc/configure \
+      --replace-fail '`date ' '`date -ud "@$SOURCE_DATE_EPOCH" '
 
     substituteInPlace bld/watcom/h/banner.h \
-      --replace '__DATE__' "\"$(date -ud "@$SOURCE_DATE_EPOCH" +'%b %d %Y')\"" \
-      --replace '__TIME__' "\"$(date -ud "@$SOURCE_DATE_EPOCH" +'%T')\""
+      --replace-fail '__DATE__' "\"$(date -ud "@$SOURCE_DATE_EPOCH" +'%b %d %Y')\"" \
+      --replace-fail '__TIME__' "\"$(date -ud "@$SOURCE_DATE_EPOCH" +'%T')\""
 
     substituteInPlace build/makeinit \
-      --replace '%__CYEAR__' '%OWCYEAR'
-  '' + lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
+      --replace-fail '$+$(%__CYEAR__)$-' "$(date -ud "@$SOURCE_DATE_EPOCH" +'%Y')"
+  ''
+  # (SDL? DOSBox?) needs OpenGL now, and that doesn't seem to play nicely anymore with the dummy driver
+  + ''
+    substituteInPlace build/mif/wgmlcmd.mif \
+      --replace-fail 'SDL_VIDEODRIVER=dummy' 'SDL_VIDEODRIVER=offscreen'
+  ''
+  + lib.optionalString (!stdenv.hostPlatform.isDarwin) ''
     substituteInPlace build/mif/local.mif \
-      --replace '-static' ""
+      --replace-fail '-static' ""
   '';
 
-  nativeBuildInputs = [ ]
-    ++ lib.optional (withDocs || withGUI) dosbox
-    ++ lib.optional withDocs ghostscript;
+  # https://github.com/open-watcom/open-watcom-v2/issues/1608
+  hardeningDisable = [ "strictflexarrays1" ];
+
+  nativeBuildInputs = lib.optionals withDocs [
+    dosbox # running prebuilt WGML tool to create docs
+    ghostscript
+    mesa.llvmpipeHook # DOSBox doesn't seem to launch without OpenGL available, even on SDL dummy platform
+  ];
 
   configurePhase = ''
     runHook preConfigure
 
     export OWROOT=$(realpath $PWD)
-    export OWTOOLS=${if stdenv.cc.isClang then "CLANG" else "GCC"}
+    export OWTOOLS=${
+      if stdenv.cc.isClang then
+        "CLANG"
+      else if stdenv.cc.isGNU then
+        "GCC"
+      else
+        throw "Don't know what compiler ID to use for ${stdenv.cc.name} in open-watcom-v2 build"
+    }
     export OWDOCBUILD=${if withDocs then "1" else "0"}
-    export OWGHOSTSCRIPTPATH=${lib.optionalString withDocs "${ghostscript}/bin"}
+    export OWGHOSTSCRIPTPATH=${lib.optionalString withDocs "${lib.makeBinPath [ ghostscript ]}"}
     export OWGUINOBUILD=${if withGUI then "0" else "1"}
     export OWNOBUILD=
     export OWDISTRBUILD=0
-    export OWDOSBOX=${lib.optionalString (withDocs || withGUI) "${dosbox}/bin/dosbox"}
+    export OWDOSBOX=${lib.getExe dosbox}
     export OWVERBOSE=0
     export OWRELROOT=$out
 
@@ -83,12 +105,17 @@ stdenv.mkDerivation rec {
   # Stripping breaks many tools
   dontStrip = true;
 
-  passthru.updateScript = unstableGitUpdater {
-    url = "https://github.com/open-watcom/open-watcom-v2.git";
+  passthru = {
+    prettyName = "open-watcom-v2";
+    updateScript = unstableGitUpdater {
+      url = "https://github.com/open-watcom/open-watcom-v2.git";
+      # no numerical releases, monthly "YYYY-MM-DD-Build" tags and daily "Current-build", "Last-CI-build" & "Coverity-scan" retagging
+      hardcodeZeroVersion = true;
+    };
   };
 
-  meta = with lib; {
-    description = "The v2 fork of the Open Watcom suite of compilers and tools";
+  meta = {
+    description = "V2 fork of the Open Watcom suite of compilers and tools";
     longDescription = ''
       A fork of Open Watcom: A C/C++/Fortran compiler and assembler suite
       targeting a multitude of architectures (x86, IA-32, Alpha AXP, MIPS,
@@ -111,14 +138,20 @@ stdenv.mkDerivation rec {
       - Broken C++ compiler pre-compiled header template support is fixed
       - Many C++ compiler crashes are fixed
       - Debugger has no length limit for any used environment variable
-    '' + lib.optionalString (!withDocs) ''
+    ''
+    + lib.optionalString (!withDocs) ''
 
       The documentation has been excluded from this build for build time reasons. It can be found here:
       https://github.com/open-watcom/open-watcom-v2/wiki/Open-Watcom-Documentation
     '';
     homepage = "https://open-watcom.github.io";
-    license = licenses.watcom;
-    platforms = [ "x86_64-linux" "i686-linux" "x86_64-darwin" "x86_64-windows" "i686-windows" ];
-    maintainers = with maintainers; [ OPNA2608 ];
+    license = lib.licenses.watcom;
+    platforms = with lib.platforms; windows ++ unix;
+    badPlatforms = lib.platforms.riscv ++ [
+      "powerpc64-linux"
+      "powerpc64le-linux"
+      "mips64el-linux"
+    ];
+    maintainers = with lib.maintainers; [ OPNA2608 ];
   };
-}
+})

@@ -1,22 +1,71 @@
-{ lib, buildPythonPackage, fetchPypi, python-dateutil, requests, pytz, pyproj , pytest, pyyaml } :
-buildPythonPackage rec {
-  pname = "OWSLib";
-  version = "0.25.0";
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  lxml,
+  pytest-cov-stub,
+  pytest-httpserver,
+  pytestCheckHook,
+  python-dateutil,
+  pyyaml,
+  requests,
+  setuptools,
+}:
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "20d79bce0be10277caa36f3134826bd0065325df0301a55b2c8b1c338d8d8f0a";
+buildPythonPackage rec {
+  pname = "owslib";
+  version = "0.36.0";
+  pyproject = true;
+
+  src = fetchFromGitHub {
+    owner = "geopython";
+    repo = "OWSLib";
+    tag = version;
+    hash = "sha256-Of/CSLcNnpTYHRm4toQK4/HXTWNcuEMkW6obWpg96Tc=";
   };
 
-  buildInputs = [ pytest ];
-  propagatedBuildInputs = [ python-dateutil pyproj pytz requests pyyaml ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools<69" "setuptools"
+  '';
 
-  # 'tests' dir not included in pypy distribution archive.
-  doCheck = false;
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "client for Open Geospatial Consortium web service interface standards";
-    license = licenses.bsd3;
+  dependencies = [
+    lxml
+    python-dateutil
+    pyyaml
+    requests
+  ];
+
+  nativeCheckInputs = [
+    pytest-cov-stub
+    pytest-httpserver
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "owslib" ];
+
+  preCheck = ''
+    # _pytest.pathlib.ImportPathMismatchError: ('owslib.swe.sensor.sml', '/build/source/build/...
+    export PY_IGNORE_IMPORTMISMATCH=1
+  '';
+
+  disabledTestMarks = [
+    # Disable tests which require network access
+    "online"
+  ];
+
+  disabledTestPaths = [
+    # Tests requires network access
+    "tests/test_ogcapi_connectedsystems_osh.py"
+  ];
+
+  meta = {
+    description = "Client for Open Geospatial Consortium web service interface standards";
     homepage = "https://www.osgeo.org/projects/owslib/";
+    changelog = "https://github.com/geopython/OWSLib/releases/tag/${src.tag}";
+    license = lib.licenses.bsd3;
+    teams = [ lib.teams.geospatial ];
   };
 }

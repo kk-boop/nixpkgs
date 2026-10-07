@@ -1,150 +1,132 @@
 { lib, pkgs }:
-rec {
+let
+  inherit (lib)
+    mapAttrs
+    optionalAttrs
+    warn
+    ;
+
+  inherit (lib.types)
+    attrsOf
+    bool
+    coercedTo
+    either
+    float
+    int
+    listOf
+    luaInline
+    mkOptionType
+    nonEmptyListOf
+    nullOr
+    oneOf
+    path
+    str
+    ;
+
+  # Attributes added accidentally in https://github.com/NixOS/nixpkgs/pull/335232 (2024-08-18)
+  # Deprecated in https://github.com/NixOS/nixpkgs/pull/415666 (2025-06)
+  allowAliases = pkgs.config.allowAliases or false;
+  aliasWarning = name: warn "`formats.${name}` is deprecated; use `lib.types.${name}` instead.";
+  aliases = mapAttrs aliasWarning {
+    inherit
+      attrsOf
+      bool
+      coercedTo
+      either
+      float
+      int
+      listOf
+      luaInline
+      mkOptionType
+      nonEmptyListOf
+      nullOr
+      oneOf
+      path
+      str
+      ;
+  };
+
+  json2x = pkgs.buildPackages.callPackage ./formats/json2x/package.nix { };
+in
+optionalAttrs allowAliases aliases
+// rec {
 
   /*
+    Every following entry represents a format for program configuration files
+    used for `settings`-style options (see https://github.com/NixOS/rfcs/pull/42).
+    Each entry should look as follows:
 
-  Every following entry represents a format for program configuration files
-  used for `settings`-style options (see https://github.com/NixOS/rfcs/pull/42).
-  Each entry should look as follows:
+      <format> = <parameters>: {
+        #        ^^ Parameters for controlling the format
 
-    <format> = <parameters>: {
-      #        ^^ Parameters for controlling the format
+        # The module system type most suitable for representing such a format
+        # The description needs to be overwritten for recursive types
+        type = ...;
 
-      # The module system type most suitable for representing such a format
-      # The description needs to be overwritten for recursive types
-      type = ...;
+        # Utility functions for convenience, or special interactions with the
+        # format (optional)
+        lib = {
+          exampleFunction = ...
+          # Types specific to the format (optional)
+          types = { ... };
+          ...
+        };
 
-      # generate :: Name -> Value -> Path
-      # A function for generating a file with a value of such a type
-      generate = ...;
+        # generate :: Name -> Value -> Path
+        # A function for generating a file with a value of such a type
+        generate = ...;
 
-    });
+      });
+
+    Please note that `pkgs` may not always be available for use due to the split
+    options doc build introduced in fc614c37c653, so lazy evaluation of only the
+    'type' field is required.
   */
 
+  cdn = (import ./formats/cdn/default.nix { inherit lib pkgs; }).format;
 
-  json = {}: {
+  configobj = (import ./formats/configobj/default.nix { inherit lib pkgs; }).format;
 
-    type = with lib.types; let
-      valueType = nullOr (oneOf [
-        bool
-        int
-        float
-        str
-        path
-        (attrsOf valueType)
-        (listOf valueType)
-      ]) // {
-        description = "JSON value";
-      };
-    in valueType;
+  elixirConf = (import ./formats/elixir-conf/default.nix { inherit lib pkgs; }).format;
 
-    generate = name: value: pkgs.runCommand name {
-      nativeBuildInputs = [ pkgs.jq ];
-      value = builtins.toJSON value;
-      passAsFile = [ "value" ];
-    } ''
-      jq . "$valuePath"> $out
-    '';
+  gitIni = (import ./formats/git-ini/default.nix { inherit lib pkgs; }).format;
 
-  };
+  hcl1 = (import ./formats/hcl1/default.nix { inherit lib pkgs json; }).format;
 
-  yaml = {}: {
+  hocon = (import ./formats/hocon/default.nix { inherit lib pkgs; }).format;
 
-    generate = name: value: pkgs.runCommand name {
-        nativeBuildInputs = [ pkgs.remarshal ];
-        value = builtins.toJSON value;
-        passAsFile = [ "value" ];
-      } ''
-        json2yaml "$valuePath" "$out"
-      '';
+  ini = (import ./formats/ini/default.nix { inherit lib pkgs; }).format;
 
-    type = with lib.types; let
-      valueType = nullOr (oneOf [
-        bool
-        int
-        float
-        str
-        path
-        (attrsOf valueType)
-        (listOf valueType)
-      ]) // {
-        description = "YAML value";
-      };
-    in valueType;
+  iniWithGlobalSection =
+    (import ./formats/ini-with-global-section/default.nix { inherit lib pkgs; }).format;
 
-  };
+  javaProperties = (import ./formats/java-properties/default.nix { inherit lib pkgs; }).format;
 
-  ini = {
-    # Represents lists as duplicate keys
-    listsAsDuplicateKeys ? false,
-    # Alternative to listsAsDuplicateKeys, converts list to non-list
-    # listToValue :: [IniAtom] -> IniAtom
-    listToValue ? null,
-    ...
-    }@args:
-    assert !listsAsDuplicateKeys || listToValue == null;
-    {
+  json = (import ./formats/json/default.nix { inherit lib pkgs; }).format;
 
-    type = with lib.types; let
+  keyValue = (import ./formats/key-value/default.nix { inherit lib pkgs; }).format;
 
-      singleIniAtom = nullOr (oneOf [
-        bool
-        int
-        float
-        str
-      ]) // {
-        description = "INI atom (null, bool, int, float or string)";
-      };
+  libconfig = (import ./formats/libconfig/default.nix { inherit lib pkgs; }).format;
 
-      iniAtom =
-        if listsAsDuplicateKeys then
-          coercedTo singleIniAtom lib.singleton (listOf singleIniAtom) // {
-            description = singleIniAtom.description + " or a list of them for duplicate keys";
-          }
-        else if listToValue != null then
-          coercedTo singleIniAtom lib.singleton (nonEmptyListOf singleIniAtom) // {
-            description = singleIniAtom.description + " or a non-empty list of them";
-          }
-        else
-          singleIniAtom;
+  lua = (import ./formats/lua/default.nix { inherit lib pkgs; }).format;
 
-    in attrsOf (attrsOf iniAtom);
+  nixConf = (import ./formats/nix-conf/default.nix { inherit lib pkgs; }).format;
 
-    generate = name: value:
-      let
-        transformedValue =
-          if listToValue != null
-          then
-            lib.mapAttrs (section: lib.mapAttrs (key: val:
-              if lib.isList val then listToValue val else val
-            )) value
-          else value;
-      in pkgs.writeText name (lib.generators.toINI (removeAttrs args ["listToValue"]) transformedValue);
+  php = (import ./formats/php/default.nix { inherit lib pkgs; }).format;
 
-  };
+  plist = (import ./formats/plist/default.nix { inherit lib pkgs; }).format;
 
-  toml = {}: json {} // {
-    type = with lib.types; let
-      valueType = oneOf [
-        bool
-        int
-        float
-        str
-        path
-        (attrsOf valueType)
-        (listOf valueType)
-      ] // {
-        description = "TOML value";
-      };
-    in valueType;
+  pythonVars = (import ./formats/python-vars/default.nix { inherit lib pkgs; }).format;
 
-    generate = name: value: pkgs.runCommand name {
-      nativeBuildInputs = [ pkgs.remarshal ];
-      value = builtins.toJSON value;
-      passAsFile = [ "value" ];
-    } ''
-      json2toml "$valuePath" "$out"
-    '';
+  systemd = (import ./formats/systemd/default.nix { inherit lib pkgs ini; }).format;
 
-  };
+  toml = (import ./formats/toml/default.nix { inherit lib pkgs json2x; }).format;
+
+  xml = (import ./formats/xml/default.nix { inherit lib pkgs; }).format;
+
+  yaml = yaml_1_1;
+
+  yaml_1_1 = (import ./formats/yaml-1-1/default.nix { inherit lib pkgs; }).format;
+
+  yaml_1_2 = (import ./formats/yaml-1-2/default.nix { inherit lib pkgs; }).format;
 }

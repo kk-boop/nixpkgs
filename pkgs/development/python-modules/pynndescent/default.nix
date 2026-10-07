@@ -1,25 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, joblib
-, llvmlite
-, numba
-, scikit-learn
-, scipy
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  joblib,
+  llvmlite,
+  numba,
+  scikit-learn,
+  scipy,
+
+  # tests
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pynndescent";
-  version = "0.5.5";
-  format = "setuptools";
+  version = "0.6.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "7a7df8412b19cfb3596060faf5a8c5d0bf5b3bd504f8efd900fc4e3918c6f882";
+  src = fetchFromGitHub {
+    owner = "lmcinnes";
+    repo = "pynndescent";
+    tag = "release-${finalAttrs.version}";
+    hash = "sha256-RfIbPPyx+Y7niuFrLjA02cUDHTSv9s5E4JiXv4ZBNEc=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     joblib
     llvmlite
     numba
@@ -27,14 +39,30 @@ buildPythonPackage rec {
     scipy
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  pythonImportsCheck = [ "pynndescent" ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = [
+    # AssertionError: Arrays are not almost equal to 6 decimals
+    "test_seuclidean"
+
+    # sklearn.utils._param_validation.InvalidParameterError: The 'metric' parameter of
+    # pairwise_distances must be a str among ...
+    "test_binary_check"
+    "test_sparse_binary_check"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Nearest Neighbor Descent";
     homepage = "https://github.com/lmcinnes/pynndescent";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ mic92 ];
+    changelog = "https://github.com/lmcinnes/pynndescent/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ mic92 ];
+    badPlatforms = [
+      # The majority of tests are crashing:
+      # Fatal Python error: Segmentation fault
+      "aarch64-linux"
+    ];
   };
-}
+})

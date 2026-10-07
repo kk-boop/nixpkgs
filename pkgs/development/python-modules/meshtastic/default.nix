@@ -1,54 +1,131 @@
-{ lib
-, buildPythonPackage
-, dotmap
-, fetchPypi
-, pexpect
-, protobuf
-, pygatt
-, pypubsub
-, pyqrcode
-, pyserial
-, pythonOlder
-, tabulate
-, timeago
+{
+  lib,
+  argcomplete,
+  bleak,
+  buildPythonPackage,
+  dash-bootstrap-components,
+  dash,
+  dotmap,
+  fetchFromGitHub,
+  hypothesis,
+  packaging,
+  pandas-stubs,
+  pandas,
+  parse,
+  platformdirs,
+  poetry-core,
+  ppk2-api,
+  print-color,
+  protobuf,
+  pyarrow,
+  pypubsub,
+  pyqrcode,
+  pyserial,
+  pytap2,
+  pytestCheckHook,
+  pyyaml,
+  requests,
+  riden,
+  setuptools,
+  tabulate,
+  wcwidth,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "meshtastic";
-  version = "1.2.44";
-  format = "setuptools";
+  version = "2.7.11";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "f99e076dde0db86a5ba734b48257ffc7355a2b4729cea1ff5cd7638ca93dbd90";
+  src = fetchFromGitHub {
+    owner = "meshtastic";
+    repo = "python";
+    tag = finalAttrs.version;
+    hash = "sha256-jHtGbG5W4KoX4pYr9WfrY56tlr2nhvhM0DeDddMOvis=";
   };
 
-  propagatedBuildInputs = [
-    dotmap
-    pexpect
+  pythonRelaxDeps = [
+    "bleak"
+    "packaging"
+    "protobuf"
+    "tabulate"
+  ];
+
+  build-system = [ poetry-core ];
+
+  dependencies = [
+    bleak
+    packaging
     protobuf
-    pygatt
     pypubsub
-    pyqrcode
     pyserial
+    pyyaml
+    requests
+    setuptools
     tabulate
-    timeago
   ];
 
-  # Project only provides PyPI releases which don't contain the tests
-  # https://github.com/meshtastic/Meshtastic-python/issues/86
-  doCheck = false;
-
-  pythonImportsCheck = [
-    "meshtastic"
-  ];
-
-  meta = with lib; {
-    description = "Python API for talking to Meshtastic devices";
-    homepage = "https://meshtastic.github.io/Meshtastic-python/";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+  optional-dependencies = {
+    analysis = [
+      dash
+      dash-bootstrap-components
+      pandas
+      pandas-stubs
+    ];
+    cli = [
+      argcomplete
+      dotmap
+      print-color
+      pyqrcode
+      wcwidth
+    ];
+    powermon = [
+      parse
+      platformdirs
+      ppk2-api
+      pyarrow
+      riden
+    ];
+    tunnel = [ pytap2 ];
   };
-}
+
+  nativeCheckInputs = [
+    hypothesis
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
+
+  preCheck = ''
+    export PATH="$PATH:$out/bin";
+  '';
+
+  pythonImportsCheck = [ "meshtastic" ];
+
+  disabledTestPaths = [
+    # Circular import with dash-bootstrap-components
+    "meshtastic/tests/test_analysis.py"
+  ];
+
+  disabledTests = [
+    # TypeError
+    "test_main_info_with_seriallog_output_txt"
+    "test_main_info_with_seriallog_stdout"
+    "test_main_info_with_tcp_interfa"
+    "test_main_info"
+    "test_main_no_proto"
+    "test_main_support"
+    "test_MeshInterface"
+    "test_message_to_json_shows_all"
+    "test_node"
+    "test_SerialInterface_single_port"
+    "test_support_info"
+    "test_TCPInterface"
+  ];
+
+  meta = {
+    description = "Python API for talking to Meshtastic devices";
+    homepage = "https://github.com/meshtastic/python";
+    changelog = "https://github.com/meshtastic/python/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
+  };
+})

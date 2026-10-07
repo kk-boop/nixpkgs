@@ -1,87 +1,107 @@
-{ lib
-, attrs
-, buildPythonPackage
-, fetchFromGitHub
-, hypothesis
-, immutables
-, motor
-, msgpack
-, poetry-core
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, tomlkit
-, ujson
+{
+  lib,
+  attrs,
+  buildPythonPackage,
+  cbor2,
+  fetchFromGitHub,
+  hatchling,
+  hatch-vcs,
+  hypothesis,
+  immutables,
+  motor,
+  msgpack,
+  msgspec,
+  orjson,
+  pymongo,
+  pytest-xdist,
+  pytestCheckHook,
+  pyyaml,
+  tomli-w,
+  tomlkit,
+  typing-extensions,
+  ujson,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "cattrs";
-  version = "1.8.0";
-  format = "pyproject";
-
-  # https://cattrs.readthedocs.io/en/latest/history.html#id33:
-  # "Python 2, 3.5 and 3.6 support removal. If you need it, use a version below 1.1.0."
-  disabled = pythonOlder "3.7";
+  version = "26.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "Tinche";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-CKAsvRKS8kmLcyPA753mh6d3S04ObzO7xLPpmlmxrxI=";
+    owner = "python-attrs";
+    repo = "cattrs";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-i1C7TvtQhiEZPi4YELxPHkiz33nNw2rtgRTqs98PVlc=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "-l --benchmark-sort=fullname --benchmark-warmup=true --benchmark-warmup-iterations=5  --benchmark-group-by=fullname" ""
+  '';
+
+  build-system = [
+    hatchling
+    hatch-vcs
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     attrs
+    typing-extensions
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    ujson = [
+      ujson
+    ];
+    orjson = [
+      orjson
+    ];
+    msgpack = [
+      msgpack
+    ];
+    pyyaml = [
+      pyyaml
+    ];
+    tomlkit = [
+      tomlkit
+    ];
+    cbor2 = [
+      cbor2
+    ];
+    bson = [
+      pymongo
+    ];
+    msgspec = [
+      msgspec
+    ];
+    tomllib = [
+      tomli-w
+    ];
+  };
+
+  nativeCheckInputs = [
     hypothesis
     immutables
     motor
-    msgpack
+    pytest-xdist
     pytestCheckHook
-    pyyaml
-    tomlkit
-    ujson
-  ];
-
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "-l --benchmark-sort=fullname --benchmark-warmup=true --benchmark-warmup-iterations=5  --benchmark-group-by=fullname" ""
-    substituteInPlace pyproject.toml \
-      --replace 'orjson = "^3.5.2"' ""
-    substituteInPlace tests/test_preconf.py \
-      --replace "from orjson import dumps as orjson_dumps" "" \
-      --replace "from orjson import loads as orjson_loads" ""
-  '';
-
-  preCheck = ''
-    export HOME=$(mktemp -d);
-  '';
+    writableTmpDirAsHomeHook
+  ]
+  ++ lib.concatAttrValues finalAttrs.passthru.optional-dependencies;
 
   disabledTestPaths = [
     # Don't run benchmarking tests
-    "bench/test_attrs_collections.py"
-    "bench/test_attrs_nested.py"
-    "bench/test_attrs_primitives.py"
-    "bench/test_primitives.py"
-  ];
-
-  disabledTests = [
-    # orjson is not available as it requires Rust nightly features to compile its requirements
-    "test_orjson"
+    "bench"
   ];
 
   pythonImportsCheck = [ "cattr" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/python-attrs/cattrs/blob/${finalAttrs.src.tag}/HISTORY.md";
     description = "Python custom class converters for attrs";
-    homepage = "https://github.com/Tinche/cattrs";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/python-attrs/cattrs";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

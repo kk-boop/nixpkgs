@@ -1,24 +1,55 @@
-{ lib, buildPythonPackage, fetchPypi, setuptools }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  mock,
+  pytestCheckHook,
+  python,
+  setuptools,
+  setuptools-scm,
+  which,
+}:
 
 buildPythonPackage rec {
   pname = "nodeenv";
-  version = "1.6.0";
+  version = "1.10.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "3ef13ff90291ba2a4a7a4ff9a979b63ffdd00a464dbe04acf0ea6471517a4c2b";
+  src = fetchFromGitHub {
+    owner = "ekalinin";
+    repo = "nodeenv";
+    tag = version;
+    hash = "sha256-CosZOTWxXFGrc2ZvPPUwFcUv1blZhyl8MWPnoRCpBBo=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [
     setuptools
+    setuptools-scm
   ];
 
-  # Tests not included in PyPI tarball
-  doCheck = false;
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ];
 
-  meta = with lib; {
+  preFixup = ''
+    substituteInPlace $out/${python.sitePackages}/nodeenv.py \
+      --replace '["which", candidate]' '["${lib.getBin which}/bin/which", candidate]'
+  '';
+
+  pythonImportsCheck = [ "nodeenv" ];
+
+  disabledTests = [
+    # Test requires coverage
+    "test_smoke"
+  ];
+
+  meta = {
     description = "Node.js virtual environment builder";
+    mainProgram = "nodeenv";
     homepage = "https://github.com/ekalinin/nodeenv";
-    license = licenses.bsd3;
+    changelog = "https://github.com/ekalinin/nodeenv/releases/tag/${version}";
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

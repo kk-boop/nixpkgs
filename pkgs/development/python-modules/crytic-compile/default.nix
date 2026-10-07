@@ -1,27 +1,51 @@
-{ lib, buildPythonPackage, fetchFromGitHub, pythonOlder, pysha3, setuptools }:
+{
+  lib,
+  buildPythonPackage,
+  cbor2,
+  fetchFromGitHub,
+  pycryptodome,
+  setuptools,
+  solc-select,
+  toml,
+}:
 
 buildPythonPackage rec {
   pname = "crytic-compile";
-  version = "0.2.2";
-
-  disabled = pythonOlder "3.6";
+  version = "0.3.11";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "crytic";
     repo = "crytic-compile";
-    rev = version;
-    sha256 = "sha256-4Lz+jJdKURp+K5XJJb7ksiFbnQwzS71gZWOufBvqz/k=";
+    tag = version;
+    hash = "sha256-NVAIVUfh1bizg/HG1z7Ze6o5w6wto744Ogq0LPg0gXg=";
   };
 
-  propagatedBuildInputs = [ pysha3 setuptools ];
+  propagatedBuildInputs = [
+    cbor2
+    pycryptodome
+    setuptools
+    solc-select
+    toml
+  ];
 
+  # Test require network access
   doCheck = false;
+
+  # required for import check to work
+  # PermissionError: [Errno 13] Permission denied: '/homeless-shelter'
+  env.HOME = "/tmp";
   pythonImportsCheck = [ "crytic_compile" ];
 
-  meta = with lib; {
+  meta = {
     description = "Abstraction layer for smart contract build systems";
+    mainProgram = "crytic-compile";
     homepage = "https://github.com/crytic/crytic-compile";
-    license = licenses.agpl3Plus;
-    maintainers = with maintainers; [ SuperSandro2000 arturcygan ];
+    changelog = "https://github.com/crytic/crytic-compile/releases/tag/${src.tag}";
+    license = lib.licenses.agpl3Plus;
+    maintainers = with lib.maintainers; [
+      arturcygan
+      hellwolf
+    ];
   };
 }

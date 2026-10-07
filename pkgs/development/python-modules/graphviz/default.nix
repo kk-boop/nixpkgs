@@ -1,59 +1,67 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, substituteAll
-, graphviz
-, xdg-utils
-, makeFontsConf
-, freefont_ttf
-, mock
-, pytestCheckHook
-, pytest-mock
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch,
+  replaceVars,
+  graphviz-nox,
+  xdg-utils,
+  makeFontsConf,
+  freefont_ttf,
+  setuptools,
+  mock,
+  pytest-cov-stub,
+  pytest-mock,
+  pytest7CheckHook,
+  writableTmpDirAsHomeHook,
 }:
 
 buildPythonPackage rec {
   pname = "graphviz";
-  version = "0.18.1";
+  version = "0.21";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  # patch does not apply to PyPI tarball due to different line endings
   src = fetchFromGitHub {
     owner = "xflr6";
     repo = "graphviz";
-    rev = version;
-    sha256 = "sha256-Y3w9btjYvKfcEQGuAzV+o6edJ9VmVcWhc+ICOqy87uM=";
+    tag = version;
+    hash = "sha256-o6woY+UhbsJtUqIzYGXlC0Pw3su7WG4xlAKSslSADwI=";
   };
 
   patches = [
-    (substituteAll {
-      src = ./paths.patch;
-      inherit graphviz;
+    (replaceVars ./paths.patch {
+      graphviz = graphviz-nox;
       xdgutils = xdg-utils;
+    })
+    (fetchpatch {
+      # python314 compat; https://github.com/xflr6/graphviz/pull/238
+      url = "https://github.com/xflr6/graphviz/commit/7e0fae6d28792a628a25cadd4ec1582c7351a7a3.patch";
+      hash = "sha256-cZhNsQFi30uFpPXbEJHQ9eol7g6pdv6w8kp1GxLTBD4=";
     })
   ];
 
-  postPatch = ''
-    sed -i "/--cov/d" setup.cfg
-  '';
-
   # Fontconfig error: Cannot load default config file
-  FONTCONFIG_FILE = makeFontsConf {
-    fontDirectories = [ freefont_ttf ];
-  };
+  env.FONTCONFIG_FILE = makeFontsConf { fontDirectories = [ freefont_ttf ]; };
 
-  checkInputs = [ mock pytestCheckHook pytest-mock ];
+  build-system = [ setuptools ];
 
-  preCheck = ''
-    export HOME=$TMPDIR
-  '';
+  nativeCheckInputs = [
+    mock
+    pytest-cov-stub
+    pytest-mock
+    pytest7CheckHook
+    writableTmpDirAsHomeHook
+  ];
 
-  meta = with lib; {
+  # Too many failures due to attempting to connect to com.apple.fonts daemon
+  doCheck = !stdenv.hostPlatform.isDarwin;
+
+  meta = {
     description = "Simple Python interface for Graphviz";
     homepage = "https://github.com/xflr6/graphviz";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    changelog = "https://github.com/xflr6/graphviz/blob/${src.tag}/CHANGES.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
-
 }

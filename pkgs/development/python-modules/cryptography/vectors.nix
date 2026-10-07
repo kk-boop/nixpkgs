@@ -1,23 +1,33 @@
-{ buildPythonPackage, fetchPypi, lib, cryptography }:
+{
+  lib,
+  buildPythonPackage,
+  cryptography,
+  uv-build,
+}:
 
 buildPythonPackage rec {
-  pname = "cryptography_vectors";
-  # The test vectors must have the same version as the cryptography package:
-  version = cryptography.version;
+  pname = "cryptography-vectors";
+  # The test vectors must have the same version as the cryptography package
+  inherit (cryptography) version src;
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1wl0ynh3lzhc6q59g8mybvijmnp195x7fjxlb3h3sgcraw14312c";
-  };
+  sourceRoot = "${src.name}/vectors";
+
+  build-system = [ uv-build ];
 
   # No tests included
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [ "cryptography_vectors" ];
+
+  meta = {
     description = "Test vectors for the cryptography package";
     homepage = "https://cryptography.io/en/latest/development/test-vectors/";
-    # Source: https://github.com/pyca/cryptography/tree/master/vectors;
-    license = with licenses; [ asl20 bsd3 ];
-    maintainers = with maintainers; [ primeos ];
+    downloadPage = "https://github.com/pyca/cryptography/tree/master/vectors";
+    license = with lib.licenses; [
+      asl20
+      bsd3
+    ];
+    maintainers = with lib.maintainers; [ mdaniels5757 ];
   };
 }

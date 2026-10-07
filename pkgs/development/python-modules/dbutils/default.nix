@@ -1,27 +1,34 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
-  version = "3.0.0";
   pname = "dbutils";
+  version = "3.1.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit version;
-    pname = "DBUtils";
-    sha256 = "549d472197b3eef27e7bb2dd2246b28e880ac0ae9fdf63aadfd3b7def153db0c";
+  src = fetchFromGitHub {
+    owner = "WebwareForPython";
+    repo = "DBUtils";
+    tag = "Release-${lib.replaceStrings [ "." ] [ "_" ] version}";
+    hash = "sha256-YyZKGN7oNuCR4lU7pxkY+vLOWGQzQjqvAIOZc7LlvUM=";
   };
 
-  checkInputs = [ pytestCheckHook ];
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "dbutils" ];
 
-  meta = with lib; {
+  meta = {
     description = "Database connections for multi-threaded environments";
     homepage = "https://webwareforpython.github.io/DBUtils/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    changelog = "https://webwareforpython.github.io/DBUtils/changelog.html";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

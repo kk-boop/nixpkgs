@@ -1,27 +1,35 @@
-import ../make-test-python.nix ({ pkgs, ... } :
+{
+  lib,
+  pkgs,
+  hostPkgs,
+  ...
+}:
 let
-  inherit (import ./../ssh-keys.nix pkgs)
-    snakeOilPrivateKey snakeOilPublicKey;
+  inherit (import ./../ssh-keys.nix hostPkgs)
+    snakeOilPrivateKey
+    snakeOilPublicKey
+    ;
 
-    # don't check host keys or known hosts, use the snakeoil ssh key
-    ssh-config = builtins.toFile "ssh.conf" ''
-      UserKnownHostsFile=/dev/null
-      StrictHostKeyChecking=no
-      IdentityFile=~/.ssh/id_snakeoil
-    '';
-in {
+  # don't check host keys or known hosts, use the snakeoil ssh key
+  ssh-config = builtins.toFile "ssh.conf" ''
+    UserKnownHostsFile=/dev/null
+    StrictHostKeyChecking=no
+    IdentityFile=~/.ssh/id_snakeoil
+  '';
+in
+{
   name = "google-oslogin";
-  meta = with pkgs.lib.maintainers; {
-    maintainers = [ adisbladis flokli ];
+  meta = {
+    maintainers = [ ];
   };
 
   nodes = {
     # the server provides both the the mocked google metadata server and the ssh server
-    server = (import ./server.nix pkgs);
+    server = ./server.nix;
 
-    client = { ... }: {};
+    client = { ... }: { };
   };
-  testScript =  ''
+  testScript = ''
     MOCKUSER = "mockuser_nixos_org"
     MOCKADMIN = "mockadmin_nixos_org"
     start_all()
@@ -31,10 +39,10 @@ in {
 
     # mockserver should return a non-expired ssh key for both mockuser and mockadmin
     server.succeed(
-        f'${pkgs.google-compute-engine-oslogin}/bin/google_authorized_keys {MOCKUSER} | grep -q "${snakeOilPublicKey}"'
+        f'${pkgs.google-guest-oslogin}/bin/google_authorized_keys {MOCKUSER} | grep -q "${snakeOilPublicKey}"'
     )
     server.succeed(
-        f'${pkgs.google-compute-engine-oslogin}/bin/google_authorized_keys {MOCKADMIN} | grep -q "${snakeOilPublicKey}"'
+        f'${pkgs.google-guest-oslogin}/bin/google_authorized_keys {MOCKADMIN} | grep -q "${snakeOilPublicKey}"'
     )
 
     # install snakeoil ssh key on the client, and provision .ssh/config file
@@ -70,5 +78,4 @@ in {
         f"ssh {MOCKADMIN}@server '/run/wrappers/bin/sudo /run/current-system/sw/bin/id' | grep -q 'root'"
     )
   '';
-  })
-
+}

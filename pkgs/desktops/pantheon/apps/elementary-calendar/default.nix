@@ -1,89 +1,71 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, pkg-config
-, meson
-, ninja
-, vala
-, desktop-file-utils
-, gtk3
-, granite
-, libgee
-, libhandy
-, geoclue2
-, libchamplain
-, clutter
-, folks
-, geocode-glib
-, python3
-, libnotify
-, libical
-, libgdata
-, evolution-data-server
-, appstream-glib
-, elementary-icon-theme
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  wrapGAppsHook3,
+  clutter,
+  evolution-data-server,
+  folks,
+  geoclue2,
+  geocode-glib_2,
+  granite,
+  gtk3,
+  libchamplain_libsoup3,
+  libgee,
+  libhandy,
+  libical,
+  libportal-gtk3,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-calendar";
-  version = "6.0.3";
-
-  repoName = "calendar";
+  version = "8.0.2";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = repoName;
-    rev = version;
-    sha256 = "sha256-+RQUiJLuCIbmcbtsOCfF9HYFrxtldZMbg2vg/a/IOaY=";
+    repo = "calendar";
+    tag = version;
+    hash = "sha256-YFO+tMJsidp5Tq8mAobdc1VBHR2DuMJlEnwSg+mVScM=";
   };
 
   nativeBuildInputs = [
-    appstream-glib
-    desktop-file-utils
     meson
     ninja
     pkg-config
-    python3
     vala
-    wrapGAppsHook
+    wrapGAppsHook3
   ];
 
   buildInputs = [
     clutter
-    elementary-icon-theme
     evolution-data-server
     folks
     geoclue2
-    geocode-glib
+    geocode-glib_2
     granite
     gtk3
-    libchamplain
+    libchamplain_libsoup3
     libgee
     libhandy
     libical
-    libnotify
-    libgdata # required by some dependency transitively
+    libportal-gtk3
   ];
 
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
-  '';
-
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Desktop calendar app designed for elementary OS";
     homepage = "https://github.com/elementary/calendar";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
     mainProgram = "io.elementary.calendar";
   };
 }

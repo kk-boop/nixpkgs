@@ -1,44 +1,54 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, sqlalchemy
-, setuptools-scm
-, setuptools
-, tox
-, sphinx
-, pytest
-, pytest-cov
-, pytest-html
-, pytest-sugar
-, coverage
-, pymysql
-, psycopg2 }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  sqlalchemy,
+  setuptools-scm,
+  setuptools,
+  pytestCheckHook,
+  pytest-sugar,
+  pymysql,
+  psycopg2,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "sqlalchemy-jsonfield";
-  version = "1.0.0";
+  version = "1.0.3";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "penguinolog";
     repo = "sqlalchemy_jsonfield";
-    rev = version;
-    sha256 = "015pl4z84spfw8389hk1szlm37jgw2basvbmzmkacdqi0685zx24";
+    tag = finalAttrs.version;
+    hash = "sha256-htzWMItAQ1MdOcWHe9le5UofXi5plNpBqOAkgbPxCYI=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = "v${version}";
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  nativeBuildInputs = [ setuptools-scm ];
-  propagatedBuildInputs = [ sqlalchemy setuptools ];
-  checkInputs = [ tox sphinx pytest pytest-cov pytest-html pytest-sugar coverage pymysql psycopg2 ];
+  dependencies = [
+    sqlalchemy
+    setuptools
+  ];
 
-  checkPhase = ''
-    TOX_TESTENV_PASSENV="PYTHONPATH SETUPTOOLS_SCM_PRETEND_VERSION" tox -e functional
-  '';
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-sugar
+    pymysql
+    psycopg2
+  ];
 
-  meta = with lib; {
-    homepage = "https://github.com/penguinolog/sqlalchemy_jsonfield";
+  pythonImportsCheck = [ "sqlalchemy_jsonfield" ];
+
+  meta = {
     description = "SQLALchemy JSONField implementation for storing dicts at SQL independently from JSON type support";
-    license = licenses.asl20;
-    maintainers = [ maintainers.ivan-tkatchev ];
+    homepage = "https://github.com/penguinolog/sqlalchemy_jsonfield";
+    changelog = "https://github.com/penguinolog/sqlalchemy_jsonfield/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-}
+})

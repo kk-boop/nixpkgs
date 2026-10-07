@@ -1,30 +1,141 @@
-{ buildPythonPackage, lib, fetchFromGitHub, isPy3k
-, cython, setuptools
-, numpy, affine, attrs, cligj, click-plugins, snuggs, gdal
-, pytest, pytest-cov, packaging, hypothesis, boto3, mock
-, certifi, shapely
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  numpy,
+  setuptools,
+
+  # non-Python dependencies
+  gdal-cpp,
+
+  # dependencies
+  affine,
+  attrs,
+  certifi,
+  click,
+  click-plugins,
+  cligj,
+  snuggs,
+
+  # optional-dependencies
+  ipython,
+  matplotlib,
+  boto3,
+
+  # tests
+  fsspec,
+  hypothesis,
+  packaging,
+  pytestCheckHook,
+  pytest-randomly,
+  shapely,
+  versionCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "rasterio";
-  version = "1.2.6";
+  version = "1.5.1";
+  pyproject = true;
 
-  # Pypi doesn't ship the tests, so we fetch directly from GitHub
   src = fetchFromGitHub {
-    owner = "mapbox";
+    owner = "rasterio";
     repo = "rasterio";
-    rev = version;
-    sha256 = "sha256-rf2qdUhbS4Z2+mvlN1RzZvlgTgjqiBoQzry4z5QLSUc=";
+    tag = version;
+    hash = "sha256-sg7c18+Gd6KObPQS7h9Jwj5iXUx5Cz1lcKSRERDMdL0=";
   };
 
-  checkInputs = [ boto3 pytest pytest-cov packaging hypothesis shapely ] ++ lib.optional (!isPy3k) mock;
-  nativeBuildInputs = [ cython gdal ];
-  propagatedBuildInputs = [ certifi gdal numpy attrs affine cligj click-plugins snuggs setuptools ];
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail "cython>=3.1,<=3.2" cython
+  '';
 
-  meta = with lib; {
+  build-system = [
+    cython
+    numpy
+    setuptools
+  ];
+
+  nativeBuildInputs = [
+    gdal-cpp # for gdal-config
+  ];
+
+  buildInputs = [
+    gdal-cpp
+  ];
+
+  pythonRelaxDeps = [
+    "click"
+  ];
+
+  dependencies = [
+    affine
+    attrs
+    certifi
+    click
+    click-plugins
+    cligj
+    numpy
+    snuggs
+  ];
+
+  optional-dependencies = {
+    ipython = [ ipython ];
+    plot = [ matplotlib ];
+    s3 = [ boto3 ];
+  };
+
+  nativeCheckInputs = [
+    boto3
+    fsspec
+    hypothesis
+    packaging
+    pytestCheckHook
+    pytest-randomly
+    shapely
+    versionCheckHook
+  ];
+
+  preCheck = ''
+    rm -r rasterio # prevent importing local rasterio
+  '';
+
+  disabledTestMarks = [ "network" ];
+
+  disabledTests = [
+    # flaky
+    "test_outer_boundless_pixel_fidelity"
+    # network access
+    "test_issue1982"
+    "test_opener_fsspec_http_fs"
+    "test_fsspec_http_msk_sidecar"
+    # expect specific magic numbers that our version of GDAL does not produce
+    "test_warp"
+    "test_warpedvrt"
+    "test_rio_warp"
+
+    # AssertionError CLI exists with non-zero error code
+    # This is a regression introduced by https://github.com/NixOS/nixpkgs/pull/448189
+    "test_sample_stdin"
+    "test_transform"
+    "test_transform_point"
+    "test_transform_point_dst_file"
+    "test_transform_point_multi"
+    "test_transform_point_src_file"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [ "test_reproject_error_propagation" ];
+
+  pythonImportsCheck = [ "rasterio" ];
+
+  meta = {
     description = "Python package to read and write geospatial raster data";
-    license = licenses.bsd3;
-    homepage = "https://rasterio.readthedocs.io/en/latest/";
-    maintainers = with maintainers; [ mredaelli ];
+    mainProgram = "rio";
+    homepage = "https://rasterio.readthedocs.io/";
+    changelog = "https://github.com/rasterio/rasterio/blob/${src.tag}/CHANGES.txt";
+    license = lib.licenses.bsd3;
+    teams = [ lib.teams.geospatial ];
   };
 }

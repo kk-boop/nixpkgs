@@ -1,53 +1,50 @@
-{ lib
-, buildPythonPackage
-, coverage
-, django
-, factory_boy
-, fetchFromGitHub
-, isPy3k
-, pylint-plugin-utils
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  django,
+  django-tables2,
+  django-tastypie,
+  factory-boy,
+  fetchFromGitHub,
+  poetry-core,
+  pylint-plugin-utils,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pylint-django";
-  version = "2.4.4";
-  disabled = !isPy3k;
+  version = "2.8.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "PyCQA";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-bFcb5GhC7jc7jEpNlyjWa2CuCSMvQLJdnag+7mHwSb8=";
+    repo = "pylint-django";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-W3BPCK6fj4poZ1EaBUGyVyfRo/0sZa+2ktk96Ic6+q0=";
   };
 
-  propagatedBuildInputs = [
-    django
-    pylint-plugin-utils
-  ];
+  build-system = [ poetry-core ];
 
-  checkInputs = [
-    coverage
-    factory_boy
+  dependencies = [ pylint-plugin-utils ];
+
+  optional-dependencies = {
+    with_django = [ django ];
+  };
+
+  nativeCheckInputs = [
+    django-tables2
+    django-tastypie
+    factory-boy
     pytestCheckHook
   ];
 
-  disabledTests = [
-    # Skip outdated tests and the one with a missing dependency (django_tables2)
-    "external_django_tables2_noerror_meta_class"
-    "external_factory_boy_noerror"
-    "func_noerror_foreign_key_attributes"
-    "func_noerror_foreign_key_key_cls_unbound"
-  ];
+  pythonImportsCheck = [ "pylint_django" ];
 
-  pythonImportsCheck = [
-    "pylint_django"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Pylint plugin to analyze Django applications";
     homepage = "https://github.com/PyCQA/pylint-django";
-    license = licenses.gpl2Plus;
-    maintainers = with maintainers; [ kamadorueda ];
+    changelog = "https://github.com/pylint-dev/pylint-django/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl2Plus;
+    maintainers = with lib.maintainers; [ kamadorueda ];
   };
-}
+})

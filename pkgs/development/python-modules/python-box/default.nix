@@ -1,43 +1,62 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, msgpack
-, pytestCheckHook
-, pythonOlder
-, pyyaml
-, ruamel-yaml
-, toml
+{
+  lib,
+  buildPythonPackage,
+  cython,
+  fetchFromGitHub,
+  msgpack,
+  pytestCheckHook,
+  pyyaml,
+  ruamel-yaml,
+  setuptools,
+  toml,
+  tomli-w,
 }:
 
 buildPythonPackage rec {
   pname = "python-box";
-  version = "5.4.1";
-  disabled = pythonOlder "3.6";
+  version = "7.3.2";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "cdgriffith";
     repo = "Box";
-    rev = version;
-    sha256 = "sha256-SkteajcWG7rBFMm6Xp6QCfkZfwthRituGL/RtICbtYk=";
+    tag = version;
+    hash = "sha256-aVPjIoizqC0OcG5ziy/lvp/JsFSUvcLUqJ03mKViKFs=";
   };
 
-  propagatedBuildInputs = [
-    msgpack
-    pyyaml
-    ruamel-yaml
-    toml
+  build-system = [
+    cython
+    setuptools
   ];
 
-  checkInputs = [
-    pytestCheckHook
+  optional-dependencies = {
+    all = [
+      msgpack
+      ruamel-yaml
+      toml
+    ];
+    yaml = [ ruamel-yaml ];
+    ruamel-yaml = [ ruamel-yaml ];
+    PyYAML = [ pyyaml ];
+    tomli = [ tomli-w ];
+    toml = [ toml ];
+    msgpack = [ msgpack ];
+  };
+
+  nativeCheckInputs = [ pytestCheckHook ] ++ optional-dependencies.all;
+
+  disabledTests = [
+    # ruamel 8.18.13 update changed white space rules
+    "test_to_yaml_ruamel"
   ];
 
   pythonImportsCheck = [ "box" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python dictionaries with advanced dot notation access";
     homepage = "https://github.com/cdgriffith/Box";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/cdgriffith/Box/blob/${version}/CHANGES.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

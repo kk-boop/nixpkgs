@@ -1,31 +1,33 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pycoolmasternet-async";
-  version = "0.1.2";
-
-  disabled = pythonOlder "3.7";
+  version = "0.2.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "OnFreund";
     repo = "pycoolmasternet-async";
-    rev = "v${version}";
-    sha256 = "0qzdk18iqrvin8p8zrydf69d6pii3j47j11h7ymmsx08gh7c176g";
+    tag = "v${version}";
+    hash = "sha256-C2JNAg7FdZ0Sfr7HGCQaBOQdWbeDtpBIIhCq3Htsx84=";
   };
+
+  build-system = [ setuptools ];
 
   # no tests implemented
   doCheck = false;
 
   pythonImportsCheck = [ "pycoolmasternet_async" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to control CoolMasterNet HVAC bridges over asyncio";
     homepage = "https://github.com/OnFreund/pycoolmasternet-async";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

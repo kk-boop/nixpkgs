@@ -1,29 +1,58 @@
-{ buildPythonPackage, fetchFromGitHub, lib, netaddr, six, nose }:
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  lib,
+  nix-update-script,
+  setuptools,
+  netaddr,
+  pytestCheckHook,
+  sphinxHook,
+  sphinx-rtd-theme,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pyrad";
-  version = "2.4";
+  version = "2.5.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "pyradius";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-oqgkE0xG/8cmLeRZdGoHkaHbjtByeJwzBJwEdxH8oNY=";
+    repo = "pyrad";
+    tag = finalAttrs.version;
+    hash = "sha256-94BjJRzCSJu/bVuYYKFlJkBcOVcQjmbDJ8QG+JwVpxY=";
   };
 
-  propagatedBuildInputs = [ netaddr six ];
-  checkInputs = [ nose ];
+  build-system = [ setuptools ];
 
-  checkPhase = ''
-    nosetests -e testBind
+  dependencies = [ netaddr ];
+
+  # Upstream doesn't exclude docs, example, and pyrad.tests from package
+  # discovery, causing them to be installed into site-packages.
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail 'exclude = ["tests*"]' 'exclude = ["docs*", "example*", "pyrad.tests*"]'
   '';
+
+  outputs = [
+    "out"
+    "doc"
+  ];
+
+  nativeBuildInputs = [
+    sphinxHook
+    sphinx-rtd-theme
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "pyrad" ];
 
-  meta = with lib; {
+  passthru.updateScript = nix-update-script { };
+
+  meta = {
     description = "Python RADIUS Implementation";
-    homepage = "https://bitbucket.org/zzzeek/sqlsoup";
-    license = licenses.bsd3;
-    maintainers = [ maintainers.globin ];
+    homepage = "https://github.com/pyradius/pyrad";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ drawbu ];
   };
-}
+})

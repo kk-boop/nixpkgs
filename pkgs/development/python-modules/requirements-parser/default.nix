@@ -1,33 +1,39 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, nose
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  pytestCheckHook,
+  packaging,
 }:
+
 buildPythonPackage rec {
   pname = "requirements-parser";
-  version = "0.2.0";
+  version = "0.13.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "5963ee895c2d05ae9f58d3fc641082fb38021618979d6a152b6b1398bd7d4ed4";
+  src = fetchFromGitHub {
+    owner = "madpah";
+    repo = "requirements-parser";
+    tag = "v${version}";
+    hash = "sha256-Hti1r/OLYHue+c7/TDDRzBgKxJazobZG+aFxK2ok70g=";
   };
 
-  checkInputs = [
-    nose
+  build-system = [ poetry-core ];
+
+  dependencies = [
+    packaging
   ];
 
-  checkPhase = ''
-    nosetests
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "requirements"
-  ];
+  pythonImportsCheck = [ "requirements" ];
 
-  meta = with lib; {
-    description = "A Pip requirements file parser";
+  meta = {
+    description = "Pip requirements file parser";
     homepage = "https://github.com/davidfischer/requirements-parser";
-    license = licenses.bsd2;
-    maintainers = teams.determinatesystems.members;
+    changelog = "https://github.com/madpah/requirements-parser/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
 }

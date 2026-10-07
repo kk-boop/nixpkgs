@@ -1,41 +1,41 @@
-{ lib
-, aiohttp
-, async-timeout
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytest-asyncio,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "volkszaehler";
-  version = "0.3.2";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "0.6.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "home-assistant-ecosystem";
     repo = "python-volkszaehler";
-    rev = version;
-    sha256 = "sha256-EiruMlhXvbUhCaDtHc3qCLbpp/KHp9rVpk2FmbR4A/k=";
+    tag = finalAttrs.version;
+    hash = "sha256-DgsP3ol6VcOnoUJF1eQjNWR45SokElNosyfgvPZVihU=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
-    async-timeout
+  build-system = [ hatchling ];
+
+  dependencies = [ aiohttp ];
+
+  nativeCheckInputs = [
+    pytest-asyncio
+    pytestCheckHook
   ];
 
-  # no tests are present
-  doCheck = false;
+  pythonImportsCheck = [ "volkszaehler" ];
 
-  pythonImportsCheck = [
-    "volkszaehler"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Python module for interacting with the Volkszahler API";
     homepage = "https://github.com/home-assistant-ecosystem/python-volkszaehler";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/home-assistant-ecosystem/python-volkszaehler/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

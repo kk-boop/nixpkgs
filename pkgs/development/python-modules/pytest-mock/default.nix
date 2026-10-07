@@ -1,33 +1,54 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytest-asyncio
-, pytestCheckHook
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch,
+  pytest,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-mock";
-  version = "3.6.1";
+  version = "3.15.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "40217a058c52a63f1042f0784f62009e976ba824c418cced42e88d5f40ab0e62";
+  src = fetchFromGitHub {
+    owner = "pytest-dev";
+    repo = "pytest-mock";
+    tag = "v${version}";
+    hash = "sha256-9h5/cssWs4F0LKnFLjWDsEjB2AYczLvnSjiUdsaEcBQ=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
+  patches = [
+    (fetchpatch {
+      name = "pytest-9.1-compat.patch";
+      url = "https://github.com/pytest-dev/pytest-mock/commit/1d42981a1577207db5919852f30ef08c97208496.patch";
+      hash = "sha256-9/vQi/VvZRrIUSq1e90MvLB0idkc+tT4R6q1Ut4HKnY=";
+    })
+  ];
 
-  checkInputs = [
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
+
+  buildInputs = [ pytest ];
+
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
 
   pythonImportsCheck = [ "pytest_mock" ];
 
-  meta = with lib; {
-    description = "Thin-wrapper around the mock package for easier use with pytest";
+  meta = {
+    description = "Thin wrapper around the mock package for easier use with pytest";
     homepage = "https://github.com/pytest-dev/pytest-mock";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/pytest-dev/pytest-mock/blob/${src.tag}/CHANGELOG.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

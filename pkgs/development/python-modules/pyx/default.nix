@@ -1,26 +1,27 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy3k
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  isPy3k,
 }:
 
 buildPythonPackage rec {
   pname = "pyx";
-  version = "0.15";
+  version = "0.17";
+  format = "setuptools";
   disabled = !isPy3k;
 
   src = fetchPypi {
-    pname = "PyX";
-    inherit version;
-    sha256 = "0xs9brmk9fvfmnsvi0haf13xwz994kv9afznzfpg9dkzbq6b1hqg";
+    inherit pname version;
+    hash = "sha256-O8iqgJExVZ96XA4fESm0LHGt423wMyET9cV3k4SjmvE=";
   };
 
   # No tests in archive
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Python package for the generation of PostScript, PDF, and SVG files";
-    homepage = "http://pyx.sourceforge.net/";
-    license = with licenses; [ gpl2 ];
+    homepage = "https://pyx.sourceforge.net/";
+    license = lib.licenses.gpl2;
   };
 }

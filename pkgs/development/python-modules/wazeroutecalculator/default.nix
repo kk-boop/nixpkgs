@@ -1,32 +1,34 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, requests
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  requests,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "wazeroutecalculator";
-  version = "0.13";
+  version = "0.16";
+  pyproject = true;
 
   src = fetchPypi {
-    pname = "WazeRouteCalculator";
-    inherit version;
-    sha256 = "sha256-Ex9yglaJkk0+Uo3Y+xpimb5boXz+4QdbJS2O75U6dUg=";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-tJip0tSlwr7a5UVH77dAPNHag4v1JShU1vHA9xKhbwg=";
   };
 
-  propagatedBuildInputs = [
-    requests
-  ];
+  build-system = [ setuptools ];
+
+  dependencies = [ requests ];
 
   # there are no tests
   doCheck = false;
 
   pythonImportsCheck = [ "WazeRouteCalculator" ];
 
-  meta = with lib; {
+  meta = {
     description = "Calculate actual route time and distance with Waze API";
     homepage = "https://github.com/kovacsbalu/WazeRouteCalculator";
-    license = licenses.gpl3Only;
-    maintainers = with maintainers; [ peterhoeg ];
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ peterhoeg ];
   };
-}
+})

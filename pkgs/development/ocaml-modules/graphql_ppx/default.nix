@@ -1,24 +1,36 @@
-{ lib, buildDunePackage, fetchFromGitHub, alcotest, reason
-, ppxlib
-, yojson }:
+{
+  lib,
+  ocaml,
+  buildDunePackage,
+  fetchFromGitHub,
+  alcotest,
+  reason,
+  result,
+  ppxlib,
+  yojson,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "graphql_ppx";
-  version = "1.2.0";
-
-  minimalOCamlVersion = "4.08";
+  version = "1.2.3";
 
   src = fetchFromGitHub {
     owner = "reasonml-community";
     repo = "graphql-ppx";
-    rev = "v${version}";
-    sha256 = "1fymmvk616wv5xkwfdmqibdgfl47ry6idc5wfh20a3mz9mpaa13s";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-u49JHC8K5iMCOQRPYaMl00npJsIE6ePaeJ2jP/vnuvw=";
   };
 
-  buildInputs = [ ppxlib ];
+  nativeBuildInputs = [ reason ];
+
+  buildInputs = [
+    ppxlib
+    reason
+  ];
 
   propagatedBuildInputs = [
     reason
+    result
     yojson
   ];
 
@@ -26,12 +38,14 @@ buildDunePackage rec {
 
   doCheck = true;
 
-  useDune2 = true;
-
   meta = {
+    broken = lib.versionAtLeast ocaml.version "5.4";
     homepage = "https://github.com/reasonml-community/graphql_ppx";
     description = "GraphQL PPX rewriter for Bucklescript/ReasonML";
     license = lib.licenses.mit;
-    maintainers = with lib.maintainers; [ Zimmi48 jtcoolen ];
+    maintainers = with lib.maintainers; [
+      Zimmi48
+      jtcoolen
+    ];
   };
-}
+})

@@ -1,51 +1,41 @@
-{ lib
-, aiohttp
-, async-timeout
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "aiopvapi";
-  version = "1.6.19";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.5";
+  version = "3.4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "sander76";
     repo = "aio-powerview-api";
-    # no tags on git, no sdist on pypi: https://github.com/sander76/aio-powerview-api/issues/12
-    rev = "89711e2a0cb4640eb458767d289dcfa3acafb10f";
-    sha256 = "18gbz9rcf183syvxvvhhl62af3b7463rlqxxs49w4m805hkvirdp";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-JXQTxHWMg/biWEQssk4KCIcTJ1JOG+UIRBI8xw4WfJ8=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
-    async-timeout
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ aiohttp ];
+
+  nativeCheckInputs = [
+    pytest-asyncio
     pytestCheckHook
   ];
 
-  postPatch = ''
-    # async_timeout 4.0.0 removes loop, https://github.com/sander76/aio-powerview-api/pull/13
-    # Patch doesn't apply due to different line endings
-    substituteInPlace aiopvapi/helpers/aiorequest.py \
-      --replace ", loop=self.loop)" ")"
-  '';
+  pythonImportsCheck = [ "aiopvapi" ];
 
-  pythonImportsCheck = [
-    "aiopvapi"
-  ];
-
-  meta = with lib; {
+  meta = {
     description = "Python API for the PowerView API";
     homepage = "https://github.com/sander76/aio-powerview-api";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/sander76/aio-powerview-api/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

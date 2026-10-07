@@ -1,32 +1,46 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, click
-, colorama
-, cryptography
-, exrex
-, fetchFromGitHub
-, pyopenssl
-, pyperclip
-, pytest-mock
-, pytestCheckHook
-, questionary
-, requests
-, requests-mock
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  click,
+  colorama,
+  cryptography,
+  exrex,
+  fetchFromGitHub,
+  poetry-core,
+  pyopenssl,
+  pyperclip,
+  pyprojectVersionPatchHook,
+  pytest-mock,
+  pytestCheckHook,
+  questionary,
+  requests-mock,
+  requests,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "myjwt";
-  version = "1.5.0";
+  version = "2.1.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "mBouamama";
+    owner = "tyki6";
     repo = "MyJWT";
-    rev = version;
-    sha256 = "sha256-kZkqFeaQPd56BVaYmCWAbVu1xwbPAIlQC3u5/x3dh7A=";
+    tag = finalAttrs.version;
+    hash = "sha256-jqBnxo7Omn5gLMCQ7SNbjo54nyFK7pn94796z2Qc9lg=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [
+    "cryptography"
+    "pyopenssl"
+    "questionary"
+  ];
+
+  build-system = [ poetry-core ];
+
+  nativeBuildInputs = [ pyprojectVersionPatchHook ];
+
+  dependencies = [
     click
     colorama
     cryptography
@@ -37,25 +51,22 @@ buildPythonPackage rec {
     requests
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-mock
     pytestCheckHook
     requests-mock
   ];
 
-  postPatch = ''
-    # Remove all version pinning (E.g., tornado==5.1.1 -> tornado)
-    sed -i -e "s/==[0-9.]*//" requirements.txt
-  '';
-
   pythonImportsCheck = [ "myjwt" ];
 
-  meta = with lib; {
+  meta = {
     description = "CLI tool for testing vulnerabilities of JSON Web Tokens (JWT)";
-    homepage = "https://github.com/mBouamama/MyJWT";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/tyki6/MyJWT";
+    changelog = "https://github.com/tyki6/MyJWT/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "myjwt";
     # Build failures
-    broken = stdenv.isDarwin;
+    broken = stdenv.hostPlatform.isDarwin;
   };
-}
+})

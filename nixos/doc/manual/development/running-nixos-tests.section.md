@@ -2,30 +2,63 @@
 
 You can run tests using `nix-build`. For example, to run the test
 [`login.nix`](https://github.com/NixOS/nixpkgs/blob/master/nixos/tests/login.nix),
-you just do:
+you do:
 
 ```ShellSession
-$ nix-build '<nixpkgs/nixos/tests/login.nix>'
-```
-
-or, if you don't want to rely on `NIX_PATH`:
-
-```ShellSession
-$ cd /my/nixpkgs/nixos/tests
-$ nix-build login.nix
-…
-running the VM test script
-machine: QEMU running (pid 8841)
-…
-6 out of 6 tests succeeded
+$ cd /my/git/clone/of/nixpkgs
+$ nix-build -A nixosTests.login
 ```
 
 After building/downloading all required dependencies, this will perform
 a build that starts a QEMU/KVM virtual machine containing a NixOS
 system. The virtual machine mounts the Nix store of the host; this makes
 VM creation very fast, as no disk image needs to be created. Afterwards,
-you can view a pretty-printed log of the test:
+you can view a log of the test:
 
 ```ShellSession
-$ firefox result/log.html
+$ nix-store --read-log result
+```
+
+## System Requirements {#sec-running-nixos-tests-requirements}
+
+NixOS tests using QEMU virtual machine [`nodes`](#test-opt-nodes) require virtualization support.
+This means that the machine must have `kvm` in its [system features](https://nixos.org/manual/nix/stable/command-ref/conf-file.html?highlight=system-features#conf-system-features) list, or `apple-virt` in case of macOS.
+These features are autodetected locally, but `apple-virt` is only autodetected since Nix 2.19.0.
+
+Features of **remote builders** must additionally be configured manually on the client, e.g. on NixOS with [`nix.buildMachines.*.supportedFeatures`](https://search.nixos.org/options?show=nix.buildMachines.*.supportedFeatures&sort=alpha_asc&query=nix.buildMachines) or through general [Nix configuration](https://nixos.org/manual/nix/stable/advanced-topics/distributed-builds).
+
+If you run the tests on a **macOS** machine, you also need a "remote" builder for Linux; possibly a VM. [nix-darwin](https://daiderd.com/nix-darwin/) users may enable [`nix.linux-builder.enable`](https://daiderd.com/nix-darwin/manual/index.html#opt-nix.linux-builder.enable) to launch such a VM.
+
+NixOS tests using `systemd-nspawn` [`containers`](#test-opt-containers) require the Nix daemon to be
+configured with the following settings:
+
+```nix
+{
+  nix.settings = {
+    auto-allocate-uids = true;
+    extra-system-features = [ "uid-range" ];
+    experimental-features = [
+      "auto-allocate-uids"
+      "cgroups"
+    ];
+  };
+}
+```
+
+See the documentation of the settings
+[`auto-allocate-uids`](https://nix.dev/manual/nix/stable/command-ref/conf-file#conf-auto-allocate-uids),
+[`uid-range`](https://nix.dev/manual/nix/stable/command-ref/conf-file.html?highlight=uid-range#conf-system-features), and
+[`cgroups`](https://nix.dev/manual/nix/stable/development/experimental-features#xp-feature-cgroups)
+for more information.
+
+If the test uses both `systemd-nspawn` [`containers`](#test-opt-containers) and QEMU virtual machine [`nodes`](#test-opt-nodes)
+and requires them share a common VLAN,
+`/dev/net` must be present in the sandbox.
+This allows them to be bridged over a TAP interface.
+To make this path available, set the following option:
+
+```nix
+{
+  nix.settings.extra-sandbox-paths = [ "/dev/net" ];
+}
 ```

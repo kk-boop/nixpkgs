@@ -1,20 +1,60 @@
-{ lib, buildPythonPackage, fetchPypi, requests }:
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  coloredlogs,
+  fastapi,
+  fetchFromGitHub,
+  hatchling,
+  pillow,
+  psutil,
+  pytestCheckHook,
+  redis,
+  requests,
+  ujson,
+  uvicorn,
+  watchdog,
+}:
 
-buildPythonPackage rec {
-  pname = "pyTelegramBotAPI";
-  version = "4.2.0";
+buildPythonPackage (finalAttrs: {
+  pname = "pytelegrambotapi";
+  version = "4.36.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "05f85dacbcf0bdf2459698bab4325f3a699d1c04bc61581627d76d075c3d5488";
+  src = fetchFromGitHub {
+    owner = "eternnoir";
+    repo = "pyTelegramBotAPI";
+    tag = finalAttrs.version;
+    hash = "sha256-KPsfKTG7MjBhM5nYlhfVF7wvjZP9KQRVmCjlGcL/OT4=";
   };
 
-  propagatedBuildInputs = [ requests ];
+  build-system = [ hatchling ];
 
-  meta = with lib; {
+  optional-dependencies = {
+    json = [ ujson ];
+    PIL = [ pillow ];
+    redis = [ redis ];
+    aiohttp = [ aiohttp ];
+    fastapi = [ fastapi ];
+    uvicorn = [ uvicorn ];
+    psutil = [ psutil ];
+    coloredlogs = [ coloredlogs ];
+    watchdog = [ watchdog ];
+  };
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    requests
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
+
+  pythonImportsCheck = [ "telebot" ];
+
+  meta = {
+    description = "Python implementation for the Telegram Bot API";
     homepage = "https://github.com/eternnoir/pyTelegramBotAPI";
-    description = "A simple, but extensible Python implementation for the Telegram Bot API";
-    license = licenses.gpl2;
-    maintainers = with maintainers; [ das_j ];
+    changelog = "https://github.com/eternnoir/pyTelegramBotAPI/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl2Only;
+    maintainers = [ ];
   };
-}
+})

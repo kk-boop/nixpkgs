@@ -1,68 +1,70 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, freezegun
-, oauthlib
-, pytest-asyncio
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, requests
-, requests_oauthlib
-, requests-mock
-, setuptools-scm
+{
+  lib,
+  aiohttp,
+  anyio,
+  buildPythonPackage,
+  fetchFromGitHub,
+  gitMinimal,
+  oauthlib,
+  pytest-asyncio,
+  pytest-mock,
+  pytestCheckHook,
+  requests,
+  requests-oauthlib,
+  requests-mock,
+  setuptools-scm,
+  tenacity,
+  time-machine,
 }:
 
 buildPythonPackage rec {
   pname = "pyatmo";
-  version = "6.2.0";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "9.9.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jabesq";
     repo = "pyatmo";
-    rev = "v${version}";
-    sha256 = "sha256-VBc2avJiIFQW1LYXQEvIZ/wZKMFJsCF9DDrxwL8dDnk=";
+    tag = "v${version}";
+    hash = "sha256-TJHCBGO9Pi3elewj4C9kIf4J9pyhSO5bYGONA3onvRE=";
   };
 
-  SETUPTOOLS_SCM_PRETEND_VERSION = version;
-
-  nativeBuildInputs = [
-    setuptools-scm
+  pythonRelaxDeps = [
+    "oauthlib"
+    "requests-oauthlib"
+    "requests"
   ];
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
     aiohttp
     oauthlib
     requests
-    requests_oauthlib
+    requests-oauthlib
+    tenacity
   ];
 
-  checkInputs = [
-    freezegun
+  nativeCheckInputs = [
+    anyio
     pytest-asyncio
     pytest-mock
     pytestCheckHook
     requests-mock
+    time-machine
   ];
 
-  postPatch = ''
-    substituteInPlace setup.cfg \
-      --replace "oauthlib~=3.1" "oauthlib" \
-      --replace "requests~=2.24" "requests"
-  '';
-
-  pythonImportsCheck = [
-    "pyatmo"
+  disabledTestPaths = [
+    "tests/test_release_script.py"
   ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pyatmo" ];
+
+  meta = {
     description = "Simple API to access Netatmo weather station data";
     homepage = "https://github.com/jabesq/pyatmo";
-    license = licenses.mit;
-    maintainers = with maintainers; [ delroth ];
+    changelog = "https://github.com/jabesq/pyatmo/blob/${src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

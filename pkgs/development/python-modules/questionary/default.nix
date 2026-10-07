@@ -1,43 +1,53 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, poetry
-, prompt-toolkit
-, pytest-cov
-, pytestCheckHook
+{
+  stdenv,
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  poetry-core,
+  prompt-toolkit,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "questionary";
-  version = "1.10.0";
-  format = "pyproject";
+  version = "2.1.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "tmbo";
-    repo = pname;
-    rev = version;
-    sha256 = "14k24fq2nmk90iv0k7pnmmdhmk8z261397wg52sfcsccyhpdw3i7";
+    repo = "questionary";
+    tag = version;
+    hash = "sha256-r7F5y6KD6zonQGtO/9OuCTMTWdkCdd9aqTgKg6eWp08=";
   };
 
-  nativeBuildInputs = [
-    poetry
-  ];
+  pythonRelaxDeps = [ "prompt_toolkit" ];
 
-  propagatedBuildInputs = [
-    prompt-toolkit
-  ];
+  build-system = [ poetry-core ];
 
-  checkInputs = [
-    pytest-cov
-    pytestCheckHook
+  dependencies = [ prompt-toolkit ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  preCheck = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    ulimit -n 1024
+  '';
+
+  disabledTests = [
+    # RuntimeError: no running event loop
+    "test_blank_line_fix"
+
+    # TypeError: Attrs.__new__() missing 1 required positional argument: 'dim'
+    # https://github.com/tmbo/questionary/issues/461
+    "test_print_with_style"
   ];
 
   pythonImportsCheck = [ "questionary" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to build command line user prompts";
     homepage = "https://github.com/tmbo/questionary";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/tmbo/questionary/blob/${src.rev}/docs/pages/changelog.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

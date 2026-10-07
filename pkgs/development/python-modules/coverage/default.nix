@@ -1,25 +1,52 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, mock
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  flaky,
+  hypothesis,
+  pytest-xdist,
+  pytest7CheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "coverage";
-  version = "5.5";
+  version = "7.15.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "ebe78fe9a0e874362175b02371bdfbee64d8edc42a044253ddf4ee7d3c15212c";
+  src = fetchFromGitHub {
+    owner = "coveragepy";
+    repo = "coveragepy";
+    tag = finalAttrs.version;
+    hash = "sha256-0+J44gHiZsetHWvu7CxM0AwkFlUpCpqLiBkZacXiE2U=";
   };
 
-  # No tests in archive
-  doCheck = false;
-  checkInputs = [ mock ];
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [
+    flaky
+    hypothesis
+    pytest-xdist
+    pytest7CheckHook
+  ];
+
+  preCheck = ''
+    export PATH="$PATH:$out/bin"
+    # import from $out
+    rm -r coverage
+  '';
+
+  disabledTests = [
+    # tests expect coverage source to be there
+    "test_all_our_source_files"
+    "test_real_code_regions"
+  ];
 
   meta = {
-    description = "Code coverage measurement for python";
-    homepage = "http://nedbatchelder.com/code/coverage/";
-    license = lib.licenses.bsd3;
+    changelog = "https://github.com/coveragepy/coveragepy/blob/${finalAttrs.src.tag}/CHANGES.rst";
+    description = "Code coverage measurement for Python";
+    homepage = "https://github.com/coveragepy/coveragepy";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
-}
+})

@@ -1,32 +1,36 @@
-{ lib, callPackage, CoreFoundation, fetchFromGitHub, pkgs, wrapCDDA, attachPkgs
-, tiles ? true, Cocoa
-, debug ? false
-, useXdgDir ? false
+{
+  callPackage,
+  fetchFromGitHub,
+  pkgs,
+  attachPkgs,
+  tiles ? true,
+  debug ? false,
+  useXdgDir ? false,
 }:
 
 let
   common = callPackage ./common.nix {
-    inherit CoreFoundation tiles Cocoa debug useXdgDir;
+    inherit tiles debug useXdgDir;
   };
 
   self = common.overrideAttrs (common: rec {
-    version = "0.F-3";
+    # 0.I is the latest stable release tag (https://github.com/CleverRaven/Cataclysm-DDA/releases/tag/0.I)
+    version = "0.I-2026-06-11-1250";
 
     src = fetchFromGitHub {
       owner = "CleverRaven";
       repo = "Cataclysm-DDA";
-      rev = version;
-      sha256 = "sha256-2su1uQaWl9WG41207dRvOTdVKcQsEz/y0uTi9JX52uI=";
+      tag = "cdda-${version}";
+      hash = "sha256-DpB9OlSpg0t4L1JdMMPeQC+cLd0zs/ZkCdXSFGWgRhA=";
     };
 
-    makeFlags = common.makeFlags ++ [
-      # Makefile declares version as 0.F, with no minor release number
-      "VERSION=${version}"
+    patches = [
+      # Unconditionally look for translation files in $out/share/locale
+      ./locale-path.patch
     ];
 
     meta = common.meta // {
-      maintainers = with lib.maintainers;
-      common.meta.maintainers ++ [ skeidel ];
+      changelog = "https://github.com/CleverRaven/Cataclysm-DDA/blob/${version}/data/changelog.txt";
     };
   });
 in

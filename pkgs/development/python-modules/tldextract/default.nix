@@ -1,56 +1,64 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, filelock
-, idna
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
-, requests
-, requests-file
-, responses
-, setuptools-scm
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  filelock,
+  idna,
+  pytest-mock,
+  pytestCheckHook,
+  requests,
+  requests-file,
+  responses,
+  setuptools,
+  setuptools-scm,
+  sybil,
+  syrupy,
 }:
 
-buildPythonPackage rec {
-  pname   = "tldextract";
-  version = "3.1.2";
-  disabled = pythonOlder "3.6";
+buildPythonPackage (finalAttrs: {
+  pname = "tldextract";
+  version = "5.3.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-0gNMNVhlH32P2t6oP7aBBQstZi3GegDZUDJtyQIClEQ=";
+  src = fetchFromGitHub {
+    owner = "john-kurkowski";
+    repo = "tldextract";
+    tag = finalAttrs.version;
+    hash = "sha256-n5lwh1A57gpdTRpXx3TJ9qZwEEHGSb3Nm7U3TOPDsk4=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
+  build-system = [
+    setuptools
+    setuptools-scm
+  ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     filelock
     idna
     requests
     requests-file
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-mock
     pytestCheckHook
     responses
+    sybil
+    syrupy
   ];
-
-  postPatch = ''
-    substituteInPlace pytest.ini --replace " --pylint" ""
-  '';
 
   pythonImportsCheck = [ "tldextract" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to accurately separate the TLD from the domain of an URL";
     longDescription = ''
       tldextract accurately separates the gTLD or ccTLD (generic or country code top-level domain)
       from the registered domain and subdomains of a URL.
     '';
     homepage = "https://github.com/john-kurkowski/tldextract";
-    license = with licenses; [ bsd3 ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/john-kurkowski/tldextract/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "tldextract";
   };
-}
+})

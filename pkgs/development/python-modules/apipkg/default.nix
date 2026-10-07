@@ -1,41 +1,46 @@
-{ lib, buildPythonPackage, fetchPypi
-, pytest, setuptools-scm, isPy3k }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatch-vcs,
+  hatchling,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "apipkg";
-  version = "1.5";
+  version = "3.0.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "37228cda29411948b422fae072f57e31d3396d2ee1c9783775980ee9c9990af6";
+  src = fetchFromGitHub {
+    owner = "pytest-dev";
+    repo = "apipkg";
+    tag = "v${version}";
+    hash = "sha256-ANLD7fUMKN3RmAVjVkcpwUH6U9ASalXdwKtPpoC8Urs=";
   };
 
-  nativeBuildInputs = [ setuptools-scm ];
-  checkInputs = [ pytest ];
-
-  # Fix pytest 4 support. See: https://github.com/pytest-dev/apipkg/issues/14
+  # support pytest 9: https://github.com/pytest-dev/apipkg/pull/58
   postPatch = ''
-    substituteInPlace "test_apipkg.py" \
-      --replace "py.test.ensuretemp('test_apipkg')" "py.path.local('test_apipkg')"
+    substituteInPlace conftest.py \
+      --replace-fail 'def pytest_report_header(startdir):' 'def pytest_report_header():'
   '';
 
-  # Failing tests on Python 3
-  # https://github.com/pytest-dev/apipkg/issues/17
-  checkPhase = let
-    disabledTests = lib.optionals isPy3k [
-      "test_error_loading_one_element"
-      "test_aliasmodule_proxy_methods"
-      "test_eagerload_on_bython"
-    ];
-    testExpression = lib.optionalString (disabledTests != [])
-    "-k 'not ${lib.concatStringsSep " and not " disabledTests}'";
-  in ''
-    py.test ${testExpression}
-  '';
+  build-system = [
+    hatch-vcs
+    hatchling
+  ];
 
-  meta = with lib; {
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  enabledTestPaths = [ "test_apipkg.py" ];
+
+  pythonImportsCheck = [ "apipkg" ];
+
+  meta = {
+    changelog = "https://github.com/pytest-dev/apipkg/blob/main/CHANGELOG";
     description = "Namespace control and lazy-import mechanism";
     homepage = "https://github.com/pytest-dev/apipkg";
-    license = licenses.mit;
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

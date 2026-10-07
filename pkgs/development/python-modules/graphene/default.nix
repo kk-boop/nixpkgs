@@ -1,59 +1,55 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, aniso8601
-, graphql-core
-, graphql-relay
-, promise
-, pytestCheckHook
-, pytest-asyncio
-, pytest-benchmark
-, pytest-mock
-, pytz
-, snapshottest
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  graphql-core,
+  graphql-relay,
+  pytest-asyncio,
+  pytest-benchmark,
+  pytest-mock,
+  pytestCheckHook,
+  typing-extensions,
+  python-dateutil,
 }:
 
 buildPythonPackage rec {
   pname = "graphene";
-  version = "3.0.0b8";
+  version = "3.4.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "graphql-python";
     repo = "graphene";
-    rev = "v${version}";
-    sha256 = "sha256-Pgln369s4qXdKqLxhX+AkgpDQm+MfSZ/OVmB1AaawHI=";
+    tag = "v${version}";
+    hash = "sha256-K1IGKK3nTsRBe2D/cKJ/ahnAO5xxjf4gtollzTwt1zU=";
   };
 
-  propagatedBuildInputs = [
-    aniso8601
+  build-system = [ setuptools ];
+
+  dependencies = [
     graphql-core
     graphql-relay
+    python-dateutil
+    typing-extensions
   ];
 
-  checkInputs = [
-    promise
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-asyncio
     pytest-benchmark
     pytest-mock
-    pytz
-    snapshottest
   ];
 
-  pytestFlagsArray = [ "--benchmark-disable" ];
-
-  disabledTests = [
-    # Expects different Exeception classes, but receives none of them
-    # https://github.com/graphql-python/graphene/issues/1346
-    "test_unexpected_error"
-  ];
+  pytestFlags = [ "--benchmark-disable" ];
 
   pythonImportsCheck = [ "graphene" ];
 
-  meta = with lib; {
+  meta = {
     description = "GraphQL Framework for Python";
     homepage = "https://github.com/graphql-python/graphene";
-    license = licenses.mit;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    changelog = "https://github.com/graphql-python/graphene/releases/tag/v${version}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

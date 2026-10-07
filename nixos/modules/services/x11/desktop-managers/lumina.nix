@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
@@ -10,6 +15,10 @@ let
 in
 
 {
+  meta = {
+    teams = [ teams.lumina ];
+  };
+
   options = {
 
     services.xserver.desktopManager.lumina.enable = mkOption {
@@ -20,16 +29,13 @@ in
 
   };
 
-
   config = mkIf cfg.enable {
 
-    services.xserver.displayManager.sessionPackages = [
+    services.displayManager.sessionPackages = [
       pkgs.lumina.lumina
     ];
 
-    environment.systemPackages =
-      pkgs.lumina.preRequisitePackages ++
-      pkgs.lumina.corePackages;
+    environment.systemPackages = pkgs.lumina.preRequisitePackages ++ pkgs.lumina.corePackages;
 
     # Link some extra directories in /run/current-system/software/share
     environment.pathsToLink = [
@@ -37,12 +43,6 @@ in
       # FIXME: modules should link subdirs of `/share` rather than relying on this
       "/share"
     ];
-
-    security.wrappers.lumina-checkpass-wrapped = {
-      source = "${pkgs.lumina.lumina}/bin/lumina-checkpass";
-      owner = "root";
-      group = "root";
-    };
 
   };
 }

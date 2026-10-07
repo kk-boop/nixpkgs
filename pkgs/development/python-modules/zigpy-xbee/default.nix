@@ -1,53 +1,56 @@
-{ lib
-, asynctest
-, buildPythonPackage
-, fetchFromGitHub
-, pyserial
-, pyserial-asyncio
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, zigpy
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pyprojectVersionPatchHook,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
+  zigpy,
 }:
 
 buildPythonPackage rec {
   pname = "zigpy-xbee";
-  version = "0.14.0";
-  # https://github.com/Martiusweb/asynctest/issues/152
-  # broken by upstream python bug with asynctest and
-  # is used exclusively by home-assistant with python 3.8
-  disabled = pythonOlder "3.8";
+  version = "0.22.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "zigpy";
     repo = "zigpy-xbee";
-    rev = version;
-    sha256 = "sha256-veAkaBHPYgVd3iwvnH/A2upYX4T/qXXNRcaysbRQvNI=";
+    tag = version;
+    hash = "sha256-ni+YY8MGPik8/qxAKlY1loAbRBFcdOch1qT4xvN1Kyc=";
   };
 
-  buildInputs = [
-    pyserial
-    pyserial-asyncio
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "setuptools-git-versioning<2"' ""
+  '';
+
+  build-system = [ setuptools ];
+
+  nativeBuildInputs = [
+    pyprojectVersionPatchHook
+  ];
+
+  dependencies = [
     zigpy
   ];
 
-  checkInputs = [
-    asynctest
+  nativeCheckInputs = [
     pytest-asyncio
     pytestCheckHook
   ];
 
   disabledTests = [
-    # assertion failure
-    # E       assert ff:ff:ff:ff:ff:ff:ff:ff is None
-    "test_startup_api_mode_config_fails"
+    "test_connect" # Attempts to test ioctl
   ];
 
-  meta = with lib; {
-    description = "A library which communicates with XBee radios for zigpy";
+  meta = {
+    changelog = "https://github.com/zigpy/zigpy-xbee/releases/tag/${version}";
+    description = "Library which communicates with XBee radios for zigpy";
     homepage = "https://github.com/zigpy/zigpy-xbee";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ etu mvnetbiz ];
-    platforms = platforms.linux;
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ mvnetbiz ];
+    platforms = lib.platforms.linux;
   };
 }

@@ -1,24 +1,68 @@
-{ lib, python, systemd }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  systemd,
+  lxml,
+  psutil,
+  pytestCheckHook,
+  pkg-config,
+  cython,
+}:
 
-python.pkgs.buildPythonPackage rec {
+buildPythonPackage rec {
   pname = "pystemd";
-  version = "0.8.0";
-  src = python.pkgs.fetchPypi {
-    inherit pname version;
-    sha256 = "0wlrid2xd73dmzl4m0jgg6cqmkx3qs9v9nikvwxd8a5b8chf9hna";
-  };
+  version = "0.15.3";
+  pyproject = true;
 
-  disabled = python.pythonOlder "3.4";
+  src = fetchFromGitHub {
+    owner = "systemd";
+    repo = "pystemd";
+    tag = "v${version}";
+    hash = "sha256-qFBa2hIcF0hyb+QyVpFG0qOpWsVVVTGCqgfChic6JCI=";
+  };
 
   buildInputs = [ systemd ];
 
-  checkInputs = with python.pkgs; [ pytest mock ];
-  checkPhase = "pytest tests";
+  build-system = [
+    setuptools
+    cython
+  ];
 
-  meta = with lib; {
-    description = "A thin Cython-based wrapper on top of libsystemd, focused on exposing the dbus API via sd-bus in an automated and easy to consume way.";
-    homepage = "https://github.com/facebookincubator/pystemd/";
-    license = licenses.lgpl21Plus;
-    maintainers = with maintainers; [ flokli ];
+  nativeBuildInputs = [
+    pkg-config
+  ];
+
+  dependencies = [
+    lxml
+    psutil
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
+  # Having the source root in `sys.path` causes import issues
+  preCheck = ''
+    cd tests
+  '';
+
+  disabledTestPaths = [
+    "test_version.py" # Requires cstq which is not in nixpkgs
+    "test_pickle.py" # fails with "Could not open a bus to DBus"
+  ];
+
+  pythonImportsCheck = [ "pystemd" ];
+
+  meta = {
+    description = ''
+      Thin Cython-based wrapper on top of libsystemd, focused on exposing the
+      dbus API via sd-bus in an automated and easy to consume way
+    '';
+    homepage = "https://github.com/facebookincubator/pystemd";
+    changelog = "https://github.com/systemd/pystemd/releases/tag/${src.tag}";
+    license = lib.licenses.lgpl21Plus;
+    maintainers = with lib.maintainers; [ flokli ];
   };
 }

@@ -1,60 +1,107 @@
-{ lib
-, buildPythonPackage
-, fetchurl
-, meson
-, ninja
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchurl,
+  fetchpatch,
+  meson,
+  ninja,
+  # TODO: We can get rid of this once `buildPythonPackage` accepts `finalAttrs`.
+  # See: https://github.com/NixOS/nixpkgs/pull/271387
+  gst-python,
 
-, pkg-config
-, python3
-, pygobject3
-, gobject-introspection
-, gst-plugins-base
-, isPy3k
+  pkg-config,
+  python,
+  pygobject3,
+  gobject-introspection,
+  gst_all_1,
+  isPy3k,
+  directoryListingUpdater,
 }:
 
 buildPythonPackage rec {
   pname = "gst-python";
-  version = "1.18.4";
+  version = "1.28.6";
 
-  format = "other";
+  pyproject = false;
 
-  outputs = [ "out" "dev" ];
+  outputs = [
+    "out"
+    "dev"
+  ];
 
   src = fetchurl {
-    url = "${meta.homepage}/src/gst-python/${pname}-${version}.tar.xz";
-    sha256 = "13h9qzfz8s1gyj2ar9q2gf5346sgdv6jv8hj7aw0hpl2gs5f0s6b";
+    url = "https://gstreamer.freedesktop.org/src/gst-python/gst-python-${version}.tar.xz";
+    hash = "sha256-NNWEQMU7VJWhI9Ckt7ervG6XkqWyGVTbhqB5Gxb24BI=";
   };
+
+  patches = [
+    # https://gitlab.freedesktop.org/gstreamer/gstreamer/-/merge_requests/9918#note_3530752
+    ./fix-test-plugin-imports.patch
+  ];
 
   # Python 2.x is not supported.
   disabled = !isPy3k;
+
+  depsBuildBuild = [ pkg-config ];
 
   nativeBuildInputs = [
     meson
     ninja
     pkg-config
-    python3
     gobject-introspection
-    gst-plugins-base
+    gst_all_1.gst-plugins-base
+  ];
+
+  buildInputs = [
+    # for gstreamer-analytics-1.0
+    gst_all_1.gst-plugins-bad
   ];
 
   propagatedBuildInputs = [
-    gst-plugins-base
+    gst_all_1.gst-plugins-base
     pygobject3
   ];
 
-  mesonFlags = [
-    "-Dpygi-overrides-dir=${placeholder "out"}/${python3.sitePackages}/gi/overrides"
+  checkInputs = [
+    gst_all_1.gst-rtsp-server
   ];
 
-  doCheck = true;
+  mesonFlags = [
+    "-Dpygi-overrides-dir=${placeholder "out"}/${python.sitePackages}/gi/overrides"
+    # Exec format error during configure
+    "-Dpython-exe=${python.pythonOnBuildForHost.interpreter}"
+    # This is needed to prevent the project from looking for `gst-rtsp-server`
+    # from `checkInputs`.
+    #
+    # TODO: This should probably be moved at least partially into the Meson hook.
+    #
+    # NB: We need to use `doInstallCheck` here because `buildPythonPackage`
+    # renames `doCheck` to `doInstallCheck`.
+    (lib.mesonEnable "tests" gst-python.doInstallCheck)
+  ];
 
-  # TODO: Meson setup hook does not like buildPythonPackage
-  # https://github.com/NixOS/nixpkgs/issues/47390
-  installCheckPhase = "meson test --print-errorlogs";
+  # `buildPythonPackage` uses `installCheckPhase` and leaves `checkPhase`
+  # empty. It renames `doCheck` from its arguments, but not `checkPhase`.
+  # See: https://github.com/NixOS/nixpkgs/issues/47390
+  installCheckPhase = ''
+    runHook preCheck
+    mesonCheckPhase
+    runHook postCheck
+  '';
 
-  meta = with lib; {
+  preCheck = lib.optionalString stdenv.hostPlatform.isDarwin ''
+    export DYLD_LIBRARY_PATH="${gst_all_1.gst-plugins-base}/lib"
+  '';
+
+  passthru = {
+    updateScript = directoryListingUpdater { odd-unstable = true; };
+  };
+
+  meta = {
     homepage = "https://gstreamer.freedesktop.org";
     description = "Python bindings for GStreamer";
-    license = licenses.lgpl2Plus;
+    license = lib.licenses.lgpl2Plus;
+    maintainers = with lib.maintainers; [ tmarkus ];
   };
 }

@@ -1,45 +1,39 @@
-{ lib
-, boolean-py
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
-, pythonOlder
-, setuptools-scm
+{
+  lib,
+  boolean-py,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "license-expression";
-  version = "21.6.14";
-
-  disabled = pythonOlder "3.6";
+  version = "30.4.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = "nexB";
+    owner = "aboutcode-org";
     repo = "license-expression";
-    rev = "v${version}";
-    sha256 = "sha256-hwfYKKalo8WYFwPCsRRXNz+/F8/42PXA8jxbIQjJH/g=";
+    tag = "v${version}";
+    hash = "sha256-Bgkm0nhu/jeqtg3444R2encCtfzd7xnwyCXlZWaYSQ0=";
   };
 
   dontConfigure = true;
 
-  nativeBuildInputs = [
-    setuptools-scm
-  ];
+  build-system = [ setuptools-scm ];
 
-  propagatedBuildInputs = [
-    boolean-py
-  ];
+  dependencies = [ boolean-py ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "license_expression" ];
 
-  meta = with lib; {
-    description = "Utility library to parse, normalize and compare License expressions for Python";
-    homepage = "https://github.com/nexB/license-expression";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+  meta = {
+    description = "Utility library to parse, normalize and compare License expressions";
+    homepage = "https://github.com/aboutcode-org/license-expression";
+    changelog = "https://github.com/aboutcode-org/license-expression/blob/${src.tag}/CHANGELOG.rst";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

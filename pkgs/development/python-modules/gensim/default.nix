@@ -1,43 +1,87 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, numpy
-, six
-, scipy
-, smart-open
-, scikit-learn, testfixtures, unittest2
-, isPy3k
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  cython,
+  setuptools,
+
+  # dependencies
+  numpy,
+  scipy,
+  smart-open,
+
+  # tests
+  mock,
+  pyemd,
+  pytestCheckHook,
+  testfixtures,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "gensim";
-  version = "4.1.2";
-  disabled = !isPy3k;
+  version = "4.4.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "1932c257de4eccbb64cc40d46e8577a25f5f47b94b96019a969fb36150f11d15";
+  __structuredAttrs = true;
+
+  src = fetchFromGitHub {
+    owner = "piskvorky";
+    repo = "gensim";
+    tag = finalAttrs.version;
+    hash = "sha256-TXutcU43ReBj9ss9+zBJFUxb5JqVHpl+B0c7hqcJAJY=";
   };
 
-  propagatedBuildInputs = [ smart-open numpy six scipy ];
+  patches = [
+    # Fall back to serial chunkize when the multiprocessing start method is not
+    # "fork" (the default changed to "forkserver" on Linux with Python 3.14).
+    # Vendored (filtered to gensim/utils.py) from the not yet merged
+    # https://github.com/piskvorky/gensim/pull/3649
+    ./python314-chunkize-forkserver.patch
+  ];
 
-  checkInputs = [ scikit-learn testfixtures unittest2 ];
+  build-system = [
+    cython
+    setuptools
+  ];
 
-  # Two tests fail.
-  #
-  # ERROR: testAddMorphemesToEmbeddings (gensim.test.test_varembed_wrapper.TestVarembed)
-  # ImportError: Could not import morfessor.
-  # This package is not in nix
-  #
-  # ERROR: testWmdistance (gensim.test.test_fasttext_wrapper.TestFastText)
-  # ImportError: Please install pyemd Python package to compute WMD.
-  # This package is not in nix
-  doCheck = false;
+  dependencies = [
+    numpy
+    scipy
+    smart-open
+  ];
+
+  nativeCheckInputs = [
+    mock
+    pyemd
+    pytestCheckHook
+    testfixtures
+  ];
+
+  pythonImportsCheck = [ "gensim" ];
+
+  enabledTestPaths = [ "gensim/test" ];
+
+  # test_parallel is flaky under load
+  disabledTests = [ "test_parallel" ];
+
+  preCheck = ''
+    export GENSIM_DATA_DIR="$NIX_BUILD_TOP/gensim-data"
+    mkdir -p "$GENSIM_DATA_DIR"
+    export SKIP_NETWORK_TESTS=1
+  ''
+  # Prevent python from importing gensim from the source files during tests
+  + ''
+    rm gensim/__init__.py
+  '';
 
   meta = {
     description = "Topic-modelling library";
     homepage = "https://radimrehurek.com/gensim/";
-    license = lib.licenses.lgpl21;
-    maintainers = with lib.maintainers; [ jyp ];
+    downloadPage = "https://github.com/piskvorky/gensim";
+    changelog = "https://github.com/RaRe-Technologies/gensim/blob/${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.lgpl21Only;
+    maintainers = [ ];
   };
-}
+})

@@ -1,44 +1,67 @@
-{ lib, stdenv, fetchFromGitHub, makeWrapper, coreutils, findutils, getopt, gnugrep, gnused, sops, vault }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  makeWrapper,
+  coreutils,
+  findutils,
+  getopt,
+  gnugrep,
+  gnused,
+  sops,
+}:
 
 stdenv.mkDerivation rec {
   pname = "helm-secrets";
-  version = "3.8.3";
+  version = "4.7.6";
 
   src = fetchFromGitHub {
     owner = "jkroepke";
-    repo = pname;
+    repo = "helm-secrets";
     rev = "v${version}";
-    hash = "sha256-FpF/d+e5T6nb0OENaYLY+3ATZ+qcAeih5/yKI+AtfKA=";
+    hash = "sha256-gCsXnZCvQqc5PIQGheOdzZ1YSUNDhbMvJIROMGA65Jg=";
   };
 
   nativeBuildInputs = [ makeWrapper ];
-  buildInputs = [ getopt sops ];
+  buildInputs = [
+    getopt
+    sops
+  ];
 
   # NOTE: helm-secrets is comprised of shell scripts.
   dontBuild = true;
 
-  # NOTE: Remove the install and upgrade hooks.
+  # NOTE: Fix version string
   postPatch = ''
-    sed -i '/^hooks:/,+2 d' plugin.yaml
+    sed -i 's/^version:.*/version: "${version}"/' plugin.yaml
   '';
 
   installPhase = ''
     runHook preInstall
 
-    install -dm755 $out/${pname} $out/${pname}/scripts
-    install -m644 -Dt $out/${pname} plugin.yaml
-    cp -r scripts/* $out/${pname}/scripts
-    wrapProgram $out/${pname}/scripts/run.sh \
-        --prefix PATH : ${lib.makeBinPath [ coreutils findutils getopt gnugrep gnused sops vault ]}
+    install -dm755 $out/helm-secrets $out/helm-secrets/scripts
+    install -m644 -Dt $out/helm-secrets plugins/helm-secrets-cli/plugin.yaml
+    cp -r plugins/helm-secrets-cli/scripts/* $out/helm-secrets/scripts
+    wrapProgram $out/helm-secrets/scripts/run.sh \
+        --prefix PATH : ${
+          lib.makeBinPath [
+            coreutils
+            findutils
+            getopt
+            gnugrep
+            gnused
+            sops
+          ]
+        }
 
     runHook postInstall
   '';
 
-  meta = with lib; {
-    description = "A Helm plugin that helps manage secrets";
-    inherit (src.meta) homepage;
-    license = licenses.apsl20;
-    maintainers = with maintainers; [ yurrriq ];
-    platforms = platforms.all;
+  meta = {
+    description = "Helm plugin that helps manage secrets";
+    homepage = "https://github.com/jkroepke/helm-secrets";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ yurrriq ];
+    platforms = lib.platforms.unix;
   };
 }

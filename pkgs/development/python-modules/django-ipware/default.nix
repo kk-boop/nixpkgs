@@ -1,26 +1,50 @@
-{ lib, buildPythonPackage, fetchPypi, django }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  django,
+  python-ipware,
+  setuptools,
+  pytestCheckHook,
+  pytest-django,
+}:
 
 buildPythonPackage rec {
   pname = "django-ipware";
-  version = "4.0.2";
+  version = "7.0.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "602a58325a4808bd19197fef2676a0b2da2df40d0ecf21be414b2ff48c72ad05";
+  src = fetchFromGitHub {
+    owner = "un33k";
+    repo = "django-ipware";
+    tag = "v${version}";
+    hash = "sha256-jLEHhJ6oNT1tsSqMbfPw1tb2Z/iQa8V6LpbT4ChLKI4=";
   };
 
-  propagatedBuildInputs = [ django ];
+  build-system = [ setuptools ];
 
-  # django.core.exceptions.ImproperlyConfigured: Requested setting IPWARE_TRUSTED_PROXY_LIST, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.
-  doCheck = false;
+  dependencies = [
+    django
+    python-ipware
+  ];
+
+  env.DJANGO_SETTINGS_MODULE = "ipware.tests.testsettings";
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-django
+  ];
+
+  enabledTestPaths = [ "ipware/tests/tests*.py" ];
 
   # pythonImportsCheck fails with:
   # django.core.exceptions.ImproperlyConfigured: Requested setting IPWARE_META_PRECEDENCE_ORDER, but settings are not configured. You must either define the environment variable DJANGO_SETTINGS_MODULE or call settings.configure() before accessing settings.
 
-  meta = with lib; {
-    description = "A Django application to retrieve user's IP address";
+  meta = {
+    description = "Django application to retrieve user's IP address";
     homepage = "https://github.com/un33k/django-ipware";
-    license = licenses.mit;
-    maintainers = with maintainers; [ ];
+    changelog = "https://github.com/un33k/django-ipware/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

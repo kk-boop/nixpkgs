@@ -1,48 +1,60 @@
-{ lib
-, breezy
-, build
-, buildPythonPackage
-, fetchPypi
-, git
-, mock
-, pep517
-, pytestCheckHook
-, toml
+{
+  lib,
+  breezy,
+  build,
+  buildPythonPackage,
+  fetchFromGitHub,
+  git,
+  pep517,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "check-manifest";
-  version = "0.47";
+  version = "0.51";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "56dadd260a9c7d550b159796d2894b6d0bcc176a94cbc426d9bb93e5e48d12ce";
+  src = fetchFromGitHub {
+    owner = "mgedmin";
+    repo = "check-manifest";
+    tag = finalAttrs.version;
+    hash = "sha256-tT6xQZwqJIsyrO9BjWweIeNgYaopziewerVBk0mFVYg=";
   };
 
-  # Test requires filesystem access
-  postPatch = ''
-    substituteInPlace tests.py --replace "test_build_sdist" "no_test_build_sdist"
-  '';
-
-  propagatedBuildInputs = [
-    build
-    pep517
-    toml
+  patches = [
+    # upstream fix for setuptools >= 83, unreleased as of 0.51
+    ./setuptools-83-ignorelist.patch
   ];
 
-  checkInputs = [
-    breezy
+  build-system = [ setuptools ];
+
+  dependencies = [
+    build
+    pep517
+    setuptools
+  ];
+
+  nativeCheckInputs = [
     git
-    mock
     pytestCheckHook
+  ];
+
+  checkInputs = [ breezy ];
+
+  disabledTests = [
+    # Test wants to setup a venv
+    "test_build_sdist_pep517_isolated"
   ];
 
   pythonImportsCheck = [ "check_manifest" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/mgedmin/check-manifest";
+  meta = {
     description = "Check MANIFEST.in in a Python source package for completeness";
-    license = licenses.mit;
-    maintainers = with maintainers; [ lewo ];
+    homepage = "https://github.com/mgedmin/check-manifest";
+    changelog = "https://github.com/mgedmin/check-manifest/blob/${finalAttrs.version}/CHANGES.rst";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ lewo ];
+    mainProgram = "check-manifest";
   };
-}
+})

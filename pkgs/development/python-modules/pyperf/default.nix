@@ -1,43 +1,42 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, six
-, statistics
-, pythonOlder
-, nose
-, psutil
-, contextlib2
-, mock
-, unittest2
-, isPy27
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  psutil,
+  unittestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "pyperf";
-  version = "2.3.0";
+  version = "2.10.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "8a85dd42e067131d5b26b71472336da7f7f4b87ff9c97350d89f5ff0de9adedc";
+    hash = "sha256-3ZPM/aeSFHJSk+lfH6bgDLSmStzxMmA5SG1OH5HKqmI=";
   };
 
-  checkInputs = [ nose psutil ] ++
-    lib.optionals isPy27 [ contextlib2 mock unittest2 ];
-  propagatedBuildInputs = [ six ] ++
-    lib.optionals (pythonOlder "3.4") [ statistics ];
+  nativeBuildInputs = [ setuptools ];
 
-  # tests not included in pypi repository
-  doCheck = false;
+  propagatedBuildInputs = [ psutil ];
 
-  checkPhase = ''
-    ${python.interpreter} -m nose
-  '';
+  nativeCheckInputs = [ unittestCheckHook ];
 
-  meta = with lib; {
+  unittestFlagsArray = [
+    "-s"
+    "pyperf/tests/"
+    "-v"
+  ];
+
+  pythonImportsCheck = [ "pyperf" ];
+
+  meta = {
     description = "Python module to generate and modify perf";
+    mainProgram = "pyperf";
     homepage = "https://pyperf.readthedocs.io/";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    changelog = "https://github.com/psf/pyperf/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

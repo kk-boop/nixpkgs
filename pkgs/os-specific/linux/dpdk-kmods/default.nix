@@ -1,34 +1,43 @@
-{ lib, stdenv, fetchzip, kernel }:
+{
+  lib,
+  stdenv,
+  fetchzip,
+  kernel,
+  kernelModuleMakeFlags,
+}:
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "dpdk-kmods";
-  version = "2021-04-21";
+  version = "2023-02-05";
 
   src = fetchzip {
-    url = "http://git.dpdk.org/dpdk-kmods/snapshot/dpdk-kmods-e13d7af77a1bf98757f85c3c4083f6ee6d0d2372.tar.xz";
-    sha256 = "sha256-8ysWT3X3rIyUAo4/QbkX7cQq5iFeU18/BPsmmWugcIc=";
+    url = "https://git.dpdk.org/dpdk-kmods/snapshot/dpdk-kmods-e721c733cd24206399bebb8f0751b0387c4c1595.tar.xz";
+    hash = "sha256-AG5Lthp+CPR4R7I23DUmoWAmET8gLEFHHdjk2TUbQn4=";
   };
 
   hardeningDisable = [ "pic" ];
 
-  KSRC = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
+  makeFlags = kernelModuleMakeFlags ++ [
+    "INSTALL_MOD_PATH=${placeholder "out"}"
+  ];
+
+  env.KSRC = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
   preBuild = "cd linux/igb_uio";
 
   installPhase = ''
-    make -C ${KSRC} M=$(pwd) modules_install
+    make -C ${finalAttrs.env.KSRC} M=$(pwd) modules_install $makeFlags
   '';
 
-  INSTALL_MOD_PATH = placeholder "out";
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  meta = {
     description = "Kernel modules for DPDK";
     homepage = "https://git.dpdk.org/dpdk-kmods/";
-    license = licenses.gpl2Only;
-    maintainers = [ maintainers.mic92 ];
-    platforms = platforms.linux;
+    license = lib.licenses.gpl2Only;
+    maintainers = [ lib.maintainers.mic92 ];
+    platforms = lib.platforms.linux;
   };
-}
+})

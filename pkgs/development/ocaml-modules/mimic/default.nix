@@ -1,26 +1,31 @@
-{ lib, buildDunePackage, fetchurl
-, fmt, mirage-flow, result, rresult, cstruct, logs, ke, lwt
-, alcotest, alcotest-lwt, bigstringaf, bigarray-compat
+{
+  lib,
+  buildDunePackage,
+  fetchurl,
+  mirage-flow,
+  cstruct,
+  logs,
+  ke,
+  lwt,
+  alcotest,
+  alcotest-lwt,
+  bigstringaf,
 }:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "mimic";
-  version = "0.0.3";
+  version = "0.0.10";
 
-  minimumOCamlVersion = "4.08";
-  useDune2 = true;
+  minimalOCamlVersion = "4.08";
 
   src = fetchurl {
-    url = "https://github.com/dinosaure/mimic/releases/download/${version}/mimic-${version}.tbz";
-    sha256 = "e4743cd2e4f8242eb1ce9d8086fd2affba0eb6a62131309ffa279108bd3dbbcb";
+    url = "https://github.com/dinosaure/mimic/releases/download/${finalAttrs.version}/mimic-${finalAttrs.version}.tbz";
+    hash = "sha256-OFqqdzY59pdMYPTEt4IPJ1cijGsJ3Xkv2xD1jc1hzU4=";
   };
 
   propagatedBuildInputs = [
-    fmt
     lwt
     mirage-flow
-    result
-    rresult
     logs
   ];
 
@@ -29,15 +34,14 @@ buildDunePackage rec {
     alcotest
     alcotest-lwt
     bigstringaf
-    bigarray-compat
     cstruct
     ke
   ];
 
-  meta = with lib; {
-    description = "A simple protocol dispatcher";
-    license = licenses.isc;
+  meta = {
+    description = "Simple protocol dispatcher";
+    license = lib.licenses.isc;
     homepage = "https://github.com/mirage/ocaml-git";
-    maintainers = [ maintainers.sternenseemann ];
+    maintainers = [ lib.maintainers.sternenseemann ];
   };
-}
+})

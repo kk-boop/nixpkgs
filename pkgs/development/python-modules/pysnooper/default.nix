@@ -1,31 +1,39 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytest
-, isPy27
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
-  version = "1.0.0";
+buildPythonPackage (finalAttrs: {
   pname = "pysnooper";
+  version = "1.2.3";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit version;
-    pname = "PySnooper";
-    sha256 = "4804aed962f36db85fefdc33edbd109b96a13153e6ffed82d1e6023b4f483b64";
+  src = fetchFromGitHub {
+    owner = "cool-RR";
+    repo = "PySnooper";
+    tag = finalAttrs.version;
+    hash = "sha256-+Cjqi0xkWO4QVAZymmcper4dal9pNWbpPgPY4UzbXfA=";
   };
 
-  # test dependency python-toolbox fails with py27
-  doCheck = !isPy27;
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytest
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  disabledTests = lib.optionals stdenv.hostPlatform.isDarwin [
+    # timing-sensitive and often breaks on Darwin
+    "test_relative_time"
   ];
 
-  meta = with lib; {
-    description = "A poor man's debugger for Python";
+  pythonImportsCheck = [ "pysnooper" ];
+
+  meta = {
+    description = "Poor man's debugger for Python";
     homepage = "https://github.com/cool-RR/PySnooper";
-    license = licenses.mit;
-    maintainers = with maintainers; [ seqizz ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ seqizz ];
   };
-}
+})

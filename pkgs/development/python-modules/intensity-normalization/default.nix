@@ -1,54 +1,56 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-, pytestCheckHook
-, matplotlib
-, nibabel
-, numpy
-, scikit-fuzzy
-, scikitimage
-, scikit-learn
-, scipy
-, statsmodels
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  pytest-cov-stub,
+  hatchling,
+  nibabel,
+  numpy,
+  scikit-fuzzy,
+  scipy,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "intensity-normalization";
-  version = "2.1.1";
-  disabled = pythonOlder "3.6";
+  version = "3.0.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-aGuGdUqaUgoD95PLFch+lF9o7eeKwK0bNWTF1beslIY=";
+    pname = "intensity_normalization";
+    inherit (finalAttrs) version;
+    hash = "sha256-d5f+Ug/ta9RQjk3JwHmVJQr8g93glzf7IcmLxLeA1tQ=";
   };
 
-  postPatch = ''
-    substituteInPlace setup.cfg --replace "pytest-runner" ""
-  '';
+  build-system = [ hatchling ];
 
-  checkInputs = [ pytestCheckHook ];
-  pythonImportsCheck = [
-    "intensity_normalization"
-    "intensity_normalization.normalize"
-    "intensity_normalization.plot"
-    "intensity_normalization.util"
-  ];
-  propagatedBuildInputs = [
-    matplotlib
+  dependencies = [
     nibabel
     numpy
     scikit-fuzzy
-    scikitimage
-    scikit-learn
     scipy
-    statsmodels
   ];
 
-  meta = with lib; {
+  nativeCheckInputs = [
+    pytestCheckHook
+    pytest-cov-stub
+  ];
+  enabledTestPaths = [ "tests" ];
+
+  pythonImportsCheck = [
+    "intensity_normalization"
+    "intensity_normalization.adapters"
+    "intensity_normalization.domain"
+    "intensity_normalization.normalizers"
+    "intensity_normalization.services"
+  ];
+
+  meta = {
     homepage = "https://github.com/jcreinhold/intensity-normalization";
     description = "MRI intensity normalization tools";
-    maintainers = with maintainers; [ bcdarwin ];
-    license = licenses.asl20;
+    changelog = "https://github.com/jcreinhold/intensity-normalization/releases/tag/${finalAttrs.version}";
+    maintainers = with lib.maintainers; [ bcdarwin ];
+    license = lib.licenses.asl20;
+    mainProgram = "intensity-normalize";
   };
-}
+})

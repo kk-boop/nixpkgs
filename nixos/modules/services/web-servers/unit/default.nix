@@ -1,4 +1,9 @@
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 with lib;
 
@@ -7,16 +12,12 @@ let
 
   configFile = pkgs.writeText "unit.json" cfg.config;
 
-in {
+in
+{
   options = {
     services.unit = {
       enable = mkEnableOption "Unit App Server";
-      package = mkOption {
-        type = types.package;
-        default = pkgs.unit;
-        defaultText = literalExpression "pkgs.unit";
-        description = "Unit package to use.";
-      };
+      package = mkPackageOption pkgs "unit" { };
       user = mkOption {
         type = types.str;
         default = "unit";
@@ -75,7 +76,7 @@ in {
             }
           }
         '';
-        description = "Unit configuration in JSON format. More details here https://unit.nginx.org/configuration";
+        description = "Unit configuration in JSON format. More details here <https://unit.nginx.org/configuration>";
       };
     };
   };
@@ -104,7 +105,7 @@ in {
         PIDFile = "/run/unit/unit.pid";
         ExecStart = ''
           ${cfg.package}/bin/unitd --control 'unix:/run/unit/control.unit.sock' --pid '/run/unit/unit.pid' \
-                                   --log '${cfg.logDir}/unit.log' --state '${cfg.stateDir}' --tmp '/tmp' \
+                                   --log '${cfg.logDir}/unit.log' --statedir '${cfg.stateDir}' --tmpdir '/tmp' \
                                    --user ${cfg.user} --group ${cfg.group}
         '';
         ExecStop = ''
@@ -114,7 +115,10 @@ in {
         RuntimeDirectory = "unit";
         RuntimeDirectoryMode = "0750";
         # Access write directories
-        ReadWritePaths = [ cfg.stateDir cfg.logDir ];
+        ReadWritePaths = [
+          cfg.stateDir
+          cfg.logDir
+        ];
         # Security
         NoNewPrivileges = true;
         # Sandboxing
@@ -129,9 +133,13 @@ in {
         ProtectKernelModules = true;
         ProtectKernelLogs = true;
         ProtectControlGroups = true;
-        RestrictAddressFamilies = [ "AF_UNIX" "AF_INET" "AF_INET6" ];
+        RestrictAddressFamilies = [
+          "AF_UNIX"
+          "AF_INET"
+          "AF_INET6"
+        ];
         LockPersonality = true;
-        MemoryDenyWriteExecute = true;
+        MemoryDenyWriteExecute = false; # pcre2 jit
         RestrictRealtime = true;
         RestrictSUIDSGID = true;
         PrivateMounts = true;

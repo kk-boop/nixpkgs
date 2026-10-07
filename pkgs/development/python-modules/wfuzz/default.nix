@@ -1,59 +1,87 @@
-{ buildPythonPackage
-, chardet
-, colorama
-, fetchFromGitHub
-, future
-, isPy27
-, lib
-, mock
-, netaddr
-, pycurl
-, pyparsing
-, pytest
-, pytestCheckHook
-, setuptools
-, six
-, stdenv
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  chardet,
+  colorama,
+  distutils,
+  fetchFromGitHub,
+  netaddr,
+  pycurl,
+  pyparsing,
+  pytestCheckHook,
+  setuptools,
+  six,
+  legacy-cgi,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "wfuzz";
-  version = "3.1.0";
+  version = "3.1.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "xmendez";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1izasczm2zwknwzxbfzqhlf4zp02jvb54ha1hfk4rlwiz0rr1kj4";
+    repo = "wfuzz";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-OYMZHo0ujRzwOcE+EKRNPxffxVbbiMHe+AqBz7q/u2A=";
   };
 
-  propagatedBuildInputs = [
+  patches = [
+    # replace use of imp module for Python >= 3.12
+    # https://github.com/xmendez/wfuzz/pull/365
+    ./Update-loader.py.patch
+    # replace removed `pipes` stdlib module with `shlex` for Python >= 3.13
+    # https://github.com/xmendez/wfuzz/issues/380
+    ./python-313-shlex.patch
+    # https://github.com/xmendez/wfuzz/pull/382
+    ./Drop-pkg_resources-from-filter-help-loader.patch
+  ];
+
+  postPatch = ''
+    substituteInPlace src/wfuzz/__init__.py \
+      --replace-fail \
+        '__version__ = "3.1.0"' \
+        '__version__ = "${finalAttrs.version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     chardet
+    distutils # src/wfuzz/plugin_api/base.py
+    legacy-cgi
+    netaddr # src/wfuzz/plugins/payloads/{iprange,ipnet}.py
     pycurl
-    six
-    setuptools
     pyparsing
-  ] ++ lib.optionals isPy27 [
-    mock
-    future
-  ] ++ lib.optionals stdenv.hostPlatform.isWindows [
-    colorama
-  ];
+    six
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isWindows [ colorama ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     netaddr
-    pytest
     pytestCheckHook
-  ] ++ lib.optionals isPy27 [
-    mock
+    writableTmpDirAsHomeHook
   ];
 
-  preCheck = "export HOME=$(mktemp -d)";
-  # The skipped tests are requiring a local web server
-  pytestFlagsArray = [ "tests/test_{moduleman,filterintro,reqresp,api,clparser}.py" ];
+  disabledTestPaths = [
+    # The tests are requiring a local web server
+    "tests/test_acceptance.py"
+    "tests/acceptance/test_saved_filter.py"
+    # depends on imp module removed from Python 3.12
+    "tests/test_moduleman.py"
+  ];
+
   pythonImportsCheck = [ "wfuzz" ];
 
-  meta = with lib; {
+  postInstall = ''
+    mkdir -p $out/share/wordlists/wfuzz
+    cp -R -T "wordlist" "$out/share/wordlists/wfuzz"
+  '';
+
+  meta = {
+    changelog = "https://github.com/xmendez/wfuzz/releases/tag/${finalAttrs.src.tag}";
     description = "Web content fuzzer to facilitate web applications assessments";
     longDescription = ''
       Wfuzz provides a framework to automate web applications security assessments
@@ -61,7 +89,11 @@ buildPythonPackage rec {
       web application vulnerabilities.
     '';
     homepage = "https://wfuzz.readthedocs.io";
-    license = with licenses; [ gpl2Only ];
-    maintainers = with maintainers; [ pamplemousse ];
+    license = lib.licenses.gpl2Only;
+    maintainers = with lib.maintainers; [
+      bad3r
+      pamplemousse
+    ];
+    mainProgram = "wfuzz";
   };
-}
+})

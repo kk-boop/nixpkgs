@@ -1,27 +1,26 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, nix-update-script
-, meson
-, python3
-, ninja
-, hicolor-icon-theme
-, gtk3
-, xorg
-, librsvg
+{
+  lib,
+  stdenvNoCC,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  adwaita-icon-theme,
+  hicolor-icon-theme,
+  gtk3,
+  xcursorgen,
+  librsvg,
 }:
 
-stdenv.mkDerivation rec {
+stdenvNoCC.mkDerivation rec {
   pname = "elementary-icon-theme";
-  version = "6.1.0";
-
-  repoName = "icons";
+  version = "9.0.0";
 
   src = fetchFromGitHub {
     owner = "elementary";
-    repo = repoName;
-    rev = version;
-    sha256 = "sha256-WR4HV0nJKj0WeSFHXLK64O0LhX8myAJE4w0aztyhPn4=";
+    repo = "icons";
+    tag = version;
+    hash = "sha256-WrZxhr7ybIx9CK5zG5Fq6udPt+0HRQIPSwxkCF2tPps=";
   };
 
   nativeBuildInputs = [
@@ -29,11 +28,11 @@ stdenv.mkDerivation rec {
     librsvg
     meson
     ninja
-    python3
-    xorg.xcursorgen
+    xcursorgen
   ];
 
   propagatedBuildInputs = [
+    adwaita-icon-theme
     hicolor-icon-theme
   ];
 
@@ -45,26 +44,27 @@ stdenv.mkDerivation rec {
   ];
 
   postPatch = ''
-    chmod +x meson/symlink.py
-    patchShebangs meson/symlink.py
+    # Upstream removed the non-fd.o office-calendar icons but left these
+    # alias symlinks dangling (elementary/icons#1435).
+    rm -f apps/16/calendar.svg \
+      mimes/symbolic/text-calendar-symbolic.svg \
+      mimes/symbolic/vcalendar-symbolic.svg
   '';
 
   postFixup = "gtk-update-icon-cache $out/share/icons/elementary";
 
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     description = "Named, vector icons for elementary OS";
     longDescription = ''
       An original set of vector icons designed specifically for elementary OS and its desktop environment: Pantheon.
     '';
     homepage = "https://github.com/elementary/icons";
-    license = licenses.gpl3;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
   };
 }

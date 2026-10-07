@@ -1,37 +1,46 @@
-{ lib
-, buildPythonPackage
-, construct
-, fetchFromGitHub
-, isPy3k
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  construct,
+  packaging,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "snapcast";
-  version = "2.1.3";
-  disabled = !isPy3k;
+  version = "2.3.8";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "happyleavesaoc";
     repo = "python-snapcast";
-    rev = version;
-    sha256 = "1jigdccdd7bffszim942mxcwxyznfjx7y3r5yklz3psl7zgbzd6c";
+    tag = version;
+    hash = "sha256-AWGpKtkki5I7VkKSSOBKUss2ULzOKVuKP/8mrU3VmqI=";
   };
+
+  nativeBuildInputs = [ setuptools ];
 
   propagatedBuildInputs = [
     construct
+    packaging
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
   pythonImportsCheck = [ "snapcast" ];
 
-  meta = with lib; {
+  disabledTests = [
+    # AssertionError and TypeError
+    "test_stream_setmeta"
+    "est_stream_setproperty"
+  ];
+
+  meta = {
     description = "Control Snapcast, a multi-room synchronous audio solution";
     homepage = "https://github.com/happyleavesaoc/python-snapcast/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ peterhoeg ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ peterhoeg ];
   };
 }

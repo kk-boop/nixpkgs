@@ -10,10 +10,3 @@ of the Nix language are fully described in the [Nix
 manual](https://nixos.org/nix/manual/#chap-writing-nix-expressions), but
 here we give a short overview of the most important constructs useful in
 NixOS configuration files.
-
-```{=docbook}
-<xi:include href="config-file.section.xml" />
-<xi:include href="abstractions.section.xml" />
-<xi:include href="modularity.section.xml" />
-<xi:include href="summary.section.xml" />
-```

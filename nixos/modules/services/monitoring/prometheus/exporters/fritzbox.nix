@@ -1,9 +1,14 @@
-{ config, lib, pkgs, options }:
-
-with lib;
+{
+  config,
+  lib,
+  pkgs,
+  options,
+  ...
+}:
 
 let
   cfg = config.services.prometheus.exporters.fritzbox;
+  inherit (lib) mkOption types concatStringsSep;
 in
 {
   port = 9133;
@@ -17,7 +22,7 @@ in
     };
 
     gatewayPort = mkOption {
-      type = types.int;
+      type = types.port;
       default = 49000;
       description = ''
         The port of the FRITZ!Box UPnP service.

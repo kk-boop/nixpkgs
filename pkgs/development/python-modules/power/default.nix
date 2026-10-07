@@ -1,11 +1,13 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
 }:
 
 buildPythonPackage rec {
   pname = "power";
   version = "1.4";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
@@ -15,10 +17,9 @@ buildPythonPackage rec {
   # Tests can't work because there is no power information available.
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Cross-platform system power status information";
     homepage = "https://github.com/Kentzo/Power";
-    license = licenses.mit;
+    license = lib.licenses.mit;
   };
-
 }

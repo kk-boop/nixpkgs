@@ -1,20 +1,57 @@
-{ lib, buildPythonPackage, fetchFromGitHub, isPy27, coloredlogs, property-manager, fasteners, pytestCheckHook, mock, virtualenv }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch2,
+  setuptools,
+  coloredlogs,
+  humanfriendly,
+  property-manager,
+  fasteners,
+  six,
+  pytestCheckHook,
+  mock,
+  virtualenv,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "executor";
   version = "23.2";
-  disabled = isPy27;
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "xolox";
     repo = "python-executor";
-    rev = version;
-    sha256 = "1mr0662c5l5zx0wjapcprp8p2xawfd0im3616df5sgv79fqzwfqs";
+    tag = finalAttrs.version;
+    hash = "sha256-Gjv+sUtnP11cM8GMGkFzXHVx0c2XXSU56L/QwoQxINc=";
   };
 
-  propagatedBuildInputs = [ coloredlogs property-manager fasteners ];
+  patches = [
+    # https://github.com/xolox/python-executor/pull/26
+    (fetchpatch2 {
+      name = "python313-compat.patch";
+      url = "https://github.com/xolox/python-executor/commit/4c5f4b44543bfb48ad790c440d1d7d0933e12499.patch?full_index=1";
+      hash = "sha256-pfWdLaREikzBaey75Tb+GiE+pUCl1h2OmsjlpzKOlno=";
+    })
+  ];
 
-  checkInputs = [ pytestCheckHook mock virtualenv ];
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
+    coloredlogs
+    humanfriendly
+    property-manager
+    fasteners
+    six
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    mock
+    virtualenv
+  ];
 
   # ignore impure tests
   disabledTests = [
@@ -24,13 +61,15 @@ buildPythonPackage rec {
     "ssh"
     "foreach"
     "local_context"
-    "release"  # meant to be ran on ubuntu to succeed
+    "release" # meant to be ran on ubuntu to succeed
   ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/xolox/python-executor/blob/${finalAttrs.version}/CHANGELOG.rst";
     description = "Programmer friendly subprocess wrapper";
+    mainProgram = "executor";
     homepage = "https://github.com/xolox/python-executor";
-    license = licenses.mit;
-    maintainers = with maintainers; [ eyjhb ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ eyjhb ];
   };
-}
+})

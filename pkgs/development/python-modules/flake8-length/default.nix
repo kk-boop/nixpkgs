@@ -1,36 +1,36 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, flake8
-, pytestCheckHook
-, fetchPypi
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  flake8,
+  flit-core,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "flake8-length";
-  version = "0.2.2";
-  disabled = pythonOlder "3.6";
+  version = "0.3.1";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "3536fee1d2a19c01f56ebb909c4d81f686f8181091a9bc3ddf3a5621c464760a";
+    hash = "sha256-Dr1hTCU2G1STczXJsUPMGFYs1NpIAk1I95vxXsRTtRA=";
   };
 
-  propagatedBuildInputs = [
-    flake8
-  ];
+  nativeBuildInputs = [ flit-core ];
 
-  pythonImportsCheck = [
-    "flake8_length"
-  ];
+  propagatedBuildInputs = [ flake8 ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pytestFlagsArray = [ "tests/" ];
+  pythonImportsCheck = [ "flake8_length" ];
+
+  enabledTestPaths = [ "tests/" ];
 
   meta = {
     description = "Flake8 plugin for a smart line length validation";
     homepage = "https://github.com/orsinium-labs/flake8-length";
+    changelog = "https://github.com/orsinium-labs/flake8-length/releases/tag/${version}";
     license = lib.licenses.mit;
     maintainers = with lib.maintainers; [ sauyon ];
   };

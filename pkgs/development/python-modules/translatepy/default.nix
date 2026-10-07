@@ -1,32 +1,41 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, requests
-, beautifulsoup4
-, pyuseragents
-, inquirer
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  requests,
+  beautifulsoup4,
+  pyuseragents,
+  safeio,
+  inquirer,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "translatepy";
-  version = "2.2";
+  version = "2.3";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "Animenosekai";
     repo = "translate";
-    rev = "v${version}";
-    sha256 = "rnt4nmDgQXSgzwNCcsZwbQn2bv83DFhL86kebeiSosc=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-cx5OeBrB8il8KrcyOmQbQ7VCXoaA5RP++oTTxCs/PcM=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     requests
     beautifulsoup4
     pyuseragents
+    safeio
     inquirer
   ];
 
-  checkInputs = [ pytestCheckHook ];
+  nativeCheckInputs = [ pytestCheckHook ];
   disabledTestPaths = [
     # Requires network connection
     "tests/test_translate.py"
@@ -34,10 +43,11 @@ buildPythonPackage rec {
   ];
   pythonImportsCheck = [ "translatepy" ];
 
-  meta = with lib; {
-    description = "A module grouping multiple translation APIs";
+  meta = {
+    description = "Module grouping multiple translation APIs";
+    mainProgram = "translatepy";
     homepage = "https://github.com/Animenosekai/translate";
-    license = with licenses; [ agpl3Only ];
-    maintainers = with maintainers; [ angustrau ];
+    license = lib.licenses.agpl3Only;
+    maintainers = with lib.maintainers; [ emilytrau ];
   };
-}
+})

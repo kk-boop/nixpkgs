@@ -1,33 +1,64 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, git
+{
+  lib,
+  buildPythonPackage,
+  setuptools,
+  chardet,
+  cryptography,
+  feedparser,
+  fetchPypi,
+  mock,
+  pysocks,
+  pytestCheckHook,
+  python-dateutil,
+  python-gnupg,
+  pytz,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "limnoria";
-  version = "2021.10.9";
-  disabled = isPy27; # abandoned upstream
+  version = "2026.3.21";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "907a4a0765ab29ccd1c2247efa0eda7a9bd82d3be3a2ecfdeb9b9e6fbb9aa56e";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-hg4NYKyUMu4jDv9i3gdejbz0w/v0ptswzO7TUSXP3+4=";
   };
 
   postPatch = ''
-    sed -i 's/version=version/version="${version}"/' setup.py
+    substituteInPlace setup.py \
+      --replace-fail "version=version" 'version="${finalAttrs.version}"'
   '';
-  buildInputs = [ git ];
 
-  # cannot be imported
-  doCheck = false;
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "A modified version of Supybot, an IRC bot";
+  dependencies = [
+    chardet
+    cryptography
+    feedparser
+    mock
+    pysocks
+    python-dateutil
+    python-gnupg
+  ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  checkPhase = ''
+    runHook preCheck
+    export PATH="$PATH:$out/bin";
+    supybot-test test -v --no-network
+    runHook postCheck
+  '';
+
+  pythonImportsCheck = [
+    # Uses the same names as Supybot
+    "supybot"
+  ];
+
+  meta = {
+    description = "Modified version of Supybot, an IRC bot";
     homepage = "https://github.com/ProgVal/Limnoria";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ goibhniu ];
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
-
-}
+})

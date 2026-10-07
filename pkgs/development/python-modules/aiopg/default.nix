@@ -1,21 +1,21 @@
-{ lib
-, async-timeout
-, buildPythonPackage
-, fetchFromGitHub
-, psycopg2
-, pythonOlder
+{
+  lib,
+  async-timeout,
+  buildPythonPackage,
+  fetchFromGitHub,
+  psycopg2,
 }:
 
 buildPythonPackage rec {
   pname = "aiopg";
-  version = "1.3.3";
-  disabled = pythonOlder "3.6";
+  version = "1.4.0";
+  format = "setuptools";
 
   src = fetchFromGitHub {
     owner = "aio-libs";
-    repo = pname;
+    repo = "aiopg";
     rev = "v${version}";
-    sha256 = "sha256-GHKsI6JATiwUg+YlGhWPBqtYl+GyXWNiDi/hzPDl2hE=";
+    hash = "sha256-GD5lRSUjASTwBk5vEK8v3xD8eNyxpwSrO3HHvtwubmk=";
   };
 
   propagatedBuildInputs = [
@@ -33,10 +33,10 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "aiopg" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for accessing a PostgreSQL database";
     homepage = "https://aiopg.readthedocs.io/";
-    license = with licenses; [ bsd2 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

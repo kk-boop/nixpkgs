@@ -1,32 +1,32 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchPypi
-, setuptools
-, typing-extensions
-, dataclasses
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  typing-extensions,
 }:
 
-buildPythonPackage rec {
-  pname = "simple_di";
-  version = "0.1.2";
-  disabled = pythonOlder "3.6";
+buildPythonPackage (finalAttrs: {
+  pname = "simple-di";
+  version = "0.1.5";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "0wqbfbajnwmkzih0jl3mncalr7dslvmwhb5mk11asqvmbp1xhn30";
+    pname = "simple_di";
+    inherit (finalAttrs) version;
+    hash = "sha256-GSuZne5M1PsRpdhhFlyq0C2PBhfA+Ab8Wwn5BfGgPKA=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     setuptools
     typing-extensions
-  ] ++ lib.optional (pythonOlder "3.7") [
-    dataclasses
   ];
 
-  pythonImportsCheck = [
-    "simple_di"
-  ];
+  pythonImportsCheck = [ "simple_di" ];
 
   # pypi distribution contains no tests
   doCheck = false;
@@ -37,4 +37,4 @@ buildPythonPackage rec {
     license = lib.licenses.asl20;
     maintainers = with lib.maintainers; [ sauyon ];
   };
-}
+})

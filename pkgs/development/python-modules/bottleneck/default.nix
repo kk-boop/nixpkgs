@@ -1,34 +1,44 @@
-{ lib, buildPythonPackage, fetchPypi
-, nose
-, numpy
-, pytest
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+  versioneer,
+  numpy,
+  pytestCheckHook,
+  python,
 }:
 
-buildPythonPackage rec {
-  pname = "Bottleneck";
-  version = "1.3.2";
+buildPythonPackage (finalAttrs: {
+  pname = "bottleneck";
+  version = "1.6.0";
+  pyproject = true;
+
+  __structuredAttrs = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "20179f0b66359792ea283b69aa16366419132f3b6cf3adadc0c48e2e8118e573";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-Ao1G7ksCWtmrTXmSQROBb4JfYrF7h8nh0NjOFEpKDjE=";
   };
 
-  propagatedBuildInputs = [ numpy ];
+  build-system = [
+    setuptools
+    versioneer
+  ];
 
-  postPatch = ''
-    substituteInPlace setup.py --replace "__builtins__.__NUMPY_SETUP__ = False" ""
-  '';
+  dependencies = [ numpy ];
 
-  checkInputs = [ pytest nose ];
-  checkPhase = ''
-    py.test -p no:warnings $out/${python.sitePackages}
-  '';
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    description = "Fast NumPy array functions written in C";
+  preCheck = "pushd $out";
+  postCheck = "popd";
+
+  pythonImportsCheck = [ "bottleneck" ];
+
+  meta = {
+    description = "Fast NumPy array functions";
     homepage = "https://github.com/pydata/bottleneck";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

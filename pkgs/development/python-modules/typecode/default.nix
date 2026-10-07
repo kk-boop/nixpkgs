@@ -1,61 +1,70 @@
-{ lib
-, fetchPypi
-, buildPythonPackage
-, setuptools-scm
-, attrs
-, pdfminer
-, commoncode
-, plugincode
-, binaryornot
-, typecode-libmagic
-, pytestCheckHook
-, pytest-xdist
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  setuptools,
+  setuptools-scm,
+  attrs,
+  pdfminer-six,
+  commoncode,
+  plugincode,
+  binaryornot,
+  typecode-libmagic,
+  pytestCheckHook,
+  pytest-xdist,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "typecode";
-  version = "21.6.1";
-  format = "setuptools";
+  version = "30.2.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "d3a82859df5607c900972e08e1bca31e3fe2daed37afd1b8231cad2ef613d8d6";
+  src = fetchFromGitHub {
+    owner = "aboutcode-org";
+    repo = "typecode";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-+7Yu2t++4PaF8yT+kKgo5MP6lbr8CXkjo5/4KMrApZY=";
   };
 
   dontConfigure = true;
 
-  nativeBuildInputs = [
+  build-system = [
+    setuptools
     setuptools-scm
   ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     attrs
-    pdfminer
+    pdfminer-six
     commoncode
     plugincode
     binaryornot
     typecode-libmagic
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-xdist
   ];
 
   disabledTests = [
     "TestFileTypesDataDriven"
-    # AssertionError: assert 'application/x-bytecode.python'...
-    "test_compiled_python_1"
+
+    # Many of the failures below are reported in:
+    # https://github.com/aboutcode-org/typecode/issues/36
+
+    # fails due to change in file (libmagic) 5.45
+    "test_media_image_img"
   ];
 
-  pythonImportsCheck = [
-    "typecode"
-  ];
+  pythonImportsCheck = [ "typecode" ];
 
-  meta = with lib; {
+  meta = {
     description = "Comprehensive filetype and mimetype detection using libmagic and Pygments";
-    homepage = "https://github.com/nexB/typecode";
-    license = licenses.asl20;
-    maintainers = teams.determinatesystems.members;
+    homepage = "https://github.com/aboutcode-org/typecode";
+    changelog = "https://github.com/aboutcode-org/typecode/releases/tag/v${finalAttrs.version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ eljamm ];
+    teams = with lib.teams; [ ngi ];
   };
-}
+})

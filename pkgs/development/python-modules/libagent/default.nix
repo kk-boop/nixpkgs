@@ -1,33 +1,89 @@
-{ lib, fetchFromGitHub, buildPythonPackage, ed25519, ecdsa , semver, mnemonic,
-  unidecode, mock, pytest , backports-shutil-which, configargparse,
-  python-daemon, pymsgbox }:
+{
+  lib,
+  fetchFromGitHub,
+  backports-shutil-which,
+  bech32,
+  buildPythonPackage,
+  setuptools,
+  cryptography,
+  docutils,
+  ecdsa,
+  gnupg,
+  pinentry-curses,
+  semver,
+  mnemonic,
+  unidecode,
+  mock,
+  pytestCheckHook,
+  configargparse,
+  python-daemon,
+  pymsgbox,
+  pynacl,
+  nix-update-script,
+}:
 
-# XXX: when changing this package, please test the package onlykey-agent.
+# When changing this package, please test packages {onlykey,trezor}-agent
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "libagent";
-  version = "0.14.1";
+  version = "0.16.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "romanz";
     repo = "trezor-agent";
-    rev = "v${version}";
-    sha256 = "16y1y9ahcv3wj7f0v4mfiwzkmn2hz1iv7y13cgr57sxa3ymyqx6c";
+    tag = "libagent/${finalAttrs.version}";
+    hash = "sha256-JFHBE2o5VSJaz5yeCiXmBchm4/1gA+dZ/PRt3+WENdA=";
   };
 
-  propagatedBuildInputs = [ unidecode backports-shutil-which configargparse
-    python-daemon pymsgbox ecdsa ed25519 mnemonic semver ];
-
-  checkInputs = [ mock pytest ];
-
-  checkPhase = ''
-    py.test libagent/tests
+  # hardcode the path to gpgconf and pinentry in the libagent library
+  postPatch = ''
+    substituteInPlace libagent/gpg/keyring.py \
+      --replace "util.which('gpgconf')" "'${gnupg}/bin/gpgconf'" \
+      --replace "'gpg-connect-agent'" "'${gnupg}/bin/gpg-connect-agent'" \
+      --replace "get_gnupg_components(sp=sp)['pinentry']" "'${(lib.getExe pinentry-curses)}'"
   '';
 
-  meta = with lib; {
+  build-system = [ setuptools ];
+
+  # https://github.com/romanz/trezor-agent/pull/481
+  pythonRemoveDeps = [ "backports.shutil-which" ];
+
+  dependencies = [
+    backports-shutil-which
+    unidecode
+    configargparse
+    python-daemon
+    pymsgbox
+    ecdsa
+    docutils
+    mnemonic
+    semver
+    pynacl
+    bech32
+    cryptography
+  ];
+
+  pythonImportsCheck = [ "libagent" ];
+
+  nativeCheckInputs = [
+    mock
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # test fails in sandbox
+    "test_get_agent_sock_path"
+  ];
+
+  passthru.updateScript = nix-update-script {
+    extraArgs = [ "--version-regex=libagent/(.*)" ];
+  };
+
+  meta = {
     description = "Using hardware wallets as SSH/GPG agent";
     homepage = "https://github.com/romanz/trezor-agent";
-    license = licenses.lgpl3Only;
-    maintainers = with maintainers; [ np ];
+    license = lib.licenses.lgpl3Only;
+    maintainers = with lib.maintainers; [ np ];
   };
-}
+})

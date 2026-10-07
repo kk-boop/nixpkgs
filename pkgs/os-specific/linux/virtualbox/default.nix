@@ -1,15 +1,22 @@
-{ stdenv, virtualbox, kernel }:
+{
+  stdenv,
+  virtualbox,
+  kernel,
+}:
 
 stdenv.mkDerivation {
-  name = "virtualbox-modules-${virtualbox.version}-${kernel.version}";
+  pname = "virtualbox-modules";
+  version = "${virtualbox.version}-${kernel.version}";
   src = virtualbox.modsrc;
   hardeningDisable = [
-    "fortify" "pic" "stackprotector"
+    "fortify"
+    "pic"
+    "stackprotector"
   ];
 
   nativeBuildInputs = kernel.moduleBuildDependencies;
 
-  KERN_DIR = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
+  env.KERN_DIR = "${kernel.dev}/lib/modules/${kernel.modDirVersion}/build";
 
   makeFlags = [ "INSTALL_MOD_PATH=$(out)" ];
   installTargets = [ "install" ];

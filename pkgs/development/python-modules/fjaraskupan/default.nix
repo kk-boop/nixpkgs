@@ -1,41 +1,45 @@
-{ lib
-, bleak
-, buildPythonPackage
-, fetchFromGitHub
-, pytest-mock
-, pytestCheckHook
-, pythonOlder
+{
+  lib,
+  bleak,
+  bleak-retry-connector,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytest-mock,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "fjaraskupan";
-  version = "1.0.2";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "2.3.4";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "elupus";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-nUrgV4keJpYRkKZE+udvmPdCW3O3YQTS1ye40IdA7vA=";
+    repo = "fjaraskupan";
+    tag = finalAttrs.version;
+    hash = "sha256-0rJoUQYexB+4ehOXKa1aca401E7opDtdoBmIW/2uOOE=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     bleak
+    bleak-retry-connector
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-mock
     pytestCheckHook
   ];
 
   pythonImportsCheck = [ "fjaraskupan" ];
 
-  meta = with lib; {
-    description = "Python module for controlling Fjäråskupan kitchen fans";
+  meta = {
+    description = "Module for controlling Fjäråskupan kitchen fans";
     homepage = "https://github.com/elupus/fjaraskupan";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/elupus/fjaraskupan/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,35 +1,85 @@
-{ lib, fetchPypi, buildPythonPackage, isPyPy, python, libev, greenlet
-, zope_interface
+{
+  stdenv,
+  lib,
+  fetchPypi,
+  buildPythonPackage,
+  isPyPy,
+  python,
+  libev,
+  cffi,
+  cython,
+  greenlet,
+  importlib-metadata,
+  setuptools,
+  zope-event,
+  zope-interface,
+  c-ares,
+  libuv,
+
+  # for passthru.tests
+  dulwich,
+  gunicorn,
+  pika,
 }:
 
 buildPythonPackage rec {
   pname = "gevent";
-  version = "20.9.0";
-  format = "pyproject";
+  version = "26.5.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "13aw9x6imsy3b369kfjblqiwfni69pp32m4r13n62r9k3l2lhvaz";
+    hash = "sha256-FlXrBMHiDXGyqko8dSgWLdWP9sxGoDevHwH1NMgP77o=";
   };
 
-  buildInputs = [ libev ];
-  propagatedBuildInputs = [
-    zope_interface
-  ] ++ lib.optionals (!isPyPy) [ greenlet ];
+  build-system = [
+    cython
+    setuptools
+  ]
+  ++ lib.optionals (!isPyPy) [ cffi ];
 
-  checkPhase = ''
-    cd greentest
-    ${python.interpreter} testrunner.py
-  '';
+  buildInputs = [
+    libev
+    libuv
+    c-ares
+  ];
+
+  dependencies = [
+    importlib-metadata
+    zope-event
+    zope-interface
+  ]
+  ++ lib.optionals (!isPyPy) [ greenlet ];
+
+  env = {
+    GEVENTSETUP_EMBED = "0";
+  }
+  // lib.optionalAttrs stdenv.cc.isGNU {
+    NIX_CFLAGS_COMPILE = "-Wno-error=incompatible-pointer-types";
+  };
 
   # Bunch of failures.
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [
+    "gevent"
+    "gevent.events"
+  ];
+
+  passthru.tests = {
+    inherit
+      dulwich
+      gunicorn
+      pika
+      ;
+  }
+  // lib.filterAttrs (k: v: lib.hasInfix "gevent" k) python.pkgs;
+
+  meta = {
     description = "Coroutine-based networking library";
     homepage = "http://www.gevent.org/";
-    license = licenses.mit;
-    platforms = platforms.unix;
-    maintainers = with maintainers; [ bjornfor ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ bjornfor ];
+    platforms = lib.platforms.unix;
   };
 }

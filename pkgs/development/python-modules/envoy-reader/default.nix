@@ -1,48 +1,59 @@
-{ lib
-, buildPythonPackage
-, envoy-utils
-, fetchFromGitHub
-, httpx
-, pytest-asyncio
-, pytest-raises
-, pytestCheckHook
-, respx
+{
+  lib,
+  beautifulsoup4,
+  buildPythonPackage,
+  envoy-utils,
+  fetchFromGitHub,
+  setuptools,
+  httpx,
+  pyjwt,
+  pytest-asyncio,
+  pytestCheckHook,
+  pytest-raises,
+  respx,
 }:
 
 buildPythonPackage rec {
   pname = "envoy-reader";
-  version = "0.20.0";
+  version = "0.21.3";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "jesserizzo";
     repo = "envoy_reader";
     rev = version;
-    sha256 = "sha256-nPB1Fvb1qwLHeFkXP2jXixD2ZGA09MtS1qXRhYGt0fM=";
+    hash = "sha256-aIpZ4ln4L57HwK8H0FqsyNnXosnAp3ingrJI6/MPS90=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    beautifulsoup4
     envoy-utils
     httpx
+    pyjwt
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytest-raises
     pytest-asyncio
     pytestCheckHook
     respx
   ];
 
+  pythonRelaxDeps = [ "pyjwt" ];
+
   postPatch = ''
     substituteInPlace setup.py \
-      --replace "pytest-runner>=5.2" ""
+      --replace-fail "pytest-runner>=5.2" ""
   '';
 
   pythonImportsCheck = [ "envoy_reader" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to read from Enphase Envoy units";
     homepage = "https://github.com/jesserizzo/envoy_reader";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

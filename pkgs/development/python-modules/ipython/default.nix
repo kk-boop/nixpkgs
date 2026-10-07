@@ -1,71 +1,111 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
-# Build dependencies
-, glibcLocales
-# Test dependencies
-, nose
-, pygments
-# Runtime dependencies
-, jedi
-, decorator
-, matplotlib-inline
-, pickleshare
-, traitlets
-, prompt-toolkit
-, pexpect
-, appnope
-, backcall
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  pythonOlder,
+
+  # Build dependencies
+  setuptools,
+
+  # Runtime dependencies
+  decorator,
+  ipython-pygments-lexers,
+  jedi,
+  matplotlib-inline,
+  pexpect,
+  prompt-toolkit,
+  psutil,
+  pygments,
+  stack-data,
+  traitlets,
+  typing-extensions,
+
+  # Optional dependencies
+  matplotlib,
+
+  # Reverse dependency
+  sage,
+
+  # Test dependencies
+  pickleshare,
+  pytest-asyncio,
+  pytestCheckHook,
+  testpath,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "ipython";
-  version = "7.28.0";
-  disabled = pythonOlder "3.7";
+  version = "9.14.0";
+  outputs = [
+    "out"
+    "man"
+  ];
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "2097be5c814d1b974aea57673176a924c4c8c9583890e7a5f082f547b9975b11";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-byf/Dx2eoFDgVR9xVovEs02KuleejxEcW0F19ErGtKo=";
   };
 
-  prePatch = lib.optionalString stdenv.isDarwin ''
-    substituteInPlace setup.py --replace "'gnureadline'" " "
-  '';
+  build-system = [ setuptools ];
 
-  buildInputs = [ glibcLocales ];
-
-  checkInputs = [ nose pygments ];
-
-  propagatedBuildInputs = [
-    jedi
+  dependencies = [
     decorator
+    ipython-pygments-lexers
+    jedi
     matplotlib-inline
-    pickleshare
-    traitlets
-    prompt-toolkit
-    pygments
     pexpect
-    backcall
-  ] ++ lib.optionals stdenv.isDarwin [appnope];
+    prompt-toolkit
+    psutil
+    pygments
+    stack-data
+    traitlets
+  ]
+  ++ lib.optionals (pythonOlder "3.12") [ typing-extensions ];
 
-  LC_ALL="en_US.UTF-8";
+  optional-dependencies = {
+    matplotlib = [ matplotlib ];
+  };
 
-  doCheck = false; # Circular dependency with ipykernel
+  pythonImportsCheck = [ "IPython" ];
 
-  checkPhase = ''
-    nosetests
+  preCheck = ''
+    export HOME=$TMPDIR
+
+    # doctests try to fetch an image from the internet
+    substituteInPlace pyproject.toml \
+      --replace-fail '"--ipdoctest-modules",' '"--ipdoctest-modules", "--ignore=IPython/core/display.py",'
   '';
 
-  pythonImportsCheck = [
-    "IPython"
+  nativeCheckInputs = [
+    pickleshare
+    pytest-asyncio
+    pytestCheckHook
+    testpath
   ];
 
-  meta = with lib; {
-    description = "IPython: Productive Interactive Computing";
-    homepage = "http://ipython.org/";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ bjornfor fridh ];
+  disabledTests = [
+    # timing sensitive
+    "test_debug_magic_passes_through_generators"
+    "test_nest_embed"
+  ]
+  ++ lib.optionals stdenv.hostPlatform.isDarwin [
+    # FileNotFoundError: [Errno 2] No such file or directory: 'pbpaste'
+    "test_clipboard_get"
+  ];
+
+  passthru.tests = {
+    inherit sage;
   };
-}
+
+  meta = {
+    description = "IPython: Productive Interactive Computing";
+    downloadPage = "https://github.com/ipython/ipython/";
+    homepage = "https://ipython.readthedocs.io/en/stable/";
+    changelog = "https://github.com/ipython/ipython/blob/${finalAttrs.version}/docs/source/whatsnew/version${lib.versions.major finalAttrs.version}.rst";
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [ bjornfor ];
+    teams = [ lib.teams.jupyter ];
+  };
+})

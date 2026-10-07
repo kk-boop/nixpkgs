@@ -1,43 +1,59 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytest
-, pytest-mypy
-, pytestCheckHook
-, pythonOlder
-, types-setuptools
+{
+  lib,
+  anyio,
+  buildPythonPackage,
+  curio-compat,
+  fetchFromGitHub,
+  hatchling,
+  hypothesis,
+  pytest,
+  pytestCheckHook,
+  pythonOlder,
+  trio-asyncio,
+  trio,
+  uvloop,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pytest-aio";
-  version = "1.4.1";
-  format = "setuptools";
+  version = "2.1.7";
+  pyproject = true;
 
-  disabled = pythonOlder "3.7";
-
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "ZPG6k+ZNi6FQftIVwr/Lux5rJlo284V/mjtYepNScdQ=";
+  src = fetchFromGitHub {
+    owner = "klen";
+    repo = "pytest-aio";
+    tag = finalAttrs.version;
+    hash = "sha256-HvD7bBT8QX9Au5TON4yLit2AOLVSRGqdkkwenyqzhpo=";
   };
 
-  buildInputs = [
-    pytest
-  ];
+  build-system = [ hatchling ];
 
-  checkInputs = [
-    pytest-mypy
+  buildInputs = [ pytest ];
+
+  optional-dependencies = {
+    curio = [ curio-compat ];
+    trio = [ trio ];
+    uvloop = [ uvloop ];
+  };
+
+  nativeCheckInputs = [
+    anyio
+    hypothesis
     pytestCheckHook
-    types-setuptools
-  ];
+  ]
+  # https://github.com/python-trio/trio-asyncio/issues/160
+  ++ lib.optionals (pythonOlder "3.14") [
+    trio-asyncio
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
-  pythonImportsCheck = [
-    "pytest_aio"
-  ];
+  pythonImportsCheck = [ "pytest_aio" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/klen/pytest-aio";
+  meta = {
     description = "Pytest plugin for aiohttp support";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/klen/pytest-aio";
+    changelog = "https://github.com/klen/pytest-aio/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

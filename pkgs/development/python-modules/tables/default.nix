@@ -1,89 +1,121 @@
-{ lib
-, fetchPypi
-, fetchpatch
-, buildPythonPackage
-, pythonOlder
-, bzip2
-, c-blosc
-, cython
-, hdf5
-, lzo
-, numpy
-, numexpr
-, setuptools
+{
+  lib,
+  fetchFromGitHub,
+  buildPythonPackage,
+  stdenv,
+
+  # build-system
+  cython,
+  setuptools,
+  sphinx,
+
+  # build-inputs
+  blosc2,
+  bzip2,
+  c-blosc,
+  hdf5,
+  lzo,
+  pkg-config,
+
+  # dependencies
+  numexpr,
+  numpy,
+  packaging, # uses packaging.version at runtime
+  py-cpuinfo,
+  typing-extensions,
+
   # Test inputs
-, pytestCheckHook
+  python,
+  writableTmpDirAsHomeHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "tables";
-  version = "3.6.1";
-  disabled = pythonOlder "3.5";
+  version = "3.11.1";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0j8vnxh2m5n0cyk9z3ndcj5n1zj5rdxgc1gb78bqlyn2lyw75aa9";
+  src = fetchFromGitHub {
+    owner = "PyTables";
+    repo = "PyTables";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-ImzfUc+B5odozROkwhnDUY2a9XDXn8Il2wKuLzOvKAg=";
+    fetchSubmodules = true;
   };
 
-  nativeBuildInputs = [ cython ];
+  build-system = [
+    cython
+    setuptools
+    sphinx
+  ];
+
+  nativeBuildInputs = [
+    pkg-config
+  ];
 
   buildInputs = [
+    blosc2
     bzip2
     c-blosc
+    blosc2.c-blosc2
     hdf5
     lzo
   ];
-  propagatedBuildInputs = [
+
+  dependencies = [
+    blosc2
+    c-blosc
+    blosc2.c-blosc2
+    py-cpuinfo
     numpy
     numexpr
-    setuptools  # uses pkg_resources at runtime
+    packaging # uses packaging.version at runtime
+    typing-extensions
   ];
 
-  patches = [
-    (fetchpatch {
-      # Needed for numpy >= 1.20.0
-      name = "tables-pr-862-use-lowercase-numpy-dtypes.patch";
-      url = "https://github.com/PyTables/PyTables/commit/93a3272b8fe754095637628b4d312400e24ae654.patch";
-      sha256 = "00czgxnm1dxp9763va9xw1nc7dd7kxh9hjcg9klim52519hkbhi4";
-    })
-  ];
-  # When doing `make distclean`, ignore docs
   postPatch = ''
-    substituteInPlace Makefile --replace "src doc" "src"
     # Force test suite to error when unittest runner fails
     substituteInPlace tables/tests/test_suite.py \
-      --replace "return 0" "assert result.wasSuccessful(); return 0" \
-      --replace "return 1" "assert result.wasSuccessful(); return 1"
+      --replace-fail "return 0" "assert result.wasSuccessful(); return 0" \
+      --replace-fail "return 1" "assert result.wasSuccessful(); return 1"
+    # Hard-code the blosc2 path to avoid issues with blosc2.c-blosc2
+    substituteInPlace tables/__init__.py \
+      --replace-fail "ctypes.CDLL(str(lib_path))" \
+      "ctypes.CDLL('"${lib.getLib c-blosc}/lib/libblosc${stdenv.hostPlatform.extensions.sharedLibrary}"')"
   '';
 
-  # Regenerate C code with Cython
-  preBuild = ''
-    make distclean
-  '';
+  env = {
+    HDF5_DIR = lib.getDev hdf5;
+    LZO_DIR = lib.getDev lzo;
+    BZIP2_DIR = lib.getDev bzip2;
+    BLOSC_DIR = lib.getDev c-blosc;
+    BLOSC2_DIR = lib.getDev blosc2.c-blosc2;
+  };
 
-  setupPyBuildFlags = [
-    "--hdf5=${lib.getDev hdf5}"
-    "--lzo=${lib.getDev lzo}"
-    "--bzip2=${lib.getDev bzip2}"
-    "--blosc=${lib.getDev c-blosc}"
+  nativeCheckInputs = [
+    python
+    writableTmpDirAsHomeHook
   ];
 
-  checkInputs = [ pytestCheckHook ];
   preCheck = ''
-    cd ..
+    cd tables/tests
   '';
-  # Runs the test suite as one single test via unittest. The whole "heavy" test suite supposedly takes ~5 hours to run.
-  pytestFlagsArray = [
-    "--pyargs"
-    "tables.tests.test_suite"
-  ];
+
+  # Runs the light (yet comprehensive) subset of the test suite.
+  # Pass `--heavy` for the whole "heavy" test suite (hour+ runtime).
+  checkPhase = ''
+    runHook preCheck
+    ${python.interpreter} -m tables.tests.test_all
+    runHook postCheck
+  '';
 
   pythonImportsCheck = [ "tables" ];
 
-  meta = with lib; {
+  meta = {
     description = "Hierarchical datasets for Python";
     homepage = "https://www.pytables.org/";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ drewrisinger ];
+    changelog = "https://github.com/PyTables/PyTables/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ sarahec ];
   };
-}
+})

@@ -1,42 +1,40 @@
-{ lib
-, buildPythonPackage
-, cython
-, fetchFromGitHub
-, poetry-core
-, pythonOlder
+{
+  lib,
+  buildPythonPackage,
+  cython,
+  fetchFromGitHub,
+  poetry-core,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "asyncmy";
-  version = "0.2.3";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "0.2.15";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "long2ice";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "ys9RYaosc4noJsWYsVo9+6W7JaG4r6lsz6UH4o08q4A=";
+    repo = "asyncmy";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-wAhw2V/7N7UzxSAXzggZekP6BWW3WPGTcs3LDUi9TgA=";
   };
 
-  nativeBuildInputs = [
+  build-system = [
     cython
     poetry-core
+    setuptools
   ];
 
-  # Not running tests as aiomysql is missing support for
-  # pymysql>=0.9.3
+  # Not running tests as aiomysql is missing support for pymysql>=0.9.3
   doCheck = false;
 
-  pythonImportsCheck = [
-    "asyncmy"
-  ];
+  pythonImportsCheck = [ "asyncmy" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to interact with MySQL/mariaDB";
     homepage = "https://github.com/long2ice/asyncmy";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/long2ice/asyncmy/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

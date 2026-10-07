@@ -1,34 +1,39 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, colorama
-, django
-, docopt
-, pytestCheckHook
-, parso
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  setuptools,
+
+  # dependencies
+  parso,
+
+  # tests
+  attrs,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "jedi";
-  version = "0.18.0";
-  disabled = pythonOlder "3.6";
+  version = "0.20.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "davidhalter";
     repo = "jedi";
-    rev = "v${version}";
-    sha256 = "0d8zdj56hyxbsvvrid6r3nprm0ygxaad6zpsbhbj6k7p3dcx7acw";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-D0Zy8HJYq5l8Wp1M+J7p8Z+EBY/R5tYFa2uMYiqLIT8=";
     fetchSubmodules = true;
   };
 
-  propagatedBuildInputs = [ parso ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    colorama
-    django
-    docopt
+  dependencies = [ parso ];
+
+  nativeCheckInputs = [
+    attrs
     pytestCheckHook
   ];
 
@@ -36,21 +41,25 @@ buildPythonPackage rec {
     export HOME=$TMPDIR
   '';
 
-  disabledTests = [
-    # Assertions mismatches with pytest>=6.0
-    "test_completion"
+  disabledTests =
+    lib.optionals stdenv.hostPlatform.isDarwin [
+      # sensitive to platform, causes false negatives on darwin
+      "test_import"
+    ]
+    ++ lib.optionals stdenv.targetPlatform.useLLVM [
+      # InvalidPythonEnvironment: The python binary is potentially unsafe.
+      "test_create_environment_executable"
+      # AssertionError: assert ['', '.1000000000000001'] == ['', '.1']
+      "test_dict_keys_completions"
+      # AssertionError: assert ['', '.1000000000000001'] == ['', '.1']
+      "test_dict_completion"
+    ];
 
-    # sensitive to platform, causes false negatives on darwin
-    "test_import"
-  ] ++ lib.optionals (stdenv.isAarch64 && pythonOlder "3.9") [
-    # AssertionError: assert 'foo' in ['setup']
-    "test_init_extension_module"
-  ];
-
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/davidhalter/jedi/blob/${finalAttrs.src.tag}/CHANGELOG.rst";
+    description = "Autocompletion tool for Python that can be used for text editors";
     homepage = "https://github.com/davidhalter/jedi";
-    description = "An autocompletion tool for Python that can be used for text editors";
-    license = licenses.lgpl3Plus;
-    maintainers = with maintainers; [ ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

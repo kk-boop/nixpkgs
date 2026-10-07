@@ -1,40 +1,96 @@
-{ buildPythonPackage, fetchFromGitHub, lib, passlib, pytestCheckHook, setuptools
-, setuptools-git, twine, webtest }:
+{
+  lib,
+  buildPythonPackage,
+  distutils,
+  fetchFromGitHub,
+  passlib,
+  pip,
+  pytestCheckHook,
+  pythonOlder,
+  setuptools,
+  twine,
+  watchdog,
+  webtest,
+  build,
+  importlib-resources,
+}:
 
 buildPythonPackage rec {
   pname = "pypiserver";
-  version = "1.4.2";
+  version = "2.4.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "1z5rsmqgin98m6ihy1ww42fxxr6jb4hzldn8vlc9ssv7sawdz8vz";
+    owner = "pypiserver";
+    repo = "pypiserver";
+    tag = "v${version}";
+    hash = "sha256-nqoAT3g32srJ0c3sGNFQBznLsnymDPUfL7kcON+BP0k=";
   };
 
-  nativeBuildInputs = [ setuptools-git ];
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail '"setuptools-git>=0.3",' ""
+  '';
 
-  propagatedBuildInputs = [ setuptools ];
+  build-system = [
+    setuptools
+  ];
+
+  dependencies = [
+    distutils
+    pip
+  ]
+  ++ lib.optionals (pythonOlder "3.12") [ importlib-resources ];
+
+  optional-dependencies = {
+    passlib = [ passlib ];
+    cache = [ watchdog ];
+  };
+
+  nativeCheckInputs = [
+    pip
+    pytestCheckHook
+    setuptools
+    twine
+    webtest
+    build
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
+  __darwinAllowLocalNetworking = true;
+
+  # Tests need these permissions in order to use the FSEvents API on macOS.
+  sandboxProfile = ''
+    (allow mach-lookup (global-name "com.apple.FSEvents"))
+  '';
 
   preCheck = ''
     export HOME=$TMPDIR
   '';
 
-  checkInputs = [ passlib pytestCheckHook twine webtest ];
-
-  # These tests try to use the network
   disabledTests = [
-    "test_pipInstall_openOk"
-    "test_pipInstall_authedOk"
+    # Fails to install the package
     "test_hash_algos"
+    "test_pip_install_authed_succeeds"
+    "test_pip_install_open_succeeds"
+  ];
+
+  disabledTestPaths = [
+    # Test requires docker service running
+    "docker/test_docker.py"
   ];
 
   pythonImportsCheck = [ "pypiserver" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/pypiserver/pypiserver";
+  meta = {
     description = "Minimal PyPI server for use with pip/easy_install";
-    license = with licenses; [ mit zlib ];
-    maintainers = [ maintainers.austinbutler ];
+    homepage = "https://github.com/pypiserver/pypiserver";
+    changelog = "https://github.com/pypiserver/pypiserver/releases/tag/v${version}";
+    license = with lib.licenses; [
+      mit
+      zlib
+    ];
+    maintainers = with lib.maintainers; [ austinbutler ];
+    mainProgram = "pypi-server";
   };
 }

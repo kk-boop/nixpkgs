@@ -1,17 +1,20 @@
-{ lib, mkDiscoursePlugin, fetchFromGitHub }:
+{
+  lib,
+  mkDiscoursePlugin,
+  fetchFromGitHub,
+}:
 
 mkDiscoursePlugin {
   name = "discourse-docs";
   src = fetchFromGitHub {
     owner = "discourse";
     repo = "discourse-docs";
-    rev = "d3eee7008b7a703774331808e302e36f2f8b4eae";
-    sha256 = "1p3aqfpv207pvlbis43znwgw56yqsn41320yaw1gdcaakf5s2rsx";
+    rev = "89bae0e929387ed5697fd3c5eedf9b3dbe85bead";
+    sha256 = "sha256-ycDyYRi7uab4vxHY8K2kUytWBmTuFTFHYGD1AHpzC+0=";
   };
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/discourse/discourse-docs";
-    maintainers = with maintainers; [ dpausp ];
-    license = licenses.mit;
+    license = lib.licenses.mit;
     description = "Find and filter knowledge base topics";
   };
 }

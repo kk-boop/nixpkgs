@@ -1,22 +1,35 @@
-{ lib, buildPythonPackage, fetchPypi, pytest, pytest-runner, six, regex}:
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  regex,
+  uv-build,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "rebulk";
-  version = "3.1.0";
+  version = "6.0.1";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "809de3a97c68afa831f7101b10d316fe62e061dc9f7f67a44b7738128721173a";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-1t8MjIluFgCHxpgfN3DtUT7Jc6n0BmueSwYU6wi6DOE=";
   };
 
-  # Some kind of trickery with imports that doesn't work.
-  doCheck = false;
-  buildInputs = [ pytest pytest-runner ];
-  propagatedBuildInputs = [ six regex ];
+  build-system = [ uv-build ];
 
-  meta = with lib; {
-    homepage = "https://github.com/Toilal/rebulk/";
-    license = licenses.mit;
+  dependencies = [ regex ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "rebulk" ];
+
+  meta = {
     description = "Advanced string matching from simple patterns";
+    homepage = "https://github.com/Toilal/rebulk/";
+    changelog = "https://github.com/Toilal/rebulk/blob/v${finalAttrs.version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

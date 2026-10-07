@@ -1,58 +1,68 @@
-{ lib
-, aiohttp
-, aioresponses
-, buildPythonPackage
-, click
-, dateparser
-, fetchFromGitHub
-, marshmallow-dataclass
-, poetry-core
-, pyjwt
-, pythonOlder
-, pytest-asyncio
-, pytestCheckHook
-, tabulate
+{
+  lib,
+  aiohttp,
+  aiointercept,
+  buildPythonPackage,
+  click,
+  cryptography,
+  dateparser,
+  fetchFromGitHub,
+  marshmallow-dataclass,
+  poetry-core,
+  pyjwt,
+  pytest-asyncio,
+  pytestCheckHook,
+  syrupy_6,
+  tabulate,
+  typeguard,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "renault-api";
-  version = "0.1.5";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.7";
+  version = "0.5.13";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "hacf-fr";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-b3oHpERUqeIw0yOxZytQuRE4jVUcahWlMQ+7ZBX0KL8=";
+    repo = "renault-api";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-+kzIPnz34uTjUQ9hksxr3RIEg0+/w+8BdoH+ruenzi0=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  build-system = [ poetry-core ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     aiohttp
-    click
-    dateparser
+    cryptography
     marshmallow-dataclass
     pyjwt
-    tabulate
   ];
 
-  checkInputs = [
-    aioresponses
+  optional-dependencies = {
+    cli = [
+      click
+      dateparser
+      tabulate
+    ];
+  };
+
+  nativeCheckInputs = [
+    aiointercept
     pytest-asyncio
     pytestCheckHook
-  ];
+    syrupy_6
+    typeguard
+  ]
+  ++ lib.flatten (builtins.attrValues finalAttrs.passthru.optional-dependencies);
 
   pythonImportsCheck = [ "renault_api" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to interact with the Renault API";
     homepage = "https://github.com/hacf-fr/renault-api";
-    license = licenses.mit;
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/hacf-fr/renault-api/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "renault-api";
   };
-}
+})

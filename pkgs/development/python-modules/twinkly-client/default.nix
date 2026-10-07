@@ -1,30 +1,31 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchPypi
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchPypi,
 }:
 
 buildPythonPackage rec {
   pname = "twinkly-client";
-  version = "0.0.2";
-  disabled = pythonOlder "3.6";
+  version = "0.0.3";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "16jbm4ya4yk2nfswza1kpgks70rmy5lpsv9dv3hdjdnr1j44hr3i";
+    hash = "sha256-F/N6yMOvLHIfXvPyR7z3P/Rlh79OvCbvEiNwClLSLl8=";
   };
 
   propagatedBuildInputs = [ aiohttp ];
 
   # Project has no tests
   doCheck = false;
+
   pythonImportsCheck = [ "twinkly_client" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to communicate with Twinkly LED strings";
     homepage = "https://github.com/dr1rrb/py-twinkly-client";
-    license = with licenses; [ asl20 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

@@ -1,4 +1,10 @@
-{ lib, stdenv, fetchFromGitHub, ocaml, findlib }:
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  ocaml,
+  findlib,
+}:
 
 stdenv.mkDerivation rec {
   pname = "ocaml${ocaml.version}-twt";
@@ -11,7 +17,12 @@ stdenv.mkDerivation rec {
     sha256 = "sha256-xbjLPd7P1KyuC3i6WHLBcdLwd14atcBsd5ER+l97KAk=";
   };
 
-  buildInputs = [ ocaml findlib ];
+  nativeBuildInputs = [
+    ocaml
+    findlib
+  ];
+
+  strictDeps = true;
 
   preInstall = ''
     mkdir -p $out/bin
@@ -24,11 +35,13 @@ stdenv.mkDerivation rec {
 
   dontStrip = true;
 
-  meta = with lib; {
-    homepage = "http://people.csail.mit.edu/mikelin/ocaml+twt/";
+  meta = {
     description = "“The Whitespace Thing” for OCaml";
-    license = licenses.mit;
-    maintainers = [ maintainers.vbgl ];
-    platforms = ocaml.meta.platforms or [ ];
+    homepage = "http://people.csail.mit.edu/mikelin/ocaml+twt/";
+    license = lib.licenses.mit;
+    maintainers = [ lib.maintainers.vbgl ];
+    mainProgram = "ocaml+twt";
+    broken = lib.versionAtLeast ocaml.version "5.0";
+    inherit (ocaml.meta) platforms;
   };
 }

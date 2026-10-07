@@ -1,37 +1,37 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, isPy3k
-, pytestCheckHook
-, voluptuous
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  pytestCheckHook,
+  voluptuous,
 }:
 
-buildPythonPackage rec  {
+buildPythonPackage rec {
   pname = "voluptuous-serialize";
-  version = "2.4.0";
-
-  disabled = !isPy3k;
+  version = "2.7.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "home-assistant-libs";
-    repo = pname;
-    rev = version;
-    sha256 = "1km2y1xaagkdvsy3bmi1sc040x5yyfdw6llmwdv9z8nz67m9v1ya";
+    repo = "voluptuous-serialize";
+    tag = version;
+    hash = "sha256-vmBK4FJr15wOYHtH14OqeyY/vgVOSrpo0Sd9wqu4zgo=";
   };
 
-  propagatedBuildInputs = [ voluptuous ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
-    pytestCheckHook
-    voluptuous
-  ];
+  dependencies = [ voluptuous ];
 
   pythonImportsCheck = [ "voluptuous_serialize" ];
 
-  meta = with lib; {
-    homepage = "https://github.com/home-assistant-libs/voluptuous-serialize";
-    license = licenses.asl20;
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Convert Voluptuous schemas to dictionaries so they can be serialized";
-    maintainers = with maintainers; [ etu ];
+    homepage = "https://github.com/home-assistant-libs/voluptuous-serialize";
+    changelog = "https://github.com/home-assistant-libs/voluptuous-serialize/releases/tag/${version}";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

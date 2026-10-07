@@ -1,28 +1,34 @@
-{ lib, fetchurl, buildDunePackage, dune-configurator }:
+{
+  lib,
+  fetchFromGitHub,
+  buildDunePackage,
+  dune-configurator,
+}:
 
-buildDunePackage rec {
+buildDunePackage (finalAttrs: {
   pname = "parmap";
-  version = "1.2.3";
+  version = "1.2.5";
 
-  src = fetchurl {
-    url = "https://github.com/rdicosmo/${pname}/releases/download/${version}/${pname}-${version}.tbz";
-    sha256 = "1wg81slp453jci0gi0rzvdjx74110mlf1n5qpsmxic6fqsyz9d2v";
+  src = fetchFromGitHub {
+    owner = "rdicosmo";
+    repo = "parmap";
+    rev = finalAttrs.version;
+    hash = "sha256-tBu7TGtDOe5FbxLZuz6nl+65aN9FHIngq/O4dJWzr3Q=";
   };
 
   minimalOCamlVersion = "4.03";
-  useDune2 = true;
 
   buildInputs = [
     dune-configurator
   ];
 
-  doCheck = true;
+  doCheck = false; # prevent running slow benchmarks
 
-  meta = with lib; {
+  meta = {
     description = "Library for multicore parallel programming";
     downloadPage = "https://github.com/rdicosmo/parmap";
     homepage = "https://rdicosmo.github.io/parmap";
-    license = licenses.lgpl2;
-    maintainers = with maintainers; [ bcdarwin ];
+    license = lib.licenses.lgpl2;
+    maintainers = with lib.maintainers; [ bcdarwin ];
   };
-}
+})

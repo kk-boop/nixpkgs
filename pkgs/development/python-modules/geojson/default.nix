@@ -1,23 +1,35 @@
-{ lib, buildPythonPackage, fetchPypi, glibcLocales }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  unittestCheckHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "geojson";
-  version = "2.5.0";
+  version = "3.3.0";
+  pyproject = true;
 
-  format = "wheel";
-
-  src = fetchPypi {
-    inherit pname version format;
-    sha256 = "1filqm050ixy53kdv81bd4n80vjvfapnmzizy7jg8a6pilv17gfc";
+  src = fetchFromGitHub {
+    owner = "jazzband";
+    repo = "geojson";
+    tag = finalAttrs.version;
+    hash = "sha256-Gz+hiv0CxitE+upLsiln+H8TtWezpUDaPH80UM7VHTA=";
   };
 
-  LC_ALL = "en_US.UTF-8";
-  checkInputs = [ glibcLocales ];
+  build-system = [ setuptools ];
+
+  pythonImportsCheck = [ "geojson" ];
+
+  nativeCheckInputs = [ unittestCheckHook ];
 
   meta = {
-    homepage = "https://github.com/frewsxcv/python-geojson";
+    homepage = "https://github.com/jazzband/geojson";
+    changelog = "https://github.com/jazzband/geojson/blob/${finalAttrs.src.tag}/CHANGELOG.rst";
     description = "Python bindings and utilities for GeoJSON";
     license = lib.licenses.bsd3;
-    maintainers = with lib.maintainers; [ oxzi ];
+    maintainers = [ ];
+    teams = [ lib.teams.geospatial ];
   };
-}
+})

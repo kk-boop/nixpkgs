@@ -1,82 +1,109 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
-, blis
-, catalogue
-, cymem
-, cython
-, Accelerate
-, CoreFoundation
-, CoreGraphics
-, CoreVideo
-, hypothesis
-, mock
-, murmurhash
-, numpy
-, plac
-, pythonOlder
-, preshed
-, pydantic
-, srsly
-, tqdm
-, typing-extensions
-, wasabi
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  blis,
+  cymem,
+  cython,
+  murmurhash,
+  numpy,
+  preshed,
+  setuptools,
+
+  # buildInputs
+  blas,
+
+  # dependencies
+  catalogue,
+  confection,
+  pydantic,
+  srsly,
+  wasabi,
+
+  # tests
+  hypothesis,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "thinc";
-  version = "8.0.10";
+  version = "8.3.12";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
-
-  src = fetchPypi {
-    inherit pname version;
-    hash = "sha256-teTbjSTmvopfHkoXhUdyt5orVgIkUZ9Qoh85UcokAB8=";
+  src = fetchFromGitHub {
+    owner = "explosion";
+    repo = "thinc";
+    tag = "release-v${finalAttrs.version}";
+    hash = "sha256-8nf+AWAD7Fy50XRJDINmyk42F7KMDhGgATwqbln3r04=";
   };
 
-  buildInputs = [ cython ]
-    ++ lib.optionals stdenv.isDarwin [
-    Accelerate
-    CoreFoundation
-    CoreGraphics
-    CoreVideo
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail coverage.exceptions.CoverageWarning ""
+  '';
+
+  build-system = [
+    blis
+    cymem
+    cython
+    murmurhash
+    numpy
+    preshed
+    setuptools
   ];
 
-  propagatedBuildInputs = [
+  buildInputs = [
+    blas
+  ];
+
+  dependencies = [
     blis
     catalogue
+    confection
     cymem
     murmurhash
     numpy
-    plac
     preshed
-    srsly
-    tqdm
     pydantic
+    srsly
     wasabi
-  ] ++ lib.optional (pythonOlder "3.8") typing-extensions;
-
-  checkInputs = [
-    hypothesis
-    mock
-    pytestCheckHook
-  ];
-
-  # Cannot find cython modules.
-  doCheck = false;
-
-  pytestFlagsArray = [
-    "thinc/tests"
   ];
 
   pythonImportsCheck = [ "thinc" ];
 
-  meta = with lib; {
-    description = "Practical Machine Learning for NLP in Python";
+  nativeCheckInputs = [
+    hypothesis
+    pytestCheckHook
+  ];
+
+  # avoid local paths, relative imports wont resolve correctly
+  preCheck = ''
+    mv thinc/tests tests
+    rm -r thinc
+  '';
+
+  pytestFlags = [
+    # UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+    "-Wignore::UserWarning"
+  ];
+
+  disabledTestPaths = [
+    # pydantic.v1.error_wrappers.ValidationError: 1 validation error for DefaultsSchema
+    "tests/test_config.py"
+  ];
+
+  disabledTests = [
+    # RecursionError: Stack overflow (used 8148 kB)
+    "test_pickle_with_flatten"
+  ];
+
+  meta = {
+    description = "Library for NLP machine learning";
     homepage = "https://github.com/explosion/thinc";
-    license = licenses.mit;
-    maintainers = with maintainers; [ aborsu ];
+    changelog = "https://github.com/explosion/thinc/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

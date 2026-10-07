@@ -1,59 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, click
-, click-log
-, dataclasses
-, pure-pcapy3
-, pyserial-asyncio
-, voluptuous
-, zigpy
-, asynctest
-, pythonOlder
-, pytestCheckHook
-, pytest-asyncio
-, pytest-timeout
+{
+  lib,
+  buildPythonPackage,
+  click,
+  click-log,
+  fetchFromGitHub,
+  pytest-asyncio,
+  pytest-timeout,
+  pytestCheckHook,
+  setuptools,
+  voluptuous,
+  zigpy,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "bellows";
-  version = "0.29.0";
-  format = "setuptools";
+  version = "1.0.1";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "zigpy";
     repo = "bellows";
-    rev = version;
-    sha256 = "sha256-coIrI3C6Wnn8Of/IHAlvZgkcBBf9OBQt5Ir6YOXCf0c=";
+    tag = finalAttrs.version;
+    hash = "sha256-UxvVV0zcBr21l5rgekRHqzNUP+4eg8BGp03czuULYQk=";
   };
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail '"setuptools-git-versioning<2"' "" \
+      --replace-fail 'dynamic = ["version"]' 'version = "${finalAttrs.version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     click
     click-log
-    pure-pcapy3
-    pyserial-asyncio
     voluptuous
     zigpy
-  ] ++ lib.optionals (pythonOlder "3.7") [
-    dataclasses
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     pytestCheckHook
     pytest-asyncio
     pytest-timeout
-  ]  ++ lib.optionals (pythonOlder "3.8") [
-    asynctest
   ];
 
-  pythonImportsCheck = [
-    "bellows"
-  ];
+  pythonImportsCheck = [ "bellows" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to implement EZSP for EmberZNet devices";
     homepage = "https://github.com/zigpy/bellows";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ etu mvnetbiz ];
+    changelog = "https://github.com/zigpy/bellows/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [ mvnetbiz ];
+    mainProgram = "bellows";
   };
-}
+})

@@ -1,60 +1,57 @@
-{ lib
-, ailment
-, archinfo
-, buildPythonPackage
-, cachetools
-, capstone
-, cffi
-, claripy
-, cle
-, cppheaderparser
-, dpkt
-, fetchFromGitHub
-, GitPython
-, itanium_demangler
-, mulpyplexer
-, nampa
-, networkx
-, progressbar2
-, protobuf
-, psutil
-, pycparser
-, pythonOlder
-, pyvex
-, sqlalchemy
-, rpyc
-, sortedcontainers
-, unicorn
+{
+  lib,
+  stdenv,
+  ailment,
+  archinfo,
+  buildPythonPackage,
+  cachetools,
+  capstone,
+  cffi,
+  claripy,
+  cle,
+  cppheaderparser,
+  cxxheaderparser,
+  dpkt,
+  fetchFromGitHub,
+  gitpython,
+  itanium-demangler,
+  mulpyplexer,
+  nampa,
+  networkx,
+  progressbar2,
+  protobuf,
+  psutil,
+  pycparser,
+  pyformlang,
+  pydemumble,
+  pyvex,
+  rich,
+  rpyc,
+  setuptools,
+  sortedcontainers,
+  sqlalchemy,
+  sympy,
+  unicorn-angr,
+  unique-log-filter,
 }:
-
-let
-  # Only the pinned release in setup.py works properly
-  unicorn' = unicorn.overridePythonAttrs (old: rec {
-    pname = "unicorn";
-    version = "1.0.2-rc4";
-    src =  fetchFromGitHub {
-      owner = "unicorn-engine";
-      repo = pname;
-      rev = version;
-      sha256 = "17nyccgk7hpc4hab24yn57f1xnmr7kq4px98zbp2bkwcrxny8gwy";
-    };
-    doCheck = false;
-  });
-in
 
 buildPythonPackage rec {
   pname = "angr";
-  version = "9.0.10730";
-  disabled = pythonOlder "3.6";
+  version = "9.2.193";
+  pyproject = true;
 
   src = fetchFromGitHub {
-    owner = pname;
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-vH5TL3l4KQh48iBXQDCH+SsB9z6fFKzHLZbtMds6JV0=";
+    owner = "angr";
+    repo = "angr";
+    tag = "v${version}";
+    hash = "sha256-7wBfxHWD5FRin8pfKup4izJBQzFN5N5dQZqIto5y83k=";
   };
 
-  propagatedBuildInputs = [
+  pythonRelaxDeps = [ "capstone" ];
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     ailment
     archinfo
     cachetools
@@ -63,29 +60,41 @@ buildPythonPackage rec {
     claripy
     cle
     cppheaderparser
+    cxxheaderparser
     dpkt
-    GitPython
-    itanium_demangler
+    gitpython
+    itanium-demangler
     mulpyplexer
     nampa
     networkx
     progressbar2
     protobuf
     psutil
-    sqlalchemy
     pycparser
+    pyformlang
+    pydemumble
     pyvex
-    sqlalchemy
+    rich
     rpyc
     sortedcontainers
-    unicorn'
+    sympy
+    unique-log-filter
+  ];
+
+  optional-dependencies = {
+    angrdb = [ sqlalchemy ];
+    unicorn = [ unicorn-angr ];
+  };
+
+  setupPyBuildFlags = lib.optionals stdenv.hostPlatform.isLinux [
+    "--plat-name"
+    "linux"
   ];
 
   # Tests have additional requirements, e.g., pypcode and angr binaries
   # cle is executing the tests with the angr binaries
   doCheck = false;
 
-  # See http://angr.io/api-doc/
   pythonImportsCheck = [
     "angr"
     "claripy"
@@ -94,10 +103,10 @@ buildPythonPackage rec {
     "archinfo"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Powerful and user-friendly binary analysis platform";
     homepage = "https://angr.io/";
-    license = with licenses; [ bsd2 ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.bsd2;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

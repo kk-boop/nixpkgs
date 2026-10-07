@@ -1,18 +1,36 @@
-{ lib, buildPythonPackage, fetchPypi, py, pytest }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  pytest,
+  pytestCheckHook,
+}:
 
 buildPythonPackage rec {
   pname = "pytest-datafiles";
-  version = "2.0";
-  src = fetchPypi {
-    inherit version pname;
-    sha256 = "1yfvaqbqvjfikz215kwn6qiwwn9girka93zq4jphgfyvn75jjcql";
+  version = "3.0.1";
+  pyproject = true;
+
+  src = fetchFromGitHub {
+    owner = "omarkohl";
+    repo = "pytest-datafiles";
+    tag = version;
+    hash = "sha256-xB96JAUlEicIrTET1L363H8O2JwCTuUWr9jX/70uFvs=";
   };
 
-  buildInputs = [ py pytest ];
+  build-system = [ hatchling ];
 
-  meta = with lib; {
-    license = licenses.mit;
+  buildInputs = [ pytest ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  pythonImportsCheck = [ "pytest_datafiles" ];
+
+  meta = {
+    description = "Pytest plugin to create a tmpdir containing predefined files/directories";
     homepage = "https://github.com/omarkohl/pytest-datafiles";
-    description = "py.test plugin to create a 'tmpdir' containing predefined files/directories.";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

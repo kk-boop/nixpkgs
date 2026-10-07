@@ -1,49 +1,61 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromBitbucket
-, freezegun
-, netifaces
-, pytest-aiohttp
-, pytestCheckHook
-, pythonOlder
-, urllib3
+{
+  lib,
+  aiohttp,
+  aresponses,
+  buildPythonPackage,
+  fetchFromGitHub,
+  freezegun,
+  psutil,
+  pytest-asyncio,
+  pytestCheckHook,
+  urllib3,
+  setuptools,
+  tenacity,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "pydaikin";
-  version = "2.6.0";
-  disabled = pythonOlder "3.6";
+  version = "2.20.0";
+  pyproject = true;
 
-  src = fetchFromBitbucket {
-    owner = "mustang51";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-Fk6zMWgvhKp+7BMDGw89Akb4fgK6+xi+AyvEY3pdTQQ=";
+  src = fetchFromGitHub {
+    owner = "fredrike";
+    repo = "pydaikin";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-hkKtfDU2FPj1KeOd/N9hyEESfsYGdXj7YZC9CYuOQ0g=";
   };
 
-  propagatedBuildInputs = [
+  __darwinAllowLocalNetworking = true;
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     aiohttp
-    netifaces
+    psutil
     urllib3
+    tenacity
   ];
 
-  # while they have tests, they do not run them in their CI and they fail as of 2.6.0
-  # AttributeError: 'DaikinBRP069' object has no attribute 'last_hour_cool_energy_consumption'
-  doCheck = false;
-
-  checkInputs = [
+  nativeCheckInputs = [
+    aresponses
     freezegun
-    pytest-aiohttp
+    pytest-asyncio
     pytestCheckHook
+  ];
+
+  disabledTests = [
+    # Failed: async def functions are not natively supported.
+    "test_update_status_dry_comfort_offset"
   ];
 
   pythonImportsCheck = [ "pydaikin" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python Daikin HVAC appliances interface";
-    homepage = "https://bitbucket.org/mustang51/pydaikin";
-    license = with licenses; [ gpl3Only ];
-    maintainers = with maintainers; [ fab ];
+    homepage = "https://github.com/fredrike/pydaikin";
+    changelog = "https://github.com/fredrike/pydaikin/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.gpl3Only;
+    maintainers = with lib.maintainers; [ fab ];
+    mainProgram = "pydaikin";
   };
-}
+})

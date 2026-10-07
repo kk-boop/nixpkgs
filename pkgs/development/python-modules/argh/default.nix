@@ -1,34 +1,46 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytest
-, py
-, mock
-, glibcLocales
-, iocapture
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  flit-core,
+  iocapture,
+  mock,
+  pytestCheckHook,
 }:
 
 buildPythonPackage rec {
   pname = "argh";
-  version = "0.26.2";
+  version = "0.31.3";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "e9535b8c84dc9571a48999094fda7f33e63c3f1b74f3e5f3ac0105a58405bb65";
+    hash = "sha256-8wAj2L4Uyl7msbPuq4KRUde72kZK4H3E3VNHkZxYkvk=";
   };
 
-  checkInputs = [ pytest py mock glibcLocales iocapture ];
+  patches = [
+    # python3.14 introduced a breaking change which caused a test to fail. A
+    # fix has been committed upstream in a pull request by the author, but has
+    # since been kept unmerged
+    # https://github.com/neithere/argh/pull/240
+    ./pr240-699568ad-06-01-2025-test_integration.patch
+  ];
 
-  checkPhase = ''
-    export LANG="en_US.UTF-8"
-    py.test
-  '';
+  nativeBuildInputs = [ flit-core ];
 
-  meta = with lib; {
-    homepage = "https://github.com/neithere/argh/";
-    description = "An unobtrusive argparse wrapper with natural syntax";
-    license = licenses.lgpl2;
-    maintainers = with maintainers; [ domenkozar ];
+  nativeCheckInputs = [
+    iocapture
+    mock
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "argh" ];
+
+  meta = {
+    changelog = "https://github.com/neithere/argh/blob/v${version}/CHANGES";
+    homepage = "https://github.com/neithere/argh";
+    description = "Unobtrusive argparse wrapper with natural syntax";
+    license = lib.licenses.lgpl3Plus;
+    maintainers = [ ];
   };
-
 }

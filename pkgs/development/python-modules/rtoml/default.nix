@@ -1,51 +1,61 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
-, setuptools-rust
-, rustPlatform
-, pytestCheckHook
-, libiconv
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  rustPlatform,
+
+  # tests
+  dirty-equals,
+  pytest-benchmark,
+  pytestCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "rtoml";
-  version = "0.7";
-  disabled = pythonOlder "3.7";
+  version = "0.13";
+  pyproject = true;
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "samuelcolvin";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-h4vY63pDkrMHt2X244FssLxHsphsfjNd6gnVFUeZZTY=";
+    repo = "rtoml";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-QrGoMxNGKQS0En2txZq+mxxWpzwLbHRxqdsAZ1J/bcc=";
   };
 
-  cargoDeps = rustPlatform.fetchCargoTarball {
-    inherit src;
-    name = "${pname}-${version}";
-    sha256 = "05fwcs6w023ihw3gyihzbnfwjaqy40d6h0z2yas4kqkkvz9x4f8j";
+  # The `generate-import-lib` PyO3 feature only matters when building Windows import libraries;
+  # on other platforms it just pulls in the `python3-dll-a` crate, which is not vendored.
+  # Drop it so the offline maturin build resolves.
+  postPatch = ''
+    substituteInPlace pyproject.toml \
+      --replace-fail ', "pyo3/generate-import-lib"' ""
+  '';
+
+  cargoDeps = rustPlatform.fetchCargoVendor {
+    inherit (finalAttrs) pname version src;
+    hash = "sha256-qHd82jdOyaIqVFFt+ZrHIH0EPwlLJpCFCrx15DN5Rig=";
   };
 
   nativeBuildInputs = with rustPlatform; [
-    setuptools-rust
-    rust.rustc
-    rust.cargo
     cargoSetupHook
+    maturinBuildHook
   ];
-
-  buildInputs = [ libiconv ];
 
   pythonImportsCheck = [ "rtoml" ];
 
-  checkInputs = [ pytestCheckHook ];
-  preCheck = ''
-    cd tests
-  '';
+  nativeCheckInputs = [
+    dirty-equals
+    pytest-benchmark
+    pytestCheckHook
+  ];
 
-  meta = with lib; {
-    description = "Rust based TOML library for python";
+  pytestFlags = [ "--benchmark-disable" ];
+
+  meta = {
+    description = "Rust based TOML library for Python";
     homepage = "https://github.com/samuelcolvin/rtoml";
-    license = licenses.mit;
-    maintainers = with maintainers; [ evils ];
+    changelog = "https://github.com/samuelcolvin/rtoml/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ GaetanLepage ];
   };
-}
+})

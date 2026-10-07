@@ -1,51 +1,57 @@
-{ lib, buildPythonPackage, fetchPypi
-, coverage
-, mock
-, ply
-, pytest-runner
-, pytestCheckHook
-, six
+{
+  buildPythonPackage,
+  fetchFromGitHub,
+  lib,
+  jinja2,
+  mock,
+  packaging,
+  pytestCheckHook,
+  setuptools,
+  setuptools-scm,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "stone";
-  version = "3.2.1";
+  version = "3.5.3";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "0xby5mpsms7b2rv8j6mvxzmzz5i9ii01brb9ylxz6kiv2i08piwv";
+  src = fetchFromGitHub {
+    owner = "dropbox";
+    repo = "stone";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-79CY4eJcsMrhJvRCdD3brwmPkl8kxLQbGIqxIA9UXPg=";
   };
 
   postPatch = ''
-    substituteInPlace setup.py \
-      --replace "pytest-runner == 5.2.0" "pytest-runner" \
-      --replace "pytest < 5" "pytest"
-    substituteInPlace test/requirements.txt \
-      --replace "coverage==5.3" "coverage"
+    # https://github.com/dropbox/stone/pull/373 pins setuptools-scm to <9,
+    # but that version is not in nixpkgs and it seems to work anyway?
+    substituteInPlace pyproject.toml \
+      --replace-fail "setuptools-scm>=8,<9" "setuptools-scm"
   '';
 
-  nativeBuildInputs = [ pytest-runner ];
-
-  propagatedBuildInputs = [ ply six ];
-
-  checkInputs = [ pytestCheckHook coverage mock ];
-
-  # try to import from `test` directory, which is exported by the python interpreter
-  # and cannot be overriden without removing some py3 to py2 support
-  disabledTestPaths = [
-    "test/test_tsd_types.py"
-    "test/test_js_client.py"
+  build-system = [
+    setuptools
+    setuptools-scm
   ];
-  disabledTests = [
-    "test_type_name_with_module"
+
+  dependencies = [
+    jinja2
+    packaging
+  ];
+
+  nativeCheckInputs = [
+    pytestCheckHook
+    mock
   ];
 
   pythonImportsCheck = [ "stone" ];
 
-  meta = with lib; {
-    description = "Official Api Spec Language for Dropbox";
+  meta = {
+    description = "Official API Spec Language for Dropbox API V2";
     homepage = "https://github.com/dropbox/stone";
-    license = licenses.mit;
-    maintainers = with maintainers; [ jonringer ];
+    changelog = "https://github.com/dropbox/stone/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.mit;
+    maintainers = [ ];
+    mainProgram = "stone";
   };
-}
+})

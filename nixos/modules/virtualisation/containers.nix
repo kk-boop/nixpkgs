@@ -1,40 +1,39 @@
-{ config, lib, pkgs, utils, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.virtualisation.containers;
 
   inherit (lib) literalExpression mkOption types;
 
+  oldRegistriesOptionsUsed = lib.any (x: x != [ ]) (
+    with cfg.registries;
+    [
+      search
+      insecure
+      block
+    ]
+  );
+
   toml = pkgs.formats.toml { };
 in
 {
   meta = {
-    maintainers = [] ++ lib.teams.podman.members;
+    teams = [ lib.teams.podman ];
   };
-
-
-  imports = [
-    (
-      lib.mkRemovedOptionModule
-      [ "virtualisation" "containers" "users" ]
-      "All users with `isNormalUser = true` set now get appropriate subuid/subgid mappings."
-    )
-    (
-      lib.mkRemovedOptionModule
-      [ "virtualisation" "containers" "containersConf" "extraConfig" ]
-      "Use virtualisation.containers.containersConf.settings instead."
-    )
-  ];
 
   options.virtualisation.containers = {
 
-    enable =
-      mkOption {
-        type = types.bool;
-        default = false;
-        description = ''
-          This option enables the common /etc/containers configuration module.
-        '';
-      };
+    enable = mkOption {
+      type = types.bool;
+      default = false;
+      description = ''
+        This option enables the common /etc/containers configuration module.
+      '';
+    };
 
     ociSeccompBpfHook.enable = mkOption {
       type = types.bool;
@@ -67,44 +66,64 @@ in
 
     storage.settings = mkOption {
       type = toml.type;
-      default = {
-        storage = {
-          driver = "overlay";
-          graphroot = "/var/lib/containers/storage";
-          runroot = "/run/containers/storage";
-        };
-      };
       description = "storage.conf configuration";
     };
 
     registries = {
+      # TODO: remove those options in 26.11
       search = mkOption {
+        visible = false;
         type = types.listOf types.str;
-        default = [ "docker.io" "quay.io" ];
+        default = [ ];
         description = ''
           List of repositories to search.
+
+          Deprecated, examine {option}`virtualisation.containers.registries.settings` instead.
         '';
       };
 
       insecure = mkOption {
-        default = [];
+        default = [ ];
+        visible = false;
         type = types.listOf types.str;
         description = ''
           List of insecure repositories.
+
+          Deprecated, examine {option}`virtualisation.containers.registries.settings` instead.
         '';
       };
 
       block = mkOption {
-        default = [];
+        default = [ ];
+        visible = false;
         type = types.listOf types.str;
         description = ''
           List of blocked repositories.
+
+          Deprecated, examine {option}`virtualisation.containers.registries.settings` instead.
+        '';
+      };
+
+      settings = mkOption {
+        type = toml.type;
+        default = {
+          registry = [
+            { location = "docker.io"; }
+            { location = "quay.io"; }
+          ];
+        };
+        description = ''
+          repositories.conf configuration.
+
+          Examine [containers-registries.conf(5)] for more information about the format.
+
+            [containers-registries.conf(5)]: https://github.com/containers/image/blob/main/docs/containers-registries.conf.5.md
         '';
       };
     };
 
     policy = mkOption {
-      default = {};
+      default = { };
       type = types.attrs;
       example = literalExpression ''
         {
@@ -119,13 +138,22 @@ in
       description = ''
         Signature verification policy file.
         If this option is empty the default policy file from
-        <literal>skopeo</literal> will be used.
+        `skopeo` will be used.
       '';
     };
 
   };
 
   config = lib.mkIf cfg.enable {
+    warnings = lib.optional oldRegistriesOptionsUsed "the options virtualisation.containers.registries.search / insecure / block are deprecated. See virtualisation.containers.registries.settings instead.";
+
+    virtualisation.containers.registries.settings = lib.mkIf oldRegistriesOptionsUsed {
+      registries = {
+        block.registries = cfg.registries.block;
+        insecure.registries = cfg.registries.insecure;
+        search.registries = cfg.registries.search;
+      };
+    };
 
     virtualisation.containers.containersConf.cniPlugins = [ pkgs.cni-plugins ];
 
@@ -133,24 +161,32 @@ in
       network.cni_plugin_dirs = map (p: "${lib.getBin p}/bin") cfg.containersConf.cniPlugins;
       engine = {
         init_path = "${pkgs.catatonit}/bin/catatonit";
-      } // lib.optionalAttrs cfg.ociSeccompBpfHook.enable {
+      }
+      // lib.optionalAttrs cfg.ociSeccompBpfHook.enable {
         hooks_dir = [ config.boot.kernelPackages.oci-seccomp-bpf-hook ];
       };
     };
 
-    environment.etc."containers/containers.conf".source =
-      toml.generate "containers.conf" cfg.containersConf.settings;
-
-    environment.etc."containers/storage.conf".source =
-      toml.generate "storage.conf" cfg.storage.settings;
-
-    environment.etc."containers/registries.conf".source = toml.generate "registries.conf" {
-      registries = lib.mapAttrs (n: v: { registries = v; }) cfg.registries;
+    virtualisation.containers.storage.settings.storage = {
+      driver = lib.mkDefault "overlay";
+      graphroot = lib.mkDefault "/var/lib/containers/storage";
+      runroot = lib.mkDefault "/run/containers/storage";
     };
 
-    environment.etc."containers/policy.json".source =
-      if cfg.policy != {} then pkgs.writeText "policy.json" (builtins.toJSON cfg.policy)
-      else utils.copyFile "${pkgs.skopeo.src}/default-policy.json";
+    environment.etc = {
+      "containers/containers.conf".source = toml.generate "containers.conf" cfg.containersConf.settings;
+
+      "containers/storage.conf".source = toml.generate "storage.conf" cfg.storage.settings;
+
+      "containers/registries.conf".source = toml.generate "registries.conf" cfg.registries.settings;
+
+      "containers/policy.json".source =
+        if cfg.policy != { } then
+          pkgs.writeText "policy.json" (builtins.toJSON cfg.policy)
+        else
+          "${pkgs.skopeo.policy}/default-policy.json";
+    };
+
   };
 
 }

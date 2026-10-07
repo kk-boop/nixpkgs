@@ -1,91 +1,103 @@
-{ stdenv
-, lib
-, buildPythonPackage
-, fetchPypi
-, argon2_cffi
-, nose
-, nose_warnings_filters
-, glibcLocales
-, isPy3k
-, mock
-, jinja2
-, tornado
-, ipython_genutils
-, traitlets
-, jupyter_core
-, jupyter-client
-, nbformat
-, nbconvert
-, ipykernel
-, terminado
-, requests
-, send2trash
-, pexpect
-, prometheus-client
-, pytestCheckHook
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # nativeBuildInputs
+  nodejs,
+  yarn-berry_3,
+  distutils,
+
+  # build-system
+  hatch-jupyter-builder,
+  hatchling,
+  jupyter-builder,
+  jupyterlab,
+
+  # dependencies
+  jupyter-server,
+  jupyterlab-server,
+  notebook-shim,
+  tornado,
+
+  # tests
+  pytest-jupyter,
+  pytestCheckHook,
+  versionCheckHook,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "notebook";
-  version = "6.4.4";
-  disabled = !isPy3k;
+  version = "7.6.3";
+  pyproject = true;
+  __structuredAttrs = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "26b0095c568e307a310fd78818ad8ebade4f00462dada4c0e34cbad632b9085d";
+  src = fetchFromGitHub {
+    owner = "jupyter";
+    repo = "notebook";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-77OGrJWMpeM4M+rsJMmBcBDDIO1Xsk+/PHflfMQnkWM=";
   };
 
-  LC_ALL = "en_US.utf8";
-
-  checkInputs = [ nose pytestCheckHook glibcLocales ]
-    ++ (if isPy3k then [ nose_warnings_filters ] else [ mock ]);
-
-  propagatedBuildInputs = [
-    jinja2 tornado ipython_genutils traitlets jupyter_core send2trash
-    jupyter-client nbformat nbconvert ipykernel terminado requests pexpect
-    prometheus-client argon2_cffi
-  ];
-
-  # disable warning_filters
-  preCheck = lib.optionalString (!isPy3k) ''
-    echo "" > setup.cfg
-  '';
-
   postPatch = ''
-    # Remove selenium tests
-    rm -rf notebook/tests/selenium
-    export HOME=$TMPDIR
+    substituteInPlace pyproject.toml \
+      --replace-fail "timeout = 300" ""
   '';
 
-  disabledTests = [
-    # a "system_config" is generated, and fails many tests
-    "config"
-    "load_ordered"
-    # requires jupyter, but will cause circular imports
-    "test_run"
-    "TestInstallServerExtension"
-    "launch_socket"
-    "sock_server"
-    "test_list_formats" # tries to find python MIME type
-    "KernelCullingTest" # has a race condition failing on slower hardware
-  ] ++ lib.optional stdenv.isDarwin [
-    "test_delete"
-    "test_checkpoints_follow_file"
+  nativeBuildInputs = [
+    nodejs
+    yarn-berry_3.yarnBerryConfigHook
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isLinux && stdenv.hostPlatform.isAarch64) [
+    distutils
   ];
 
-  disabledTestPaths = lib.optionals stdenv.isDarwin [
-    # requires local networking
-    "notebook/auth/tests/test_login.py"
-    "notebook/bundler/tests/test_bundler_api.py"
+  missingHashes = ./missing-hashes.json;
+  offlineCache = yarn-berry_3.fetchYarnBerryDeps {
+    inherit (finalAttrs) src missingHashes;
+    hash = "sha256-6Ujcy5g7f+tqe8skHG9RznvsA7+kXocVQccMgQB60Xg=";
+  };
+
+  build-system = [
+    hatch-jupyter-builder
+    hatchling
+    jupyter-builder
+    jupyterlab
   ];
+
+  dependencies = [
+    jupyter-server
+    jupyterlab
+    jupyterlab-server
+    notebook-shim
+    tornado
+  ];
+
+  nativeCheckInputs = [
+    pytest-jupyter
+    pytestCheckHook
+    versionCheckHook
+  ];
+
+  pytestFlags = [
+    "-Wignore::DeprecationWarning"
+  ];
+
+  env = {
+    CI = 1; # quiet lerna progress bar
+    JUPYTER_PLATFORM_DIRS = 1;
+  };
 
   # Some of the tests use localhost networking.
   __darwinAllowLocalNetworking = true;
 
   meta = {
-    description = "The Jupyter HTML notebook is a web-based notebook environment for interactive computing";
-    homepage = "https://jupyter.org/";
+    description = "Web-based notebook environment for interactive computing";
+    homepage = "https://github.com/jupyter/notebook";
+    changelog = "https://github.com/jupyter/notebook/blob/${finalAttrs.src.tag}/CHANGELOG.md";
     license = lib.licenses.bsd3;
-    maintainers = with lib.maintainers; [ fridh ];
+    teams = [ lib.teams.jupyter ];
+    mainProgram = "jupyter-notebook";
   };
-}
+})

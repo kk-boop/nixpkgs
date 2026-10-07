@@ -1,36 +1,55 @@
-{ lib, buildPythonPackage, fetchPypi
-, setuptools-scm, pytest, pytest-freezegun, freezegun, backports_unittest-mock
-, six, pytz, jaraco_functools, pythonOlder
-, pytest-flake8, pytest-cov, pytest-black, pytest-mypy
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  jaraco-functools,
+  pytest-freezer,
+  pytestCheckHook,
+  python-dateutil,
+  setuptools-scm,
 }:
 
 buildPythonPackage rec {
   pname = "tempora";
-  version = "4.1.2";
+  version = "5.8.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "fd6cafd66b01390d53a760349cf0b3123844ec6ae3d1043d7190473ea9459138";
+  src = fetchFromGitHub {
+    owner = "jaraco";
+    repo = "tempora";
+    tag = "v${version}";
+    hash = "sha256-1Zeo8bUCHKPZ6I0HGT7bIh7IgbRL4j9Cv3t9FFiZ72s=";
   };
 
-  disabled = pythonOlder "3.2";
-
-  nativeBuildInputs = [ setuptools-scm ];
-
-  propagatedBuildInputs = [ six pytz jaraco_functools ];
-
-  checkInputs = [
-    pytest-freezegun pytest freezegun backports_unittest-mock
-    pytest-flake8 pytest-cov pytest-black pytest-mypy
-  ];
-
-  checkPhase = ''
-    pytest
+  postPatch = ''
+    sed -i "/coherent\.licensed/d" pyproject.toml
   '';
 
-  meta = with lib; {
+  build-system = [ setuptools-scm ];
+
+  dependencies = [
+    jaraco-functools
+    python-dateutil
+  ];
+
+  nativeCheckInputs = [
+    pytest-freezer
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [
+    "tempora"
+    "tempora.schedule"
+    "tempora.timing"
+    "tempora.utc"
+  ];
+
+  meta = {
     description = "Objects and routines pertaining to date and time";
+    mainProgram = "calc-prorate";
     homepage = "https://github.com/jaraco/tempora";
-    license = licenses.mit;
+    changelog = "https://github.com/jaraco/tempora/blob/${src.tag}/NEWS.rst";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

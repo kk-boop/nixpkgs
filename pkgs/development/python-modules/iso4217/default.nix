@@ -1,52 +1,61 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, fetchurl
-, pytestCheckHook
-, python
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchurl,
+  pytestCheckHook,
+  python,
+  setuptools,
 }:
 let
   table = fetchurl {
-    # See https://github.com/dahlia/iso4217/blob/main/setup.py#L18
-    url = "http://www.currency-iso.org/dam/downloads/lists/list_one.xml";
-    sha256 = "0frhicc7s8gqglr41hzx61fic3ckvr4sg773ahp1s28n5by3y7ac";
+    # See https://github.com/dahlia/iso4217/blob/main/setup.py#L19
+    url = "https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/lists/list-one.xml";
+    hash = "sha256-r1mRvI/qcOYOGKVzXHJGFdYxc+YlzpcdnWJExaF0Mp0=";
   };
 in
 buildPythonPackage rec {
   pname = "iso4217";
-  version = "1.6";
+  version = "1.16";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "dahlia";
-    repo = pname;
-    rev = version;
-    sha256 = "0mdpf5a0xr5lrcfgvqi1sdn7ln2w6pkc3lg0laqkbx5mhxky0fla";
+    repo = "iso4217";
+    tag = version;
+    hash = "sha256-C7TwGlbTwpcJ0rE7notWzZHthWzXKMPbHq00zMhfHeA=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  postPatch = ''
+    # get_version() appends a date to the version prefix
+    substituteInPlace setup.py \
+      --replace-fail 'version=get_version()' 'version="${version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
 
   preBuild = ''
     # The table is already downloaded
     export ISO4217_DOWNLOAD=0
     # Copy the table file to satifiy the build process
-    cp -r ${table} $pname/table.xml
+    cp -r ${table} iso4217/table.xml
   '';
 
   postInstall = ''
     # Copy the table file
-    cp -r ${table} $out/${python.sitePackages}/$pname/table.xml
+    cp -r ${table} $out/${python.sitePackages}/iso4217/table.xml
   '';
 
-  pytestFlagsArray = [ "$pname/test.py" ];
+  enabledTestPaths = [ "iso4217/test.py" ];
 
   pythonImportsCheck = [ "iso4217" ];
 
-  meta = with lib; {
+  meta = {
     description = "ISO 4217 currency data package for Python";
     homepage = "https://github.com/dahlia/iso4217";
-    license = with licenses; [ publicDomain ];
-    maintainers = with maintainers; [ fab ];
+    license = lib.licenses.publicDomain;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

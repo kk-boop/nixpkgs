@@ -1,26 +1,37 @@
-{ lib
-, fetchFromGitHub
-, buildPythonPackage
-, astunparse
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "gast";
-  version = "0.5.1";
+  version = "0.7.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "serge-sans-paille";
     repo = "gast";
-    rev = version;
-    sha256 = "1gph45frnj47lfr6idiyxrb3gk7vzc9rni9cijmcyz10dyx5kgwa";
+    tag = version;
+    hash = "sha256-paaXVdhstNlLc/zv/L1tHuv9IZ0Vz/vz2x2y2ePpXRc=";
   };
 
-  checkInputs = [ astunparse ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
-    description = "GAST provides a compatibility layer between the AST of various Python versions, as produced by ast.parse from the standard ast module.";
+  nativeCheckInputs = [
+    pytestCheckHook
+  ];
+
+  pythonImportsCheck = [ "gast" ];
+
+  meta = {
+    description = "Compatibility layer between the AST of various Python versions";
     homepage = "https://github.com/serge-sans-paille/gast/";
-    license = licenses.bsd3;
-    maintainers = with maintainers; [ jyp cpcloud ];
+    license = lib.licenses.bsd3;
+    maintainers = with lib.maintainers; [
+      cpcloud
+    ];
   };
 }

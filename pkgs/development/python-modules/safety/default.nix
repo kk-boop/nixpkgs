@@ -1,33 +1,95 @@
-{ lib, buildPythonPackage, fetchPypi, requests, dparse, click, setuptools, pytestCheckHook }:
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  hatchling,
+  click,
+  packaging,
+  dparse,
+  ruamel-yaml,
+  jinja2,
+  marshmallow,
+  nltk,
+  authlib,
+  typer,
+  pydantic,
+  safety-schemas,
+  typing-extensions,
+  filelock,
+  httpx,
+  tenacity,
+  tomlkit,
+  truststore,
+  git,
+  pytestCheckHook,
+  tomli,
+  writableTmpDirAsHomeHook,
+}:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "safety";
-  version = "1.10.3";
+  version = "3.8.1";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-MOOU0CogrEm39lKS0Z04+pJ6j5WCzf060a27xmxkGtU=";
+  src = fetchFromGitHub {
+    owner = "pyupio";
+    repo = "safety";
+    tag = finalAttrs.version;
+    hash = "sha256-xKZ8uhwuM6eu1NTppPFTBkxSjrguTw9GuIvPhPaTIAI=";
   };
 
-  propagatedBuildInputs = [ requests dparse click setuptools ];
-
-  # Disable tests depending on online services
-  checkInputs = [ pytestCheckHook ];
-  dontUseSetuptoolsCheck = true;
-  disabledTests = [
-    "test_check_live"
-    "test_check_live_cached"
+  patches = [
+    ./disable-telemetry.patch
   ];
 
-  preCheck = ''
-    export HOME=$(mktemp -d)
-  '';
+  build-system = [ hatchling ];
 
-  meta = with lib; {
-    description =
-      "Safety checks your installed dependencies for known security vulnerabilities";
+  pythonRelaxDeps = [
+    "safety-schemas"
+  ];
+
+  dependencies = [
+    click
+    packaging
+    dparse
+    ruamel-yaml
+    jinja2
+    marshmallow
+    nltk
+    authlib
+    typer
+    pydantic
+    safety-schemas
+    typing-extensions
+    filelock
+    httpx
+    tenacity
+    tomlkit
+    truststore
+  ];
+
+  nativeCheckInputs = [
+    git
+    pytestCheckHook
+    tomli
+    writableTmpDirAsHomeHook
+  ];
+
+  disabledTestPaths = [
+    # Failed to initialize SafetyPlatformClient: [Errno -3] Temporary failure in name resolution
+    "tests/firewall/test_command.py"
+    "tests/test_cli.py"
+  ];
+
+  meta = {
+    description = "Checks installed dependencies for known vulnerabilities";
+    mainProgram = "safety";
     homepage = "https://github.com/pyupio/safety";
-    license = licenses.mit;
-    maintainers = with maintainers; [ thomasdesr ];
+    changelog = "https://github.com/pyupio/safety/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      thomasdesr
+      dotlambda
+    ];
   };
-}
+})

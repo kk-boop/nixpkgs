@@ -1,39 +1,39 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, pythonOlder
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "wiffi";
-  version = "1.1.0";
-  format = "setuptools";
+  version = "1.1.2";
+  pyproject = true;
 
-  disabled = pythonOlder "3.6";
+  __structuredAttrs = true;
 
   src = fetchFromGitHub {
     owner = "mampfes";
     repo = "python-wiffi";
-    rev = version;
-    sha256 = "sha256-uB4M3etW1DCE//V2pcmsLZbORmrL00pbPADMQD5y3CY=";
+    tag = finalAttrs.version;
+    hash = "sha256-pnbzJxq8K947Yg54LysPPho6IRKf0cc+szTETgyzFao=";
   };
 
-  propagatedBuildInputs = [
-    aiohttp
-  ];
+  build-system = [ setuptools ];
+
+  dependencies = [ aiohttp ];
 
   # Project has no tests
   doCheck = false;
 
-  pythonImportsCheck = [
-    "wiffi"
-  ];
+  pythonImportsCheck = [ "wiffi" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python module to interface with STALL WIFFI devices";
     homepage = "https://github.com/mampfes/python-wiffi";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/mampfes/python-wiffi/blob/${finalAttrs.version}/HISTORY.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

@@ -1,43 +1,41 @@
-{ lib
-, buildPythonPackage
-, pythonOlder
-, fetchFromGitHub
-, requests
-, pytestCheckHook
-, responses
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  setuptools,
+  requests,
+  pytestCheckHook,
+  responses,
 }:
 
 buildPythonPackage rec {
   pname = "herepy";
-  version = "3.5.6";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.5";
+  version = "3.6.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "abdullahselek";
     repo = "HerePy";
-    rev = version;
-    sha256 = "sha256-I5u5PKB29jQNFdsx+y5ZJOE837D7Hpcsf3pwlCvmEqU=";
+    tag = version;
+    hash = "sha256-8DwzzC0sTrGnMpuADc55HCIeH/KyWacv8X+Ubh+n7ZM=";
   };
 
-  propagatedBuildInputs = [
-    requests
-  ];
+  build-system = [ setuptools ];
 
-  checkInputs = [
+  dependencies = [ requests ];
+
+  nativeCheckInputs = [
     pytestCheckHook
     responses
   ];
 
-  pythonImportsCheck = [
-    "herepy"
-  ];
+  pythonImportsCheck = [ "herepy" ];
 
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/abdullahselek/HerePy/releases/tag/${version}";
     description = "Library that provides a Python interface to the HERE APIs";
     homepage = "https://github.com/abdullahselek/HerePy";
-    license = licenses.mit;
-    maintainers = with maintainers; [ dotlambda ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ dotlambda ];
   };
 }

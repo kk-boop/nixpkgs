@@ -1,58 +1,115 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, ddt
-, iso8601
-, keystoneauth1
-, openssl
-, oslo-i18n
-, oslo-serialization
-, pbr
-, prettytable
-, requests-mock
-, stestr
-, testscenarios
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  pbr,
+  setuptools,
+
+  # direct
+  keystoneauth1,
+  iso8601,
+  oslo-i18n,
+  oslo-serialization,
+  oslo-utils,
+  prettytable,
+  stevedore,
+
+  # tests
+  stestrCheckHook,
+  versionCheckHook,
+  coverage,
+  fixtures,
+  requests-mock,
+  openstacksdk,
+  osprofiler,
+  openssl,
+  testscenarios,
+  testtools,
+  tempest,
+
+  # docs
+  sphinxHook,
+  openstackdocstheme,
+  sphinxcontrib-apidoc,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-novaclient";
-  version = "17.6.0";
+  version = "18.12.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-yRDCCFMQ2mNfs0NYXxBwcS/w+cs8j3nUTKPWMsTyMPU=";
+  src = fetchFromGitHub {
+    owner = "openstack";
+    repo = "python-novaclient";
+    tag = finalAttrs.version;
+    hash = "sha256-ZVJXGGceY7tnD/rkMkZjn5zifATeLYRGEVI2iLKERJ8=";
   };
 
-  propagatedBuildInputs = [
-    iso8601
+  patches = [
+    ./fix-setup-cfg.patch
+  ];
+
+  env.PBR_VERSION = finalAttrs.version;
+
+  nativeBuildInputs = [
+    openstackdocstheme
+    sphinxcontrib-apidoc
+    sphinxHook
+  ];
+
+  sphinxBuilders = [ "man" ];
+
+  build-system = [
+    pbr
+    setuptools
+  ];
+
+  dependencies = [
     keystoneauth1
+    iso8601
     oslo-i18n
     oslo-serialization
+    oslo-utils
     pbr
     prettytable
+    stevedore
   ];
 
-  checkInputs = [
-    ddt
-    openssl
+  nativeCheckInputs = [
+    stestrCheckHook
+    coverage
+    fixtures
     requests-mock
-    stestr
+    openstacksdk
+    osprofiler
+    openssl
     testscenarios
+    testtools
+    tempest
   ];
 
-  checkPhase = ''
-    stestr run -e <(echo "
-    novaclient.tests.unit.test_shell.ShellTest.test_osprofiler
-    novaclient.tests.unit.test_shell.ShellTestKeystoneV3.test_osprofiler
-    ")
-  '';
+  nativeInstallCheckInputs = [ versionCheckHook ];
+  doInstallCheck = true;
 
-  pythonImportsCheck = [ "novaclient" ];
+  pythonImportsCheck = [
+    "novaclient"
+    "novaclient.v2"
+    "novaclient.tests"
+    "novaclient.tests.functional"
+    "novaclient.tests.functional.api"
+    "novaclient.tests.functional.v2"
+    "novaclient.tests.functional.v2.legacy"
+    "novaclient.tests.unit"
+    "novaclient.tests.unit.fixture_data"
+    "novaclient.tests.unit.v2"
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Client library for OpenStack Compute API";
-    homepage = "https://github.com/openstack/python-novaclient";
-    license = licenses.asl20;
-    maintainers = teams.openstack.members;
+    mainProgram = "nova";
+    homepage = "https://docs.openstack.org/python-novaclient/latest/";
+    downloadPage = "https://github.com/openstack/python-novaclient/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.asl20;
+    teams = [ lib.teams.openstack ];
   };
-}
+})

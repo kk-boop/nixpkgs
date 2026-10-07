@@ -1,43 +1,54 @@
-{ lib
-, aiohttp
-, buildPythonPackage
-, fetchFromGitHub
-, geopy
-, imageio
-, lxml
-, pillow
-, pytestCheckHook
-, python-dateutil
-, pythonOlder
-, voluptuous
+{
+  lib,
+  aiohttp,
+  buildPythonPackage,
+  fetchFromGitHub,
+  freezegun,
+  geopy,
+  imageio,
+  lxml,
+  numpy,
+  pandas,
+  pillow,
+  pytest-asyncio,
+  pytestCheckHook,
+  python-dateutil,
+  setuptools,
+  syrupy_6,
+  voluptuous,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "env-canada";
-  version = "0.5.17";
-  format = "setuptools";
-
-  disabled = pythonOlder "3.8";
+  version = "0.20.5";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "michaeldavie";
     repo = "env_canada";
-    rev = "v${version}";
-    sha256 = "sha256-viuBuyGzAUcfb4qSecZsDvoAU++FNhuwNJET/s0qyOI=";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-pgZ4LE7Yd+qdNkQzr/1hxvbR94GHxCiBtUm5JeR7X9Y=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
     aiohttp
     geopy
     imageio
     lxml
+    numpy
+    pandas
     pillow
     python-dateutil
     voluptuous
   ];
 
-  checkInputs = [
+  nativeCheckInputs = [
+    pytest-asyncio
+    freezegun
     pytestCheckHook
+    syrupy_6
   ];
 
   disabledTests = [
@@ -51,16 +62,18 @@ buildPythonPackage rec {
     "test_get_loop"
     "test_get_ec_sites"
     "test_ecradar"
+    "test_historical_number_values"
+    "test_basemap_caching_behavior"
+    "test_layer_image_caching"
   ];
 
-  pythonImportsCheck = [
-    "env_canada"
-  ];
+  pythonImportsCheck = [ "env_canada" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to get Environment Canada weather data";
     homepage = "https://github.com/michaeldavie/env_canada";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/michaeldavie/env_canada/blob/${finalAttrs.src.tag}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

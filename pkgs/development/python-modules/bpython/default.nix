@@ -1,53 +1,90 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, curtsies
-, greenlet
-, jedi
-, pygments
-, pyxdg
-, requests
-, substituteAll
-, urwid
-, watchdog
-, which
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  fetchpatch,
+  curtsies,
+  cwcwidth,
+  greenlet,
+  jedi,
+  pygments,
+  pytestCheckHook,
+  pyperclip,
+  pyxdg,
+  requests,
+  setuptools,
+  urwid,
+  watchdog,
+  gitUpdater,
 }:
 
 buildPythonPackage rec {
   pname = "bpython";
-  version = "0.21";
+  version = "0.26";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "88aa9b89974f6a7726499a2608fa7ded216d84c69e78114ab2ef996a45709487";
+  src = fetchFromGitHub {
+    owner = "bpython";
+    repo = "bpython";
+    tag = "${version}-release";
+    hash = "sha256-NmWM0fdzS9n5FSnNJOCdS1JE5ZHrmJXqCuHa54rT8GU=";
   };
 
-  patches = [ (substituteAll {
-    src = ./clipboard-make-which-substitutable.patch;
-    which = "${which}/bin/which";
-  })];
+  patches = [
+    # This should be removed in the next release.
+    (fetchpatch {
+      url = "https://github.com/bpython/bpython/commit/870e81cb5a6860f1ba15744c81b97f71467eedf9.patch";
+      hash = "sha256-z55EkLT51ulz/V3XgjP1cbQza9ztb5YHu1UlXlbaWTQ=";
+    })
+  ];
 
-  propagatedBuildInputs = [
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail 'version = "unknown"' 'version = "${version}"'
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
     curtsies
+    cwcwidth
     greenlet
     pygments
     pyxdg
     requests
-    urwid
   ];
+
+  optional-dependencies = {
+    clipboard = [ pyperclip ];
+    jedi = [ jedi ];
+    urwid = [ urwid ];
+    watch = [ watchdog ];
+  };
 
   postInstall = ''
     substituteInPlace "$out/share/applications/org.bpython-interpreter.bpython.desktop" \
-      --replace "Exec=/usr/bin/bpython" "Exec=$out/bin/bpython"
+      --replace "Exec=/usr/bin/bpython" "Exec=bpython"
   '';
 
-  checkInputs = [ jedi watchdog ];
+  nativeCheckInputs = [
+    pytestCheckHook
+  ]
+  ++ lib.concatAttrValues optional-dependencies;
+
   pythonImportsCheck = [ "bpython" ];
 
-  meta = with lib; {
-    description = "A fancy curses interface to the Python interactive interpreter";
+  passthru.updateScript = gitUpdater {
+    rev-suffix = "-release";
+  };
+
+  meta = {
+    changelog = "https://github.com/bpython/bpython/blob/${src.tag}/CHANGELOG.rst";
+    description = "Fancy curses interface to the Python interactive interpreter";
     homepage = "https://bpython-interpreter.org/";
-    license = licenses.mit;
-    maintainers = with maintainers; [ flokli ];
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [
+      flokli
+      dotlambda
+    ];
   };
 }

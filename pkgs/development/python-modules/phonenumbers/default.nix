@@ -1,35 +1,33 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "phonenumbers";
-  version = "8.12.39";
-  format = "setuptools";
+  version = "9.0.34";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "0f7745e1f108654db347d885e814cbb5f225b8c5f5ce336024b193c79291ddaa";
+    hash = "sha256-AHUcddEWZIXKgM4C7BW2phomKOmzEzgVeTMLxwyTQHU=";
   };
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  build-system = [ setuptools ];
 
-  pytestFlagsArray = [
-    "tests/*.py"
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "phonenumbers"
-  ];
+  enabledTestPaths = [ "tests/*.py" ];
 
-  meta = with lib; {
+  pythonImportsCheck = [ "phonenumbers" ];
+
+  meta = {
     description = "Python module for handling international phone numbers";
     homepage = "https://github.com/daviddrysdale/python-phonenumbers";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fadenb ];
+    changelog = "https://github.com/daviddrysdale/python-phonenumbers/blob/v${version}/python/HISTORY.md";
+    license = lib.licenses.asl20;
   };
 }

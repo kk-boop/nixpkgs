@@ -1,21 +1,26 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pyserial
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  pkg-resources-backport,
+  pyserial,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "python-velbus";
-  version = "2.1.4";
+  version = "2.1.14";
+  pyproject = true;
 
-  src = fetchFromGitHub {
-    owner = "thomasdelaet";
-    repo = pname;
-    rev = version;
-    sha256 = "1z0a7fc9xfrcpwi9xiimxsgbzbp2iwyi1rij6vqd5z47mzi49fv9";
+  src = fetchPypi {
+    inherit (finalAttrs) pname version;
+    hash = "sha256-3eDfXPMO167QI/umLBjlHTBV67XQ8QYkg4EzfrRTw6M=";
   };
 
-  propagatedBuildInputs = [
+  build-system = [ setuptools ];
+
+  dependencies = [
+    pkg-resources-backport
     pyserial
   ];
 
@@ -24,10 +29,11 @@ buildPythonPackage rec {
 
   pythonImportsCheck = [ "velbus" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library to control the Velbus home automation system";
     homepage = "https://github.com/thomasdelaet/python-velbus";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/thomasdelaet/python-velbus/releases/tag/${finalAttrs.version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

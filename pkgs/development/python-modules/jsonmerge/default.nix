@@ -1,25 +1,35 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, jsonschema
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  jsonschema,
+  pytestCheckHook,
+  setuptools,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "jsonmerge";
-  version = "1.8.0";
+  version = "1.9.2";
+
+  __structuredAttrs = true;
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "a86bfc44f32f6a28b749743df8960a4ce1930666b3b73882513825f845cb9558";
+    inherit (finalAttrs) pname version;
+    hash = "sha256-xDdX4BgLDhm3rkwTCtQqB8xYDDGRL2H0gj6Ory+jlKM=";
   };
 
-  propagatedBuildInputs = [ jsonschema ];
+  build-system = [ setuptools ];
 
-  meta = with lib; {
+  dependencies = [ jsonschema ];
+
+  nativeCheckInputs = [ pytestCheckHook ];
+
+  meta = {
     description = "Merge a series of JSON documents";
     homepage = "https://github.com/avian2/jsonmerge";
-    changelog = "https://github.com/avian2/jsonmerge/blob/jsonmerge-${version}/ChangeLog";
-    license = licenses.mit;
-    maintainers = with maintainers; [ emily ];
+    changelog = "https://github.com/avian2/jsonmerge/blob/jsonmerge-${finalAttrs.version}/ChangeLog";
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
-}
+})

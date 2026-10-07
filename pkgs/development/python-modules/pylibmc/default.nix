@@ -1,23 +1,39 @@
-{ buildPythonPackage, fetchPypi, lib, libmemcached, zlib, cyrus_sasl }:
+{
+  lib,
+  buildPythonPackage,
+  cyrus_sasl,
+  fetchPypi,
+  libmemcached,
+  zlib,
+}:
 
 buildPythonPackage rec {
-  version = "1.6.1";
   pname = "pylibmc";
+  version = "1.6.3";
+  format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "1sg7d9j0v6g3xg3finf4l1hb72c13vcyyi6rqrc9shbx903d93ca";
+    hash = "sha256-7vpGEVU3q61l++LgMqzRs0Y9m/njNa9LCRbfTk0yBuA=";
   };
 
-  buildInputs = [ libmemcached zlib cyrus_sasl ];
+  buildInputs = [
+    cyrus_sasl
+    libmemcached
+    zlib
+  ];
+
   setupPyBuildFlags = [ "--with-sasl2" ];
 
-  # requires an external memcached server running
+  # Requires an external memcached server running
   doCheck = false;
 
-  meta = with lib; {
+  pythonImportsCheck = [ "pylibmc" ];
+
+  meta = {
     description = "Quick and small memcached client for Python";
     homepage = "http://sendapatch.se/projects/pylibmc/";
-    license = licenses.bsd3;
+    license = lib.licenses.bsd3;
+    maintainers = [ ];
   };
 }

@@ -1,61 +1,53 @@
-{ lib
-, brotli
-, brotlicffi
-, buildPythonPackage
-, certifi
-, chardet
-, charset-normalizer
-, fetchPypi
-, idna
-, pytest-mock
-, pytest-xdist
-, pytestCheckHook
-, urllib3
-, isPy27
-, isPy3k
-, trustme
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  certifi,
+  chardet,
+  charset-normalizer,
+  fetchFromGitHub,
+  idna,
+  pysocks,
+  pytest-mock,
+  pytest-xdist,
+  pytestCheckHook,
+  setuptools,
+  urllib3,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "requests";
-  version = "2.26.0";
+  version = "2.34.2";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-uKpY+M95P/2HgtPYyxnmbvNverpDU+7IWedGeLAbB6c=";
+  src = fetchFromGitHub {
+    owner = "psf";
+    repo = "requests";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-J2/sNpFUDHkNBeN7BfiMamv7YaWixZAZHxaqmPVEptc=";
   };
 
-  patches = [
-    # Use the default NixOS CA bundle from the certifi package
-    ./0001-Prefer-NixOS-Nix-default-CA-bundles-over-certifi.patch
-  ];
+  build-system = [ setuptools ];
 
-  postPatch = ''
-    # Use latest idna
-    substituteInPlace setup.py --replace ",<3" ""
-  '';
-
-  propagatedBuildInputs = [
+  dependencies = [
     certifi
+    charset-normalizer
     idna
     urllib3
-    chardet
-  ] ++ lib.optionals (isPy3k) [
-    brotlicffi
-    charset-normalizer
-  ] ++ lib.optionals (isPy27) [
-    brotli
   ];
 
-  checkInputs = [
+  optional-dependencies = {
+    security = [ ];
+    socks = [ pysocks ];
+    use_chardet_on_py3 = [ chardet ];
+  };
+
+  nativeCheckInputs = [
     pytest-mock
     pytest-xdist
     pytestCheckHook
-    trustme
-  ];
-
-  # AttributeError: 'KeywordMapping' object has no attribute 'get'
-  doCheck = !isPy27;
+  ]
+  ++ finalAttrs.passthru.optional-dependencies.socks;
 
   disabledTests = [
     # Disable tests that require network access and use httpbin
@@ -71,14 +63,27 @@ buildPythonPackage rec {
     "test_use_proxy_from_environment"
     "TestRequests"
     "TestTimeout"
+  ]
+  ++ lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64) [
+    # Fatal Python error: Aborted
+    "test_basic_response"
+    "test_text_response"
+  ];
+
+  disabledTestPaths = lib.optionals (stdenv.hostPlatform.isDarwin && stdenv.hostPlatform.isAarch64) [
+    # Fatal Python error: Aborted
+    "tests/test_lowlevel.py"
   ];
 
   pythonImportsCheck = [ "requests" ];
 
-  meta = with lib; {
-    description = "Simple HTTP library for Python";
-    homepage = "http://docs.python-requests.org/en/latest/";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ fab ];
+  __darwinAllowLocalNetworking = true;
+
+  meta = {
+    description = "HTTP library for Python";
+    homepage = "http://docs.python-requests.org/";
+    changelog = "https://github.com/psf/requests/blob/${finalAttrs.src.tag}/HISTORY.md";
+    license = lib.licenses.asl20;
+    maintainers = with lib.maintainers; [ fab ];
   };
-}
+})

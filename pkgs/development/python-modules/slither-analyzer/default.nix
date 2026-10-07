@@ -1,45 +1,82 @@
-{ lib
-, stdenv
-, buildPythonPackage
-, fetchPypi
-, makeWrapper
-, pythonOlder
-, crytic-compile
-, prettytable
-, setuptools
-, solc
-, withSolc ? false
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+
+  # build-system
+  hatchling,
+
+  # nativeBuildInputs
+  makeWrapper,
+
+  # dependencies
+  crytic-compile,
+  packaging,
+  prettytable,
+  web3,
+
+  # tests
+  versionCheckHook,
+  writableTmpDirAsHomeHook,
+
+  # postFixup
+  solc,
+
+  withSolc ? false,
 }:
 
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "slither-analyzer";
-  version = "0.8.2";
-  disabled = pythonOlder "3.6";
+  version = "0.11.5";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-77045eB7KvHBb0j61qz4zJTtEprg4/aH6MrPlQY1wiM=";
+  src = fetchFromGitHub {
+    owner = "crytic";
+    repo = "slither";
+    tag = finalAttrs.version;
+    hash = "sha256-sy1vE9XniwyvvZRFnnKhPfmYh2auHHcMel9sZx2YK3c=";
   };
 
-  nativeBuildInputs = [
-    makeWrapper
+  build-system = [ hatchling ];
+
+  nativeBuildInputs = [ makeWrapper ];
+
+  dependencies = [
+    crytic-compile
+    packaging
+    prettytable
+    web3
   ];
 
-  propagatedBuildInputs = [
-    crytic-compile
-    prettytable
-    setuptools
+  nativeCheckInputs = [
+    versionCheckHook
+    writableTmpDirAsHomeHook
   ];
+  versionCheckKeepEnvironment = [ "HOME" ];
 
   postFixup = lib.optionalString withSolc ''
     wrapProgram $out/bin/slither \
       --prefix PATH : "${lib.makeBinPath [ solc ]}"
   '';
 
-  # No Python tests
-  doCheck = false;
+  pythonImportsCheck = [
+    "slither"
+    "slither.all_exceptions"
+    "slither.analyses"
+    "slither.core"
+    "slither.detectors"
+    "slither.exceptions"
+    "slither.formatters"
+    "slither.printers"
+    "slither.slither"
+    "slither.slithir"
+    "slither.solc_parsing"
+    "slither.utils"
+    "slither.visitors"
+    "slither.vyper_parsing"
+  ];
 
-  meta = with lib; {
+  meta = {
     description = "Static Analyzer for Solidity";
     longDescription = ''
       Slither is a Solidity static analysis framework written in Python 3. It
@@ -47,7 +84,13 @@ buildPythonPackage rec {
       contract details, and provides an API to easily write custom analyses.
     '';
     homepage = "https://github.com/trailofbits/slither";
-    license = licenses.agpl3Plus;
-    maintainers = with maintainers; [ arturcygan fab ];
+    changelog = "https://github.com/crytic/slither/releases/tag/${finalAttrs.src.tag}";
+    license = lib.licenses.agpl3Plus;
+    mainProgram = "slither";
+    maintainers = with lib.maintainers; [
+      arturcygan
+      fab
+      hellwolf
+    ];
   };
-}
+})

@@ -1,23 +1,45 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  stdenv,
+  buildPythonPackage,
+  fetchPypi,
+  setuptools,
+}:
 
 buildPythonPackage rec {
   pname = "distlib";
-  version = "0.3.3";
+  version = "0.4.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "d982d0751ff6eaaab5e2ec8e691d949ee80eddf01a62eaa96ddb11531fe16b05";
-    extension = "zip";
+    hash = "sha256-/uxAB1vgOgRQGpc9gfYzc1tLafmLBUUFkjEMD0AaTg0=";
   };
+
+  nativeBuildInputs = [ setuptools ];
+
+  postFixup = lib.optionalString (!stdenv.hostPlatform.isWindows) ''
+    find $out -name '*.exe' -delete
+  '';
+
+  pythonImportsCheck = [
+    "distlib"
+    "distlib.database"
+    "distlib.locators"
+    "distlib.index"
+    "distlib.markers"
+    "distlib.metadata"
+    "distlib.util"
+    "distlib.resources"
+  ];
 
   # Tests use pypi.org.
   doCheck = false;
 
-  meta = with lib; {
+  meta = {
     description = "Low-level components of distutils2/packaging";
     homepage = "https://distlib.readthedocs.io";
-    license = licenses.psfl;
-    maintainers = with maintainers; [ lnl7 ];
+    license = lib.licenses.psfl;
+    maintainers = [ ];
   };
 }
-

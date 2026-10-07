@@ -1,32 +1,42 @@
-{ lib, fetchFromGitHub, pkg-config, ncurses, libev, buildDunePackage, ocaml
-, cppo, dune-configurator, ocplib-endian, result
-, mmap, seq
-, ocaml-syntax-shims
+{
+  lib,
+  fetchFromGitHub,
+  libev,
+  buildDunePackage,
+  cppo,
+  dune-configurator,
+  ocplib-endian,
+  ppxlib,
+  version ? if lib.versionAtLeast ppxlib.version "0.36" then "6.1.2" else "5.9.1",
 }:
 
-let inherit (lib) optional versionAtLeast; in
-
-buildDunePackage rec {
+buildDunePackage {
   pname = "lwt";
-  version = "5.4.1";
-
-  useDune2 = true;
+  inherit version;
 
   src = fetchFromGitHub {
     owner = "ocsigen";
     repo = "lwt";
-    rev = version;
-    sha256 = "sha256-XpoRKcdNo2j05Gxm5wmKSdwqimFDSWvmLyooPYTHAjM=";
+    tag = version;
+    hash =
+      {
+        "5.9.1" = "sha256-oPYLFugMTI3a+hmnwgUcoMgn5l88NP1Roq0agLhH/vI=";
+        "5.9.2" = "sha256-pzowRN1wwaF2iMfMPE7RCtA2XjlaXC3xD0yznriVfu8=";
+        "6.1.2" = "sha256-9Uxo1ekB3VcvdR4FCVdVWzvPHuVwflYIdD/fWvg0/kc=";
+      }
+      ."${version}";
   };
 
-  nativeBuildInputs = [ pkg-config cppo dune-configurator ];
-  buildInputs = optional (!versionAtLeast ocaml.version "4.08") ocaml-syntax-shims
-   ++ optional (!versionAtLeast ocaml.version "4.07") ncurses;
-  propagatedBuildInputs = [ libev mmap ocplib-endian seq result ];
+  nativeBuildInputs = [ cppo ];
+  buildInputs = [ dune-configurator ];
+  propagatedBuildInputs = [
+    libev
+    ocplib-endian
+  ];
 
   meta = {
     homepage = "https://ocsigen.org/lwt/";
-    description = "A cooperative threads library for OCaml";
+    description = "Cooperative threads library for OCaml";
     maintainers = [ lib.maintainers.vbgl ];
     license = lib.licenses.mit;
   };

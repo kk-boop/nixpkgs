@@ -1,31 +1,51 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, google-api-core
-, libcst
-, mock
-, proto-plus
-, pytestCheckHook
-, pytest-asyncio
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  google-api-core,
+  google-auth,
+  mock,
+  proto-plus,
+  protobuf,
+  pytest-asyncio,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "google-cloud-speech";
-  version = "2.11.1";
+  version = "2.41.0";
+  pyproject = true;
 
   src = fetchPypi {
-    inherit pname version;
-    sha256 = "3a15400d2fab2ec161c9b647730e8ba92feb9cbe6a1c0c7734ec8e8941290dbd";
+    pname = "google_cloud_speech";
+    inherit version;
+    hash = "sha256-8avwwyYPvzpMPfnt6KgBO7Qr3Vg8u/7rp1LHpPeB0mE=";
   };
 
-  propagatedBuildInputs = [ libcst google-api-core proto-plus ];
+  build-system = [ setuptools ];
 
-  checkInputs = [ mock pytestCheckHook pytest-asyncio ];
+  pythonRelaxDeps = [
+    "protobuf"
+  ];
 
-  pytestFlagsArray = [
-    # requrire credentials
-    "--ignore=tests/system/gapic/v1/test_system_speech_v1.py"
-    "--ignore=tests/system/gapic/v1p1beta1/test_system_speech_v1p1beta1.py"
+  dependencies = [
+    google-api-core
+    google-auth
+    proto-plus
+    protobuf
+  ]
+  ++ google-api-core.optional-dependencies.grpc;
+
+  nativeCheckInputs = [
+    mock
+    pytest-asyncio
+    pytestCheckHook
+  ];
+
+  disabledTests = [
+    # Test requires project ID
+    "test_list_phrase_set"
   ];
 
   pythonImportsCheck = [
@@ -34,10 +54,11 @@ buildPythonPackage rec {
     "google.cloud.speech_v1p1beta1"
   ];
 
-  meta = with lib; {
+  meta = {
     description = "Google Cloud Speech API client library";
-    homepage = "https://github.com/googleapis/python-speech";
-    license = licenses.asl20;
-    maintainers = with maintainers; [ SuperSandro2000 ];
+    homepage = "https://github.com/googleapis/google-cloud-python/tree/main/packages/google-cloud-speech";
+    changelog = "https://github.com/googleapis/google-cloud-python/blob/google-cloud-speech-v${version}/packages/google-cloud-speech/CHANGELOG.md";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
 }

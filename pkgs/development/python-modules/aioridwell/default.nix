@@ -1,46 +1,46 @@
-{ lib
-, aiohttp
-, aresponses
-, buildPythonPackage
-, fetchFromGitHub
-, freezegun
-, poetry-core
-, pyjwt
-, pytest-aiohttp
-, pytest-asyncio
-, pytestCheckHook
-, pythonOlder
-, pytz
-, titlecase
-, types-pytz
+{
+  lib,
+  aiohttp,
+  aresponses,
+  buildPythonPackage,
+  certifi,
+  fetchFromGitHub,
+  freezegun,
+  poetry-core,
+  pyjwt,
+  pytest-aiohttp,
+  pytest-asyncio,
+  pytestCheckHook,
+  pytz,
+  titlecase,
+  types-pytz,
 }:
 
 buildPythonPackage rec {
   pname = "aioridwell";
-  version = "2021.10.0";
-  format = "pyproject";
-
-  disabled = pythonOlder "3.8";
+  version = "2025.09.0";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "bachya";
-    repo = pname;
-    rev = version;
-    sha256 = "sha256-h89gfdZvk7H22xAczaPMscTYZu0YeFxvFfL6/Oz2cJw=";
+    repo = "aioridwell";
+    tag = version;
+    hash = "sha256-lZ4Hmf1OruKTUMkpPYhqkqj+j+yeckXynjxa1oOtXzc=";
   };
 
-  nativeBuildInputs = [
-    poetry-core
-  ];
+  nativeBuildInputs = [ poetry-core ];
 
   propagatedBuildInputs = [
     aiohttp
+    certifi
     pyjwt
     pytz
     titlecase
   ];
 
-  checkInputs = [
+  __darwinAllowLocalNetworking = true;
+
+  nativeCheckInputs = [
     aresponses
     freezegun
     pytest-aiohttp
@@ -48,12 +48,6 @@ buildPythonPackage rec {
     pytestCheckHook
     types-pytz
   ];
-
-  postPatch = ''
-    substituteInPlace pyproject.toml \
-      --replace 'titlecase = "^2.3"' 'titlecase = "*"' \
-      --replace 'pytz = "^2021.3"' 'pytz = "*"'
-  '';
 
   disabledTests = [
     # AssertionError: assert datetime.date(...
@@ -65,14 +59,13 @@ buildPythonPackage rec {
     "examples/"
   ];
 
-  pythonImportsCheck = [
-    "aioridwell"
-  ];
+  pythonImportsCheck = [ "aioridwell" ];
 
-  meta = with lib; {
+  meta = {
     description = "Python library for interacting with Ridwell waste recycling";
     homepage = "https://github.com/bachya/aioridwell";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ fab ];
+    changelog = "https://github.com/bachya/aioridwell/releases/tag/${version}";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ fab ];
   };
 }

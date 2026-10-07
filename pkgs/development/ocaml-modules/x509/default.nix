@@ -1,31 +1,53 @@
-{ lib, fetchurl, buildDunePackage
-, alcotest, cstruct-unix
-, asn1-combinators, domain-name, fmt, gmap, pbkdf, rresult, mirage-crypto, mirage-crypto-ec, mirage-crypto-pk
-, logs, base64
+{
+  lib,
+  fetchurl,
+  buildDunePackage,
+  alcotest,
+  asn1-combinators,
+  domain-name,
+  fmt,
+  gmap,
+  kdf,
+  mirage-crypto,
+  mirage-crypto-ec,
+  mirage-crypto-pk,
+  ipaddr,
+  logs,
+  base64,
+  ohex,
 }:
 
-buildDunePackage rec {
-  minimumOCamlVersion = "4.07";
-
+buildDunePackage (finalAttrs: {
   pname = "x509";
-  version = "0.14.1";
+  version = "1.2.0";
 
   src = fetchurl {
-    url = "https://github.com/mirleft/ocaml-x509/releases/download/v${version}/x509-v${version}.tbz";
-    sha256 = "d91eb4f2790f9d098713c71cc4b5d12706aedb1795666b5e6d667fe5c262f9c3";
+    url = "https://github.com/mirleft/ocaml-x509/releases/download/v${finalAttrs.version}/x509-${finalAttrs.version}.tbz";
+    hash = "sha256-SD9SkJah/O3D+YJ7gmgZ1qKU+Xq6CPkD62v4n7D2FnQ=";
   };
 
-  useDune2 = true;
-
-  buildInputs = [ alcotest cstruct-unix ];
-  propagatedBuildInputs = [ asn1-combinators domain-name fmt gmap mirage-crypto mirage-crypto-pk mirage-crypto-ec pbkdf rresult logs base64 ];
+  checkInputs = [ alcotest ];
+  propagatedBuildInputs = [
+    asn1-combinators
+    domain-name
+    fmt
+    gmap
+    mirage-crypto
+    mirage-crypto-pk
+    mirage-crypto-ec
+    kdf
+    logs
+    base64
+    ipaddr
+    ohex
+  ];
 
   doCheck = true;
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/mirleft/ocaml-x509";
     description = "X509 (RFC5280) handling in OCaml";
-    license = licenses.bsd2;
-    maintainers = with maintainers; [ vbgl ];
+    license = lib.licenses.bsd2;
+    maintainers = [ ];
   };
-}
+})

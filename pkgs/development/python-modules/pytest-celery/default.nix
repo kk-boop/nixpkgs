@@ -1,22 +1,89 @@
-{ lib, buildPythonPackage, fetchPypi }:
+{
+  lib,
+  buildPythonPackage,
+  debugpy,
+  docker,
+  fetchFromGitHub,
+  kombu,
+  poetry-core,
+  psutil,
+  pytest-docker-tools,
+  pytest,
+  tenacity,
+
+  # optional dependencies
+  redis,
+  python-memcached,
+  boto3,
+  botocore,
+  urllib3,
+}:
 
 buildPythonPackage rec {
   pname = "pytest-celery";
-  version = "0.0.0";
+  version = "1.3.0";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "cfd060fc32676afa1e4f51b2938f903f7f75d952186b8c6cf631628c4088f406";
+  src = fetchFromGitHub {
+    owner = "celery";
+    repo = "pytest-celery";
+    tag = "v${version}";
+    hash = "sha256-8qDnyMv0NxMFWGRbJ63Ye/dSRr8A6Azh2J5gkiwYYzI=";
   };
 
-  patches = [ ./no-celery.patch ];
+  postPatch = ''
+    # Avoid infinite recursion with celery
+    substituteInPlace pyproject.toml \
+      --replace 'celery = { version = "*" }' ""
+  '';
 
-  doCheck = false; # This package has nothing to test or import.
+  pythonRelaxDeps = [
+    "debugpy"
+  ];
 
-  meta = with lib; {
-    description = "pytest plugin for unittest subTest() support and subtests fixture";
-    homepage = "https://github.com/pytest-dev/pytest-subtests";
-    license = licenses.mit;
+  pythonRemoveDeps = [
+    "celery" # cyclic dependency
+    "setuptools" # https://github.com/celery/pytest-celery/pull/464
+  ];
+
+  build-system = [ poetry-core ];
+
+  buildInputs = [ pytest ];
+
+  dependencies = [
+    debugpy
+    docker
+    kombu
+    psutil
+    pytest-docker-tools
+    tenacity
+  ];
+
+  optional-dependencies = {
+    all = [
+      redis
+      python-memcached
+      boto3
+      botocore
+      urllib3
+    ];
+    redis = [ redis ];
+    memcached = [ python-memcached ];
+    sqs = [
+      boto3
+      botocore
+      urllib3
+    ];
+  };
+
+  # Infinite recursion with celery
+  doCheck = false;
+
+  meta = {
+    description = "Pytest plugin to enable celery.contrib.pytest";
+    homepage = "https://github.com/celery/pytest-celery";
+    changelog = "https://github.com/celery/pytest-celery/blob/${src.tag}/Changelog.rst";
+    license = lib.licenses.mit;
     maintainers = [ ];
   };
 }

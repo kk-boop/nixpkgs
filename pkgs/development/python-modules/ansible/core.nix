@@ -1,56 +1,70 @@
-{ lib
-, callPackage
-, buildPythonPackage
-, fetchPypi
-, installShellFiles
-, cryptography
-, jinja2
-, junit-xml
-, lxml
-, ncclient
-, packaging
-, paramiko
-, pexpect
-, psutil
-, pycrypto
-, pyyaml
-, requests
-, resolvelib
-, scp
-, windowsSupport ? false, pywinrm
-, xmltodict
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  python,
+  pythonOlder,
+  installShellFiles,
+  docutils,
+  setuptools,
+  ansible,
+  cryptography,
+  jinja2,
+  junit-xml,
+  lxml,
+  ncclient,
+  packaging,
+  paramiko,
+  ansible-pylibssh,
+  pexpect,
+  psutil,
+  pycrypto,
+  pyyaml,
+  requests,
+  resolvelib,
+  scp,
+  windowsSupport ? false,
+  pywinrm,
+  xmltodict,
+  # Additional packages to add to dependencies
+  extraPackages ? _: [ ],
 }:
 
-let
-  ansible-collections = callPackage ./collections.nix {
-    version = "5.0.1";
-    sha256 = "sha256:0xn3lpinmflkxwak7zb36wjs9w2y1k5s295apn3v77xnpc2cfz5l";
-  };
-in
-buildPythonPackage rec {
+buildPythonPackage (finalAttrs: {
   pname = "ansible-core";
-  version = "2.12.1";
+  version = "2.21.4";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "sha256-pFCHByYr4Ru03ZigBvGxSBeHmgVea2xGrZ/KiJT7MHM=";
+  disabled = pythonOlder "3.12";
+
+  src = fetchFromGitHub {
+    owner = "ansible";
+    repo = "ansible";
+    tag = "v${finalAttrs.version}";
+    hash = "sha256-lUm7xhvF0CU37fnunLyAG4FLpjwAgEoLEY1ztua2m4s=";
   };
 
-  # ansible_connection is already wrapped, so don't pass it through
-  # the python interpreter again, as it would break execution of
-  # connection plugins.
   postPatch = ''
-    substituteInPlace lib/ansible/executor/task_executor.py \
-      --replace "[python," "["
+    patchShebangs --build packaging/cli-doc/build.py
+
+    SETUPTOOLS_PATTERN='"setuptools[0-9 <>=.,]+"'
+    WHEEL_PATTERN='"wheel[0-9 <>=.,]+"'
+    echo "Patching pyproject.toml"
+    # print replaced patterns to stdout
+    sed -r -i -e 's/'"$SETUPTOOLS_PATTERN"'/"setuptools"/w /dev/stdout' \
+      -e 's/'"$WHEEL_PATTERN"'/"wheel"/w /dev/stdout' pyproject.toml
   '';
 
   nativeBuildInputs = [
     installShellFiles
+    docutils
   ];
 
-  propagatedBuildInputs = [
-    # depend on ansible-collections instead of the other way around
-    ansible-collections
+  build-system = [ setuptools ];
+
+  dependencies = [
+    # depend on ansible instead of the other way around
+    ansible
     # from requirements.txt
     cryptography
     jinja2
@@ -62,29 +76,40 @@ buildPythonPackage rec {
     lxml
     ncclient
     paramiko
+    ansible-pylibssh
     pexpect
     psutil
     pycrypto
     requests
     scp
     xmltodict
-  ] ++ lib.optional windowsSupport pywinrm;
+  ]
+  ++ lib.optionals windowsSupport [ pywinrm ]
+  ++ extraPackages python.pkgs;
+
+  pythonRelaxDeps = [ "resolvelib" ];
 
   postInstall = ''
-    installManPage docs/man/man1/*.1
+    export HOME="$(mktemp -d)"
+    packaging/cli-doc/build.py man --output-dir=man
+    installManPage man/*
+  '';
+
+  postFixup = ''
+    patchPythonScript $out/${python.sitePackages}/ansible/cli/scripts/ansible_connection_cli_stub.py
   '';
 
   # internal import errors, missing dependencies
   doCheck = false;
 
-  passthru = {
-    collections = ansible-collections;
-  };
-
-  meta = with lib; {
+  meta = {
+    changelog = "https://github.com/ansible/ansible/blob/v${finalAttrs.version}/changelogs/CHANGELOG-v${lib.versions.majorMinor finalAttrs.version}.rst";
     description = "Radically simple IT automation";
     homepage = "https://www.ansible.com";
-    license = licenses.gpl3Plus;
-    maintainers = with maintainers; [ hexa ];
+    license = lib.licenses.gpl3Plus;
+    maintainers = with lib.maintainers; [
+      HarisDotParis
+      robsliwi
+    ];
   };
-}
+})

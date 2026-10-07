@@ -1,4 +1,11 @@
-{ lib, stdenv, fetchurl, fetchpatch, autoconf, automake, m4, perl, help2man
+{
+  lib,
+  stdenv,
+  fetchurl,
+  m4,
+  runtimeShell,
+  updateAutotoolsGnuConfigScriptsHook,
+  file,
 }:
 
 # Note: this package is used for bootstrapping fetchurl, and thus
@@ -6,42 +13,53 @@
 # cgit) that are needed here should be included directly in Nixpkgs as
 # files.
 
-stdenv.mkDerivation rec {
+stdenv.mkDerivation (finalAttrs: {
   pname = "libtool";
-  version = "2.4.6";
+  version = "2.6.2";
 
   src = fetchurl {
-    url = "mirror://gnu/libtool/${pname}-${version}.tar.gz";
-    sha256 = "1qq61k6lp1fp75xs398yzi6wvbx232l7xbyn3p13cnh27mflvgg3";
+    url = "mirror://gnu/libtool/libtool-${finalAttrs.version}.tar.gz";
+    hash = "sha256-JK2zqprgNccPq6NEr1fXMhXriSgQRa9sfM0wd1H4sL8=";
   };
 
-  outputs = [ "out" "lib" ];
-
-  patches = [
-    # Suport macOS version 11.0
-    # https://lists.gnu.org/archive/html/libtool-patches/2020-06/msg00001.html
-    ./libtool2-macos11.patch
+  outputs = [
+    "out"
+    "lib"
   ];
 
-  # Normally we'd use autoreconfHook, but that includes libtoolize.
-  postPatch = ''
-    aclocal -I m4
-    automake
-    autoconf
+  # FILECMD was added in libtool 2.4.7; previous versions hardwired `/usr/bin/file`
+  #   https://lists.gnu.org/archive/html/autotools-announce/2022-03/msg00000.html
+  env.FILECMD = "${file}/bin/file";
 
-    pushd libltdl
-    aclocal -I ../m4
-    automake
-    autoconf
-    popd
-  '';
+  postPatch =
+    # libtool commit da2e352735722917bf0786284411262195a6a3f6 changed
+    # the shebang from `/bin/sh` (which is a special sandbox exception)
+    # to `/usr/bin/env sh`, meaning that we now need to patch shebangs
+    # in libtoolize.in:
+    ''
+      substituteInPlace libtoolize.in       --replace '#! /usr/bin/env sh' '#!${runtimeShell}'
+      # avoid help2man run after 'libtoolize.in' update
+      touch doc/libtoolize.1
+    '';
 
-  nativeBuildInputs = [ perl help2man m4 ] ++ [ autoconf automake ];
-  propagatedBuildInputs = [ m4 ];
+  strictDeps = true;
+  # As libtool is an early bootstrap dependency try hard not to
+  # add autoconf and automake or help2man dependencies here. That way we can
+  # avoid pulling in perl and get away with just an `m4` depend.
+  nativeBuildInputs = [
+    updateAutotoolsGnuConfigScriptsHook
+    m4
+    file
+  ];
+  propagatedBuildInputs = [
+    m4
+    file
+  ];
 
   # Don't fixup "#! /bin/sh" in Libtool, otherwise it will use the
   # "fixed" path in generated files!
   dontPatchShebangs = true;
+  dontFixLibtool = true;
 
   # XXX: The GNU ld wrapper does all sorts of nasty things wrt. RPATH, which
   # leads to the failure of a number of tests.
@@ -50,7 +68,9 @@ stdenv.mkDerivation rec {
 
   enableParallelBuilding = true;
 
-  meta = with lib; {
+  __structuredAttrs = true;
+
+  meta = {
     description = "GNU Libtool, a generic library support script";
     longDescription = ''
       GNU libtool is a generic library support script.  Libtool hides
@@ -62,8 +82,9 @@ stdenv.mkDerivation rec {
       documentation for details.
     '';
     homepage = "https://www.gnu.org/software/libtool/";
-    license = licenses.gpl2Plus;
+    license = lib.licenses.gpl2Plus;
     maintainers = [ ];
-    platforms = platforms.unix;
+    platforms = lib.platforms.unix;
+    mainProgram = "libtool";
   };
-}
+})

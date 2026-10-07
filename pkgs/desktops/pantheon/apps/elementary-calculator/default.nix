@@ -1,72 +1,65 @@
-{ lib
-, stdenv
-, fetchFromGitHub
-, fetchpatch
-, nix-update-script
-, pkg-config
-, meson
-, ninja
-, vala
-, desktop-file-utils
-, libxml2
-, gtk3
-, python3
-, granite
-, libgee
-, libhandy
-, elementary-icon-theme
-, appstream
-, wrapGAppsHook
+{
+  lib,
+  stdenv,
+  fetchFromGitHub,
+  nix-update-script,
+  meson,
+  ninja,
+  pkg-config,
+  vala,
+  wrapGAppsHook4,
+  elementary-gtk-theme,
+  elementary-icon-theme,
+  granite7,
+  gtk4,
+  libgee,
 }:
 
 stdenv.mkDerivation rec {
   pname = "elementary-calculator";
-  version = "1.7.2";
+  version = "8.0.1";
 
   src = fetchFromGitHub {
     owner = "elementary";
     repo = "calculator";
     rev = version;
-    sha256 = "sha256-U0wXrw9ZJwkqZAtTTHmTzqYhwF9V2JZEZZdDak3kPIc=";
+    sha256 = "sha256-XBOe3v6lKoICgEh78JoVH0Ojs8tr5PxKHQGk63MX6pQ=";
   };
 
   nativeBuildInputs = [
-    appstream
-    desktop-file-utils
-    libxml2
     meson
     ninja
     pkg-config
-    python3
     vala
-    wrapGAppsHook
+    wrapGAppsHook4
   ];
 
   buildInputs = [
     elementary-icon-theme
-    granite
-    gtk3
+    granite7
+    gtk4
     libgee
-    libhandy
   ];
 
-  postPatch = ''
-    chmod +x meson/post_install.py
-    patchShebangs meson/post_install.py
+  preFixup = ''
+    gappsWrapperArgs+=(
+      # The GTK theme is hardcoded.
+      --prefix XDG_DATA_DIRS : "${elementary-gtk-theme}/share"
+      # The icon theme is hardcoded.
+      --prefix XDG_DATA_DIRS : "$XDG_ICON_DIRS"
+    )
   '';
 
   passthru = {
-    updateScript = nix-update-script {
-      attrPath = "pantheon.${pname}";
-    };
+    updateScript = nix-update-script { };
   };
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/elementary/calculator";
     description = "Calculator app designed for elementary OS";
-    license = licenses.gpl3Plus;
-    platforms = platforms.linux;
-    maintainers = teams.pantheon.members;
+    license = lib.licenses.gpl3Plus;
+    platforms = lib.platforms.linux;
+    teams = [ lib.teams.pantheon ];
     mainProgram = "io.elementary.calculator";
   };
 }

@@ -1,63 +1,85 @@
 # Test for cntr tool
-{ system ? builtins.currentSystem, config ? { }
-, pkgs ? import ../.. { inherit system config; }, lib ? pkgs.lib }:
+
+{ runTest, lib }:
 
 let
-  inherit (import ../lib/testing-python.nix { inherit system pkgs; }) makeTest;
-
-  mkOCITest = backend:
-    makeTest {
+  mkOCITest =
+    backend:
+    runTest {
       name = "cntr-${backend}";
 
-      meta = { maintainers = with lib.maintainers; [ sorki mic92 ]; };
+      meta.maintainers = with lib.maintainers; [
+        sorki
+        mic92
+      ];
 
-      nodes = {
-        ${backend} = { pkgs, ... }: {
+      nodes.${backend} =
+        { pkgs, ... }:
+        {
           environment.systemPackages = [ pkgs.cntr ];
           virtualisation.oci-containers = {
             inherit backend;
             containers.nginx = {
               image = "nginx-container";
-              imageFile = pkgs.dockerTools.examples.nginx;
+              imageStream = pkgs.dockerTools.examples.nginxStream;
               ports = [ "8181:80" ];
             };
           };
         };
-      };
 
       testScript = ''
         start_all()
         ${backend}.wait_for_unit("${backend}-nginx.service")
-        result = ${backend}.wait_until_succeeds(
-            "cntr attach -t ${backend} nginx sh -- -c 'curl localhost | grep Hello'"
-        )
-        assert "Hello" in result
+        ${backend}.wait_for_open_port(8181)
+        # Test attach: uses host tools in container's network namespace
+        # Curl localhost to verify we're in the container's network
+        result = ${backend}.succeed("cntr attach -t ${backend} nginx curl -s localhost")
+        assert "Hello" in result, f"no greeting in output: {result}"
+        # Test exec: runs in container's native filesystem
+        # Use nginx's own binary to verify exec works
+        result = ${backend}.succeed("cntr exec -t ${backend} nginx -- nginx -v")
+        assert "nginx" in result, f"expected nginx version: {result}"
       '';
     };
 
-  mkContainersTest = makeTest {
+  mkContainersTest = runTest {
     name = "cntr-containers";
 
-    meta = with pkgs.lib.maintainers; { maintainers = [ sorki mic92 ]; };
+    meta.maintainers = with lib.maintainers; [
+      sorki
+      mic92
+    ];
 
-    machine = { lib, ... }: {
-      environment.systemPackages = [ pkgs.cntr ];
-      containers.test = {
-        autoStart = true;
-        privateNetwork = true;
-        hostAddress = "172.16.0.1";
-        localAddress = "172.16.0.2";
-        config = { };
+    nodes.machine =
+      { pkgs, ... }:
+      {
+        environment.systemPackages = [ pkgs.cntr ];
+        containers.test = {
+          autoStart = true;
+          privateNetwork = true;
+          hostAddress = "172.16.0.1";
+          localAddress = "172.16.0.2";
+          config =
+            { pkgs, ... }:
+            {
+              environment.systemPackages = [ pkgs.iputils ];
+            };
+        };
       };
-    };
 
     testScript = ''
       machine.start()
       machine.wait_for_unit("container@test.service")
-      machine.succeed("cntr attach test sh -- -c 'ping -c5 172.16.0.1'")
+      # Test attach: container fs is mounted at /var/lib/cntr/
+      # Writing to /var/lib/cntr/tmp/foo creates /tmp/foo in the container
+      machine.succeed("cntr attach test touch /var/lib/cntr/tmp/cntr-attach-test")
+      # Verify both that exec works and that the file from attach exists in container's /tmp
+      machine.succeed("cntr exec test -- test -f /tmp/cntr-attach-test")
+      machine.succeed("cntr exec test -- /run/current-system/sw/bin/ping -c1 172.16.0.1")
     '';
   };
-in {
+in
+{
   nixos-container = mkContainersTest;
-} // (lib.foldl' (attrs: backend: attrs // { ${backend} = mkOCITest backend; })
-  { } [ "docker" "podman" ])
+}
+// (lib.genAttrs [ "docker" "podman" ] mkOCITest)

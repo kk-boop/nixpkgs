@@ -1,37 +1,45 @@
-{ lib
-, buildPythonPackage
-, fetchFromGitHub
-, pytestCheckHook
+{
+  lib,
+  buildPythonPackage,
+  fetchFromGitHub,
+  importlib-metadata,
+  pytestCheckHook,
+  setuptools,
+  typing-extensions,
 }:
 
 buildPythonPackage rec {
   pname = "docstring-to-markdown";
-  version = "0.9";
+  version = "0.17";
+  pyproject = true;
 
   src = fetchFromGitHub {
     owner = "python-lsp";
-    repo = pname;
-    rev = "v${version}";
-    sha256 = "sha256-XVTlSqqWmvnB5nvjvgGDJmg71KKTq2hHB4//QW7ugvA=";
+    repo = "docstring-to-markdown";
+    tag = "v${version}";
+    hash = "sha256-conwwToBrlDL487zf2ldCOxFFKxP1a8LnU0KocI8riI=";
   };
 
-  patches = [
-    # So pytest-flake8 and pytest-cov won't be needed
-    ./remove-coverage-tests.patch
+  postPatch = ''
+    sed -i -E '/--(cov|flake8)/d' setup.cfg
+  '';
+
+  build-system = [ setuptools ];
+
+  dependencies = [
+    importlib-metadata
+    typing-extensions
   ];
 
-  checkInputs = [
-    pytestCheckHook
-  ];
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  pythonImportsCheck = [
-    "docstring_to_markdown"
-  ];
+  pythonImportsCheck = [ "docstring_to_markdown" ];
 
-  meta = with lib; {
+  meta = {
     homepage = "https://github.com/python-lsp/docstring-to-markdown";
     description = "On the fly conversion of Python docstrings to markdown";
-    license = licenses.lgpl2Plus;
-    maintainers = with maintainers; [ doronbehar ];
+    changelog = "https://github.com/python-lsp/docstring-to-markdown/releases/tag/${src.tag}";
+    license = lib.licenses.lgpl2Plus;
+    maintainers = with lib.maintainers; [ doronbehar ];
   };
 }

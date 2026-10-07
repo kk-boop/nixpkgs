@@ -1,47 +1,44 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, six
-, monotonic
-, diskcache
-, more-itertools
-, testtools
-, isPy3k
-, nose
-, futures ? null
+{
+  lib,
+  buildPythonPackage,
+  diskcache,
+  eventlet,
+  fetchFromGitHub,
+  more-itertools,
+  pytestCheckHook,
+  setuptools,
 }:
 
 buildPythonPackage rec {
   pname = "fasteners";
-  version = "0.16.3";
+  version = "0.20";
+  pyproject = true;
 
-  src = fetchPypi {
-    inherit pname version;
-    sha256 = "b1ab4e5adfbc28681ce44b3024421c4f567e705cc3963c732bf1cba3348307de";
+  src = fetchFromGitHub {
+    owner = "harlowja";
+    repo = "fasteners";
+    tag = version;
+    hash = "sha256-h8hlx3yl1+EgqCGE02O+wLejwxgJ5ZOs6nPrYUtHwn0=";
   };
 
-  propagatedBuildInputs = [
-    six
-    monotonic
-  ];
+  nativeBuildInputs = [ setuptools ];
 
-  checkInputs = [
+  nativeCheckInputs = [
     diskcache
+    eventlet
     more-itertools
-    testtools
-    nose
-  ] ++ lib.optionals (!isPy3k) [
-    futures
+    pytestCheckHook
   ];
 
-  checkPhase = ''
-    nosetests
-  '';
+  pythonImportsCheck = [ "fasteners" ];
 
-  meta = with lib; {
-    description = "A python package that provides useful locks";
+  enabledTestPaths = [ "tests/" ];
+
+  meta = {
+    description = "Module that provides useful locks";
     homepage = "https://github.com/harlowja/fasteners";
-    license = licenses.asl20;
+    changelog = "https://github.com/harlowja/fasteners/releases/tag/${version}";
+    license = lib.licenses.asl20;
+    maintainers = [ ];
   };
-
 }

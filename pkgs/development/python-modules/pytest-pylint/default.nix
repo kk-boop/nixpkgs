@@ -1,41 +1,58 @@
-{ lib
-, buildPythonPackage
-, fetchPypi
-, isPy27
-, pytest
-, pylint
-, six
-, pytest-runner
-, toml
+{
+  lib,
+  buildPythonPackage,
+  fetchPypi,
+  fetchpatch2,
+  setuptools,
+  pylint,
+  pytest,
+  pytestCheckHook,
+  toml,
 }:
 
 buildPythonPackage rec {
   pname = "pytest-pylint";
-  version = "0.18.0";
-  disabled = isPy27;
+  version = "0.21.0";
+  pyproject = true;
 
   src = fetchPypi {
     inherit pname version;
-    sha256 = "790c7a8019fab08e59bd3812db1657a01995a975af8b1c6ce95b9aa39d61da27";
+    hash = "sha256-iHZLjh1c+hiAkkjgzML8BQNfCMNfCwIi3c/qHDxOVT4=";
   };
 
-  nativeBuildInputs = [ pytest-runner ];
+  patches = [
+    # Use pathlib.Path in plugin hooks for pytest 8.1+ compatibility.
+    (fetchpatch2 {
+      url = "https://github.com/carsongee/pytest-pylint/commit/62457e8013df106116fb2a62c7c44870103ff393.patch?full_index=1";
+      hash = "sha256-EnlHEe5uZkvrWO8B33xkQ3LCQ7Bj5/oLES//NP8vkwE=";
+    })
+    # Handle test output difference in pytest 9.
+    # https://github.com/carsongee/pytest-pylint/pull/196
+    ./pytest-9.patch
+  ];
+
+  postPatch = ''
+    substituteInPlace setup.py \
+      --replace-fail "pytest-runner" ""
+  '';
+
+  build-system = [ setuptools ];
 
   buildInputs = [ pytest ];
 
-  propagatedBuildInputs = [
+  dependencies = [
     pylint
-    six
     toml
   ];
 
-  # tests not included with release
-  doCheck = false;
+  nativeCheckInputs = [ pytestCheckHook ];
 
-  meta = with lib; {
-    description = "pytest plugin to check source code with pylint";
+  pythonImportsCheck = [ "pytest_pylint" ];
+
+  meta = {
+    description = "Pytest plugin to check source code with pylint";
     homepage = "https://github.com/carsongee/pytest-pylint";
-    license = licenses.mit;
-    maintainers = [ maintainers.costrouc ];
+    license = lib.licenses.mit;
+    maintainers = [ ];
   };
 }

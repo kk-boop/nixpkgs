@@ -1,32 +1,44 @@
-{ lib
-, callPackage
-, python27Packages
-, installShellFiles
-, rSrc
-, version
-, oildev
-, binlore
+{
+  lib,
+  callPackage,
+  installShellFiles,
+  rSrc,
+  version,
+  gawk,
+  binlore,
+  resholve,
+  resholve-utils,
 }:
-
-python27Packages.buildPythonApplication {
+let
+  python27 = callPackage ./python27.nix { };
+in
+python27.pkgs.buildPythonApplication {
   pname = "resholve";
   inherit version;
   src = rSrc;
-  format = "other";
-  dontBuild = true;
 
   nativeBuildInputs = [ installShellFiles ];
 
-  propagatedBuildInputs = [ oildev python27Packages.configargparse ];
+  propagatedBuildInputs = with python27.pkgs; [
+    oildev
+    configargparse
+    sedparse
+  ];
 
-  patchPhase = ''
-    for file in resholve; do
+  makeWrapperArgs = [
+    "--prefix"
+    "PATH"
+    ":"
+    (lib.makeBinPath [ gawk ])
+  ];
+
+  postPatch = ''
+    for file in setup.cfg _resholve/version.py; do
       substituteInPlace $file --subst-var-by version ${version}
     done
   '';
 
-  installPhase = ''
-    install -Dm755 resholve $out/bin/resholve
+  postInstall = ''
     installManPage resholve.1
   '';
 
@@ -36,13 +48,37 @@ python27Packages.buildPythonApplication {
     rm $out/nix-support/propagated-build-inputs
   '';
 
-  passthru.tests = callPackage ./test.nix { inherit rSrc; inherit binlore; };
+  passthru = {
+    inherit (resholve-utils)
+      mkDerivation
+      phraseSolution
+      writeScript
+      writeScriptBin
+      ;
+    tests = callPackage ./test.nix {
+      inherit
+        rSrc
+        binlore
+        resholve
+        ;
+    };
+  };
 
-  meta = with lib; {
+  __structuredAttrs = true;
+
+  meta = {
     description = "Resolve external shell-script dependencies";
     homepage = "https://github.com/abathur/resholve";
-    license = with licenses; [ mit ];
-    maintainers = with maintainers; [ abathur ];
-    platforms = platforms.all;
+    changelog = "https://github.com/abathur/resholve/blob/v${version}/CHANGELOG.md";
+    license = lib.licenses.mit;
+    maintainers = with lib.maintainers; [ abathur ];
+    platforms = lib.platforms.all;
+    knownVulnerabilities = [
+      ''
+        resholve depends on python27 (EOL). While it's safe to
+        run on trusted input in the build sandbox, you should
+        avoid running it on untrusted input.
+      ''
+    ];
   };
 }
